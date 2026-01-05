@@ -89,11 +89,12 @@ export default function ProfilePage() {
     // Store theme preference - Save full profile to keep everything in sync
     // This ensures theme changes persist even without clicking "Save Profile"
     try {
-      const existingProfile = localStorage.getItem(`profile_${user.id}`)
+      const profileKey = `profile_${user.id}`
+      const existingProfile = localStorage.getItem(profileKey)
       if (existingProfile) {
         const profileData = JSON.parse(existingProfile)
         profileData.preferredTheme = profile.preferredTheme
-        localStorage.setItem(`profile_${user.id}`, JSON.stringify(profileData))
+        localStorage.setItem(profileKey, JSON.stringify(profileData))
       } else {
         // If no profile exists yet, save just the theme for now
         localStorage.setItem(`theme_${user.id}`, profile.preferredTheme)
@@ -158,11 +159,13 @@ export default function ProfilePage() {
               html.classList.remove("light")
             }
             
-            setProfile({
+            const profileToSet = {
               ...loadedProfile,
               preferredTheme: themeToUse,
               displayName: loadedProfile.displayName || currentUser.email?.split("@")[0] || "",
-            })
+              avatarStyle: loadedProfile.avatarStyle || "bard",
+            }
+            setProfile(profileToSet)
             
           } catch (err) {
             // Failed to parse, use defaults with dark mode
@@ -433,12 +436,29 @@ export default function ProfilePage() {
                     <button
                       key={avatar.value}
                       type="button"
-                      onClick={() =>
-                        setProfile({
+                      onClick={() => {
+                        const newProfile = {
                           ...profile,
                           avatarStyle: avatar.value as ProfileSettings["avatarStyle"],
-                        })
-                      }
+                        }
+                        setProfile(newProfile)
+                        // Save avatar immediately to localStorage (not waiting for Save Profile button)
+                        if (user) {
+                          try {
+                            const profileKey = `profile_${user.id}`
+                            const existingProfile = localStorage.getItem(profileKey)
+                            if (existingProfile) {
+                              const profileData = JSON.parse(existingProfile)
+                              profileData.avatarStyle = newProfile.avatarStyle
+                              localStorage.setItem(profileKey, JSON.stringify(profileData))
+                            } else {
+                              localStorage.setItem(profileKey, JSON.stringify(newProfile))
+                            }
+                          } catch (err) {
+                            // Silent fail - avatar will be saved on next profile save
+                          }
+                        }
+                      }}
                       className={`rounded-lg border-2 p-3 text-center transition-all ${
                         profile.avatarStyle === avatar.value
                           ? "border-primary bg-primary/10"

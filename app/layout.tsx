@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cinzel, Cinzel_Decorative, MedievalSharp } from "next/font/google";
 import "./globals.css";
+import { ThemeLoader } from "@/components/theme-loader";
 
 const cinzel = Cinzel({
   variable: "--font-cinzel",
@@ -31,11 +32,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      {/* Dark mode is the default theme for all pages */}
+    <html lang="en">
+      {/* ThemeLoader will apply the user's preferred theme on mount */}
       <body
         className={`${cinzel.variable} ${cinzelDecorative.variable} ${medievalSharp.variable} antialiased`}
       >
+        <ThemeLoader />
         {children}
       </body>
     </html>
