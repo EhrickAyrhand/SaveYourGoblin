@@ -160,18 +160,32 @@ export default function Home() {
         </div>
 
         {/* Footer CTA */}
-        <div className="mt-12 w-full max-w-2xl rounded-lg border-2 border-primary/20 bg-card/50 p-8 parchment">
-          <h3 className="mb-4 font-display text-2xl font-bold">
-            Ready to Enhance Your Campaign?
-          </h3>
-          <p className="mb-6 text-muted-foreground">
-            Join RPG masters who never get caught off-guard. Create an account to start generating 
-            content today.
-          </p>
-          <Button asChild size="lg" className="font-display">
-            <Link href="/register">Start Your Journey</Link>
-          </Button>
-        </div>
+        {!user ? (
+          <div className="mt-12 w-full max-w-2xl rounded-lg border-2 border-primary/20 bg-card/50 p-8 parchment">
+            <h3 className="mb-4 font-display text-2xl font-bold">
+              Ready to Enhance Your Campaign?
+            </h3>
+            <p className="mb-6 text-muted-foreground">
+              Join RPG masters who never get caught off-guard. Create an account to start generating 
+              content today.
+            </p>
+            <Button asChild size="lg" className="font-display">
+              <Link href="/register">Start Your Journey</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-12 w-full max-w-2xl rounded-lg border-2 border-primary/20 bg-card/50 p-8 parchment">
+            <h3 className="mb-4 font-display text-2xl font-bold">
+              Ready to Enhance Your Campaign?
+            </h3>
+            <p className="mb-6 text-muted-foreground">
+              Start generating characters, NPCs, missions, and environments for your next session.
+            </p>
+            <Button asChild size="lg" className="font-display">
+              <Link href="/generator">Start Generating</Link>
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   )
