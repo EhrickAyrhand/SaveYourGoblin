@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { getCurrentUser, signOut } from "@/lib/auth"
+import { supabase } from "@/lib/supabase"
 import type { User } from "@/types/auth"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,8 +16,10 @@ import {
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-
-type ContentType = "character" | "environment" | "mission"
+import { CharacterCard } from "@/components/rpg/character-card"
+import { EnvironmentCard } from "@/components/rpg/environment-card"
+import { MissionCard } from "@/components/rpg/mission-card"
+import type { ContentType, GeneratedContent, Character, Environment, Mission } from "@/types/rpg"
 
 export default function GeneratorPage() {
   const router = useRouter()
@@ -26,6 +29,11 @@ export default function GeneratorPage() {
   const [contentType, setContentType] = useState<ContentType>("character")
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [generationSuccess, setGenerationSuccess] = useState(false)
 
   useEffect(() => {
     async function checkUser() {
@@ -47,6 +55,14 @@ export default function GeneratorPage() {
     checkUser()
   }, [router])
 
+  // Clear generated content when content type changes
+  useEffect(() => {
+    setGeneratedContent(null)
+    setGenerationSuccess(false)
+    setSaveSuccess(false)
+    setSaveError(null)
+  }, [contentType])
+
   async function handleGenerate() {
     if (!scenario.trim()) {
       setError("Please describe what you want to generate")
@@ -55,23 +71,141 @@ export default function GeneratorPage() {
 
     setIsGenerating(true)
     setError(null)
+    setGeneratedContent(null)
+    setSaveSuccess(false)
 
     try {
-      // TODO: Connect to AI API
-      // For now, just simulate a delay
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      
-      // This will be replaced with actual AI API call
-      console.log("Generating:", { scenario, contentType })
-      
-      // Show success message (will be replaced with actual content display)
-      alert("AI generation will be implemented soon! This is just a preview.")
-      
+      // Get the access token from Supabase session
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        throw new Error("Not authenticated. Please sign in again.")
+      }
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          scenario: scenario.trim(),
+          contentType,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to generate content")
+      }
+
+      // Handle streaming response
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("No response body")
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ""
+      let parsedContent: GeneratedContent | null = null
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        
+        // Try to parse complete JSON from buffer
+        // For mock streaming, the entire JSON comes in chunks
+        try {
+          const content = JSON.parse(buffer)
+          parsedContent = content.content
+          setGeneratedContent(parsedContent)
+          buffer = "" // Clear buffer after successful parse
+          break // Exit loop once we have the content
+        } catch {
+          // JSON is incomplete, continue reading
+        }
+      }
+
+      // Final parse attempt for any remaining data
+      if (!parsedContent && buffer.trim()) {
+        try {
+          const content = JSON.parse(buffer)
+          parsedContent = content.content
+          setGeneratedContent(parsedContent)
+        } catch (err) {
+          console.error("Failed to parse final content:", err)
+          throw new Error("Failed to parse generated content")
+        }
+      }
+
+      if (!parsedContent) {
+        throw new Error("No content was generated")
+      }
+
+      // Show success notification
+      setGenerationSuccess(true)
+      setTimeout(() => setGenerationSuccess(false), 5000)
+
+      // Auto-save after successful generation
+      await handleAutoSave(parsedContent)
     } catch (err) {
-      setError("Failed to generate content. Please try again.")
+      setError(err instanceof Error ? err.message : "Failed to generate content. Please try again.")
       console.error(err)
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  async function handleAutoSave(contentToSave?: GeneratedContent) {
+    const content = contentToSave || generatedContent
+    if (!content || !user) return
+
+    setIsSaving(true)
+    setSaveSuccess(false)
+    setSaveError(null)
+
+    try {
+      // Get the access token from Supabase session
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        setSaveError("Not authenticated. Please sign in again to save content.")
+        return
+      }
+
+      const response = await fetch("/api/content", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          type: contentType,
+          scenario: scenario.trim(),
+          contentData: content,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        const errorMessage = errorData.error || errorData.message || "Failed to save content"
+        setSaveError(errorMessage)
+        console.error("Save error:", errorMessage)
+        return
+      }
+
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 5000)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to save content"
+      setSaveError(errorMessage)
+      console.error("Auto-save failed:", err)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -121,8 +255,21 @@ export default function GeneratorPage() {
         </div>
 
         {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2">
+            <AlertDescription className="font-body">
+              {error}
+              {error.includes("Failed") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-4 mt-2 font-body"
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                >
+                  Retry
+                </Button>
+              )}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -277,8 +424,83 @@ export default function GeneratorPage() {
           </Card>
         </div>
 
-        {/* Placeholder for Generated Content */}
-        {/* This will be replaced with actual content display components later */}
+        {/* Generated Content Display */}
+        {isGenerating && !generatedContent && (
+          <Card className="parchment ornate-border animate-in fade-in">
+            <CardContent className="p-12 text-center">
+              <div className="space-y-4">
+                <div className="text-4xl animate-bounce">⚡</div>
+                <p className="font-display text-xl">Generating your content...</p>
+                <p className="font-body text-sm text-muted-foreground">
+                  The AI is crafting your {contentType} based on your scenario
+                </p>
+                <div className="flex justify-center gap-1 pt-4">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Generation Success Notification */}
+        {generationSuccess && (
+          <Alert className="bg-green-500/10 border-green-500 animate-in fade-in slide-in-from-top-2 shadow-lg">
+            <AlertDescription className="font-body flex items-center gap-2 text-green-600 dark:text-green-400">
+              <span className="text-2xl">✨</span>
+              <div>
+                <p className="font-display font-semibold text-lg">Content Generated Successfully!</p>
+                <p className="text-sm">Your {contentType} has been created and is displayed below.</p>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {generatedContent && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {saveSuccess && (
+              <Alert className="bg-primary/10 border-primary animate-in fade-in slide-in-from-top-2">
+                <AlertDescription className="font-body flex items-center gap-2">
+                  <span className="text-lg">✓</span>
+                  <span>Content saved successfully to your library!</span>
+                </AlertDescription>
+              </Alert>
+            )}
+            {saveError && (
+              <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2">
+                <AlertDescription className="font-body">
+                  <strong>Save failed:</strong> {saveError}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-4 mt-2 font-body"
+                    onClick={() => handleAutoSave()}
+                    disabled={isSaving}
+                  >
+                    Retry Save
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+            {isSaving && (
+              <Alert className="animate-pulse">
+                <AlertDescription className="font-body">
+                  Saving content...
+                </AlertDescription>
+              </Alert>
+            )}
+            {contentType === "character" && "name" in generatedContent && "race" in generatedContent && (
+              <CharacterCard character={generatedContent as Character} />
+            )}
+            {contentType === "environment" && "name" in generatedContent && "description" in generatedContent && !("race" in generatedContent) && !("title" in generatedContent) && (
+              <EnvironmentCard environment={generatedContent as Environment} />
+            )}
+            {contentType === "mission" && "title" in generatedContent && "description" in generatedContent && (
+              <MissionCard mission={generatedContent as Mission} />
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
