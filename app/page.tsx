@@ -49,6 +49,9 @@ export default function Home() {
                 <Link href="/generator">Start Generating</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="min-w-[160px] font-display text-lg">
+                <Link href="/library">My Library</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="min-w-[160px] font-display text-lg">
                 <Link href="/profile">Profile</Link>
               </Button>
             </>
@@ -181,9 +184,14 @@ export default function Home() {
             <p className="mb-6 text-muted-foreground">
               Start generating characters, NPCs, missions, and environments for your next session.
             </p>
-            <Button asChild size="lg" className="font-display">
-              <Link href="/generator">Start Generating</Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button asChild size="lg" className="font-display">
+                <Link href="/generator">Start Generating</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="font-display">
+                <Link href="/library">View Library</Link>
+              </Button>
+            </div>
           </div>
         )}
       </main>

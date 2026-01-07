@@ -1,12 +1,101 @@
 /**
- * API Route for Saving Generated Content
+ * API Route for Saving and Fetching Generated Content
  * 
- * Saves generated content to Supabase with validation
+ * POST: Saves generated content to Supabase with validation
+ * GET: Fetches user's saved content with filtering, search, and pagination
  */
 
 import { NextRequest } from 'next/server'
 import { getServerUser, createServerClient } from '@/lib/supabase-server'
 import type { ContentType, GeneratedContent } from '@/types/rpg'
+
+export async function GET(request: NextRequest) {
+  try {
+    // Authenticate user
+    const user = await getServerUser(request)
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Get query parameters
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get('type') as ContentType | null
+    const search = searchParams.get('search') || ''
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = parseInt(searchParams.get('offset') || '0')
+
+    // Create authenticated Supabase client
+    const authHeader = request.headers.get('authorization')
+    let supabase = await createServerClient()
+    
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7)
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+      supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      })
+    }
+
+    // Build query
+    let query = supabase
+      .from('generated_content')
+      .select('id, type, scenario_input, content_data, created_at', { count: 'exact' })
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    // Apply type filter
+    if (type && ['character', 'environment', 'mission'].includes(type)) {
+      query = query.eq('type', type)
+    }
+
+    // Apply search filter (search in scenario_input and content_data)
+    if (search.trim()) {
+      query = query.or(`scenario_input.ilike.%${search}%,content_data::text.ilike.%${search}%`)
+    }
+
+    const { data, error, count } = await query
+
+    if (error) {
+      console.error('Supabase query error:', error)
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to fetch content',
+          message: error.message,
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    return new Response(
+      JSON.stringify({
+        data: data || [],
+        total: count || 0,
+        limit,
+        offset,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    )
+  } catch (error) {
+    console.error('Fetch content error:', error)
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to fetch content',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

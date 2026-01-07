@@ -243,6 +243,9 @@ export default function GeneratorPage() {
           </div>
           <div className="flex gap-2">
             <Button asChild variant="outline" className="font-body">
+              <Link href="/library">📚 Library</Link>
+            </Button>
+            <Button asChild variant="outline" className="font-body">
               <Link href="/profile">Profile</Link>
             </Button>
             <Button asChild variant="outline" className="font-body">
