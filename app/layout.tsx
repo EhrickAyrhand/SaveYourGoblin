@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cinzel, Cinzel_Decorative, MedievalSharp } from "next/font/google";
 import "./globals.css";
 import { ThemeLoader } from "@/components/theme-loader";
+import { ThemeSelector } from "@/components/ui/theme-selector";
 
 const cinzel = Cinzel({
   variable: "--font-cinzel",
@@ -39,6 +40,7 @@ export default function RootLayout({
       >
         <ThemeLoader />
         {children}
+        <ThemeSelector />
       </body>
     </html>
   );

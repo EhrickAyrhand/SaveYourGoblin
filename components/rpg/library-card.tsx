@@ -105,12 +105,12 @@ export function LibraryCard({ item, onView, onDelete }: LibraryCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className="text-2xl flex-shrink-0">{getTypeIcon()}</span>
+            <span className="text-3xl flex-shrink-0">{getTypeIcon()}</span>
             <div className="flex-1 min-w-0">
-              <CardTitle className="font-display text-lg mb-1 truncate">
+              <CardTitle className="font-display text-xl mb-2 truncate">
                 {getContentName()}
               </CardTitle>
-              <CardDescription className="font-body text-xs">
+              <CardDescription className="font-body text-sm">
                 {getTypeLabel()} • {formatDate(item.created_at)}
               </CardDescription>
             </div>
@@ -139,7 +139,7 @@ export function LibraryCard({ item, onView, onDelete }: LibraryCardProps) {
               size="sm"
               onClick={handleConfirmDelete}
               disabled={isDeleting}
-              className="font-body text-xs"
+              className="font-body text-sm"
             >
               {isDeleting ? "Deleting..." : "Confirm"}
             </Button>
@@ -148,7 +148,7 @@ export function LibraryCard({ item, onView, onDelete }: LibraryCardProps) {
               size="sm"
               onClick={handleCancelDelete}
               disabled={isDeleting}
-              className="font-body text-xs"
+              className="font-body text-sm"
             >
               Cancel
             </Button>

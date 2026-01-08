@@ -34,25 +34,25 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
 
   return (
     <Card className="parchment ornate-border">
-      <CardHeader>
-        <CardTitle className="font-display text-3xl mb-2">{environment.name}</CardTitle>
+      <CardHeader className="px-6 pt-6">
+        <CardTitle className="font-display text-4xl mb-3">{environment.name}</CardTitle>
         <CardDescription className="font-body text-base">
           {environment.mood} • {environment.lighting}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="p-6 space-y-6">
         {/* Description */}
         <div>
-          <h3 className="font-display text-lg font-semibold mb-2">Description</h3>
-          <p className="font-body text-sm text-muted-foreground leading-relaxed">
+          <h3 className="font-display text-2xl font-semibold mb-3">Description</h3>
+          <p className="font-body text-base text-muted-foreground leading-relaxed">
             {environment.description}
           </p>
         </div>
 
         {/* Ambient Sounds */}
         <div>
-          <h3 className="font-display text-lg font-semibold mb-2">Ambient Atmosphere</h3>
-          <p className="font-body text-sm text-muted-foreground italic leading-relaxed">
+          <h3 className="font-display text-2xl font-semibold mb-3">Ambient Atmosphere</h3>
+          <p className="font-body text-base text-muted-foreground italic leading-relaxed">
             {environment.ambient}
           </p>
         </div>
@@ -60,14 +60,14 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
         {/* Features */}
         {environment.features && environment.features.length > 0 && (
           <div>
-            <h3 className="font-display text-lg font-semibold mb-3">Notable Features</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <h3 className="font-display text-2xl font-semibold mb-4">Notable Features</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {environment.features.map((feature, idx) => (
                 <div
                   key={idx}
-                  className="font-body text-sm p-3 rounded-md bg-muted/50 border border-border"
+                  className="font-body text-base p-4 rounded-md bg-muted/50 border border-border"
                 >
-                  <span className="text-primary font-semibold">•</span> {feature}
+                  <span className="text-primary font-semibold text-lg">•</span> {feature}
                 </div>
               ))}
             </div>
@@ -77,12 +77,12 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
         {/* NPCs */}
         {environment.npcs && environment.npcs.length > 0 && (
           <div>
-            <h3 className="font-display text-lg font-semibold mb-3">Present NPCs</h3>
-            <div className="flex flex-wrap gap-2">
+            <h3 className="font-display text-2xl font-semibold mb-4">Present NPCs</h3>
+            <div className="flex flex-wrap gap-3">
               {environment.npcs.map((npc, idx) => (
                 <div
                   key={idx}
-                  className="font-body text-sm px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20"
+                  className="font-body text-base px-4 py-2 rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold"
                 >
                   {npc}
                 </div>
@@ -92,14 +92,14 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
         )}
 
         {/* Mood & Lighting Summary */}
-        <div className="pt-4 border-t border-border grid grid-cols-2 gap-4">
+        <div className="pt-6 border-t border-border grid grid-cols-2 gap-6">
           <div>
-            <p className="font-body text-xs text-muted-foreground mb-1">Mood</p>
-            <p className="font-display text-sm font-semibold">{environment.mood}</p>
+            <p className="font-body text-sm text-muted-foreground mb-2">Mood</p>
+            <p className="font-display text-lg font-semibold">{environment.mood}</p>
           </div>
           <div>
-            <p className="font-body text-xs text-muted-foreground mb-1">Lighting</p>
-            <p className="font-display text-sm font-semibold">{environment.lighting}</p>
+            <p className="font-body text-sm text-muted-foreground mb-2">Lighting</p>
+            <p className="font-display text-lg font-semibold">{environment.lighting}</p>
           </div>
         </div>
       </CardContent>

@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
 import Link from "next/link"
 
 interface ProfileSettings {
@@ -267,32 +268,24 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background p-4">
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-primary bg-card text-4xl parchment">
+          <div className="flex items-center gap-6">
+            <div className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-primary bg-card text-5xl parchment">
               {avatarEmojis[profile.avatarStyle]}
             </div>
             <div>
-              <h1 className="font-display text-4xl font-bold">
+              <h1 className="font-display text-5xl font-bold">
                 {profile.displayName || "Your Profile"}
               </h1>
-              <p className="mt-2 text-muted-foreground font-body">
+              <p className="mt-3 text-lg text-muted-foreground font-body">
                 Customize your RPG Master's Assistant profile
               </p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button asChild variant="outline" className="font-body">
-              <Link href="/generator">Generator</Link>
-            </Button>
-            <Button asChild variant="outline" className="font-body">
-              <Link href="/">Home</Link>
-            </Button>
-            <Button variant="outline" onClick={handleSignOut} className="font-body">
-              Sign Out
-            </Button>
+            <NavigationDropdown onSignOut={handleSignOut} />
           </div>
         </div>
 
@@ -315,28 +308,28 @@ export default function ProfilePage() {
           {/* Basic Information */}
           <Card className="parchment ornate-border">
             <CardHeader>
-              <CardTitle className="font-display text-2xl">Basic Information</CardTitle>
-              <CardDescription className="font-body">
+              <CardTitle className="font-display text-3xl">Basic Information</CardTitle>
+              <CardDescription className="font-body text-base">
                 Your account details and preferences
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="font-body">Email</Label>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="email" className="font-body text-base">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={user.email}
                   disabled
-                  className="font-body"
+                  className="font-body text-base h-12"
                 />
-                <p className="text-xs text-muted-foreground font-body">
+                <p className="text-sm text-muted-foreground font-body">
                   Email cannot be changed
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="displayName" className="font-body">Display Name</Label>
+              <div className="space-y-3">
+                <Label htmlFor="displayName" className="font-body text-base">Display Name</Label>
                 <Input
                   id="displayName"
                   type="text"
@@ -345,12 +338,12 @@ export default function ProfilePage() {
                     setProfile({ ...profile, displayName: e.target.value })
                   }
                   placeholder="Enter your display name"
-                  className="font-body"
+                  className="font-body text-base h-12"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="favoriteRPG" className="font-body">Favorite RPG System</Label>
+              <div className="space-y-3">
+                <Label htmlFor="favoriteRPG" className="font-body text-base">Favorite RPG System</Label>
                 <Input
                   id="favoriteRPG"
                   type="text"
@@ -359,12 +352,12 @@ export default function ProfilePage() {
                     setProfile({ ...profile, favoriteRPG: e.target.value })
                   }
                   placeholder="D&D 5e"
-                  className="font-body"
+                  className="font-body text-base h-12"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="bio" className="font-body">Bio</Label>
+              <div className="space-y-3">
+                <Label htmlFor="bio" className="font-body text-base">Bio</Label>
                 <textarea
                   id="bio"
                   value={profile.bio}
@@ -372,8 +365,8 @@ export default function ProfilePage() {
                     setProfile({ ...profile, bio: e.target.value })
                   }
                   placeholder="Tell us about yourself..."
-                  rows={4}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-body"
+                  rows={6}
+                  className="w-full rounded-md border border-input bg-background px-4 py-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 font-body"
                 />
               </div>
             </CardContent>
@@ -382,16 +375,16 @@ export default function ProfilePage() {
           {/* Appearance & Style */}
           <Card className="parchment ornate-border">
             <CardHeader>
-              <CardTitle className="font-display text-2xl">Appearance & Style</CardTitle>
-              <CardDescription className="font-body">
+              <CardTitle className="font-display text-3xl">Appearance & Style</CardTitle>
+              <CardDescription className="font-body text-base">
                 Customize your profile appearance
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-8">
               {/* Theme Selection */}
-              <div className="space-y-3">
-                <Label className="font-body">Preferred Theme</Label>
-                <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-4">
+                <Label className="font-body text-base">Preferred Theme</Label>
+                <div className="grid grid-cols-3 gap-3">
                   {[
                     { value: "dark", label: "🌙 Dark", desc: "Default" },
                     { value: "parchment", label: "📜 Parchment", desc: "Light" },
@@ -407,14 +400,14 @@ export default function ProfilePage() {
                         })
                         // Theme effect will automatically save to localStorage
                       }}
-                      className={`rounded-lg border-2 p-3 text-center transition-all ${
+                      className={`rounded-lg border-2 p-4 text-center transition-all ${
                         profile.preferredTheme === theme.value
                           ? "border-primary bg-primary/10"
                           : "border-border hover:border-primary/50"
                       }`}
                     >
-                      <div className="font-display text-sm font-semibold">{theme.label}</div>
-                      <div className="mt-1 text-xs text-muted-foreground font-body">
+                      <div className="font-display text-base font-semibold">{theme.label}</div>
+                      <div className="mt-1 text-sm text-muted-foreground font-body">
                         {theme.desc}
                       </div>
                     </button>
@@ -423,9 +416,9 @@ export default function ProfilePage() {
               </div>
 
               {/* Avatar Style */}
-              <div className="space-y-3">
-                <Label className="font-body">Avatar Style</Label>
-                <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-4">
+                <Label className="font-body text-base">Avatar Style</Label>
+                <div className="grid grid-cols-2 gap-3">
                   {[
                     { value: "warrior", label: "⚔️ Warrior", emoji: "⚔️" },
                     { value: "wizard", label: "🔮 Wizard", emoji: "🔮" },
@@ -459,14 +452,14 @@ export default function ProfilePage() {
                           }
                         }
                       }}
-                      className={`rounded-lg border-2 p-3 text-center transition-all ${
+                      className={`rounded-lg border-2 p-4 text-center transition-all ${
                         profile.avatarStyle === avatar.value
                           ? "border-primary bg-primary/10"
                           : "border-border hover:border-primary/50"
                       }`}
                     >
-                      <div className="text-2xl">{avatar.emoji}</div>
-                      <div className="mt-1 font-body text-xs font-medium">
+                      <div className="text-3xl">{avatar.emoji}</div>
+                      <div className="mt-2 font-body text-sm font-medium">
                         {avatar.label.split(" ")[1]}
                       </div>
                     </button>
@@ -477,50 +470,18 @@ export default function ProfilePage() {
           </Card>
         </div>
 
-        {/* Account Information */}
-        <Card className="parchment ornate-border">
-          <CardHeader>
-            <CardTitle className="font-display text-2xl">Account Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-sm text-muted-foreground font-body">Email Verified</p>
-                <p className="font-medium font-body">
-                  {user.emailVerified ? (
-                    <span className="text-green-600 dark:text-green-400">✓ Verified</span>
-                  ) : (
-                    <span className="text-yellow-600 dark:text-yellow-400">⚠ Not Verified</span>
-                  )}
-                </p>
-              </div>
-              {user.createdAt && (
-                <div>
-                  <p className="text-sm text-muted-foreground font-body">Account Created</p>
-                  <p className="font-medium font-body">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-              )}
-            </div>
+        {/* Spacer for fixed button */}
+        <div className="h-20" />
+      </div>
 
-            {!user.emailVerified && (
-              <Alert>
-                <AlertDescription className="font-body">
-                  Your email address is not verified. Please check your email and
-                  click the verification link to verify your account.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Save Button */}
-        <div className="flex justify-end gap-4">
+      {/* Fixed Save Button at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border p-4 shadow-lg">
+        <div className="mx-auto max-w-6xl flex justify-end">
           <Button
             onClick={handleSaveProfile}
             disabled={isSaving}
-            className="min-w-[120px] font-display"
+            size="lg"
+            className="min-w-[180px] font-display text-lg h-12"
           >
             {isSaving ? "Saving..." : "Save Profile"}
           </Button>

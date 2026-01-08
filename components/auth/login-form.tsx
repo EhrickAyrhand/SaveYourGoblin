@@ -129,6 +129,11 @@ export function LoginForm() {
         </Form>
       </CardContent>
       <CardFooter className="flex flex-col space-y-4">
+        <Button asChild variant="outline" className="w-full font-body">
+          <Link href="/">
+            ← Back to Home
+          </Link>
+        </Button>
         <div className="text-sm text-center text-muted-foreground">
           <Link
             href="/forgot-password"

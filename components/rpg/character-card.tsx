@@ -115,9 +115,9 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
   return (
     <Card className="parchment ornate-border">
       {/* Character Header */}
-      <CardHeader className="border-b border-border/50 pb-4">
-        <CardTitle className="font-display text-3xl mb-2">{character.name}</CardTitle>
-        <div className="flex flex-wrap gap-3 text-sm font-body text-muted-foreground">
+      <CardHeader className="border-b border-border/50 pb-4 px-6 pt-6">
+        <CardTitle className="font-display text-4xl mb-3">{character.name}</CardTitle>
+        <div className="flex flex-wrap gap-3 text-base font-body text-muted-foreground">
           <span className="font-semibold text-foreground">{character.race}</span>
           <span>•</span>
           <span className="font-semibold text-foreground">{character.class}</span>
@@ -138,81 +138,81 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
         {/* Top Section: Ability Scores and Combat Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Ability Scores - Left Column */}
-          <div className="space-y-3">
-            <h3 className="font-display text-lg font-semibold border-b border-primary/30 pb-2">
+          <div className="space-y-4">
+            <h3 className="font-display text-2xl font-semibold border-b border-primary/30 pb-3">
               Ability Scores
             </h3>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
               {/* STR */}
               <div className="border-2 border-primary/50 rounded-lg p-3 text-center bg-background/50">
-                <div className="text-xs font-body text-muted-foreground mb-1">STRENGTH</div>
-                <div className="text-3xl font-display font-bold">{character.attributes.strength}</div>
-                <div className="text-sm font-body mt-1">
+                <div className="text-sm font-body text-muted-foreground mb-1.5 font-semibold">STR</div>
+                <div className="text-3xl font-display font-bold mb-1">{character.attributes.strength}</div>
+                <div className="text-sm font-body font-semibold">
                   {formatModifier(getModifier(character.attributes.strength))}
                 </div>
               </div>
 
               {/* DEX */}
               <div className="border-2 border-primary/50 rounded-lg p-3 text-center bg-background/50">
-                <div className="text-xs font-body text-muted-foreground mb-1">DEXTERITY</div>
-                <div className="text-3xl font-display font-bold">{character.attributes.dexterity}</div>
-                <div className="text-sm font-body mt-1">
+                <div className="text-sm font-body text-muted-foreground mb-1.5 font-semibold">DEX</div>
+                <div className="text-3xl font-display font-bold mb-1">{character.attributes.dexterity}</div>
+                <div className="text-sm font-body font-semibold">
                   {formatModifier(getModifier(character.attributes.dexterity))}
                 </div>
               </div>
 
               {/* CON */}
               <div className="border-2 border-primary/50 rounded-lg p-3 text-center bg-background/50">
-                <div className="text-xs font-body text-muted-foreground mb-1">CONSTITUTION</div>
-                <div className="text-3xl font-display font-bold">{character.attributes.constitution}</div>
-                <div className="text-sm font-body mt-1">
+                <div className="text-sm font-body text-muted-foreground mb-1.5 font-semibold">CON</div>
+                <div className="text-3xl font-display font-bold mb-1">{character.attributes.constitution}</div>
+                <div className="text-sm font-body font-semibold">
                   {formatModifier(getModifier(character.attributes.constitution))}
                 </div>
               </div>
 
               {/* INT */}
               <div className="border-2 border-primary/50 rounded-lg p-3 text-center bg-background/50">
-                <div className="text-xs font-body text-muted-foreground mb-1">INTELLIGENCE</div>
-                <div className="text-3xl font-display font-bold">{character.attributes.intelligence}</div>
-                <div className="text-sm font-body mt-1">
+                <div className="text-sm font-body text-muted-foreground mb-1.5 font-semibold">INT</div>
+                <div className="text-3xl font-display font-bold mb-1">{character.attributes.intelligence}</div>
+                <div className="text-sm font-body font-semibold">
                   {formatModifier(getModifier(character.attributes.intelligence))}
                 </div>
               </div>
 
               {/* WIS */}
               <div className="border-2 border-primary/50 rounded-lg p-3 text-center bg-background/50">
-                <div className="text-xs font-body text-muted-foreground mb-1">WISDOM</div>
-                <div className="text-3xl font-display font-bold">{character.attributes.wisdom}</div>
-                <div className="text-sm font-body mt-1">
+                <div className="text-sm font-body text-muted-foreground mb-1.5 font-semibold">WIS</div>
+                <div className="text-3xl font-display font-bold mb-1">{character.attributes.wisdom}</div>
+                <div className="text-sm font-body font-semibold">
                   {formatModifier(getModifier(character.attributes.wisdom))}
                 </div>
               </div>
 
               {/* CHA */}
               <div className="border-2 border-primary/50 rounded-lg p-3 text-center bg-background/50">
-                <div className="text-xs font-body text-muted-foreground mb-1">CHARISMA</div>
-                <div className="text-3xl font-display font-bold">{character.attributes.charisma}</div>
-                <div className="text-sm font-body mt-1">
+                <div className="text-sm font-body text-muted-foreground mb-1.5 font-semibold">CHA</div>
+                <div className="text-3xl font-display font-bold mb-1">{character.attributes.charisma}</div>
+                <div className="text-sm font-body font-semibold">
                   {formatModifier(getModifier(character.attributes.charisma))}
                 </div>
               </div>
             </div>
 
             {/* Proficiency Bonus */}
-            <div className="border border-border rounded-lg p-3 bg-muted/30">
-              <div className="text-xs font-body text-muted-foreground mb-1">PROFICIENCY BONUS</div>
-              <div className="text-2xl font-display font-bold text-center">
+            <div className="border border-border rounded-lg p-4 bg-muted/30">
+              <div className="text-sm font-body text-muted-foreground mb-2 font-semibold">PROFICIENCY BONUS</div>
+              <div className="text-3xl font-display font-bold text-center">
                 {formatModifier(proficiencyBonus)}
               </div>
             </div>
           </div>
 
           {/* Middle Column: Skills */}
-          <div className="space-y-3">
-            <h3 className="font-display text-lg font-semibold border-b border-primary/30 pb-2">
+          <div className="space-y-4">
+            <h3 className="font-display text-2xl font-semibold border-b border-primary/30 pb-3">
               Skills
             </h3>
-            <div className="space-y-1 text-sm font-body max-h-[600px] overflow-y-auto pr-2">
+            <div className="space-y-2 text-base font-body max-h-[600px] overflow-y-auto pr-2 scrollbar-styled">
               {DND_SKILLS.map((skill) => {
                 const skillData = character.skills?.find(s => s.name === skill.name)
                 const isExpertise = character.expertise?.includes(skill.name)
@@ -222,23 +222,23 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                 return (
                   <div
                     key={skill.name}
-                    className="flex items-center justify-between py-1 border-b border-border/30"
+                    className="flex items-center justify-between py-2 border-b border-border/30"
                   >
                     <div className="flex items-center gap-2">
                       {(isProficient || isExpertise) && (
-                        <span className="text-primary font-bold">✓</span>
+                        <span className="text-primary font-bold text-lg">✓</span>
                       )}
-                      <span className={isProficient ? "font-semibold" : ""}>
+                      <span className={isProficient ? "font-semibold text-base" : "text-base"}>
                         {skill.name}
                       </span>
-                      <span className="text-xs text-muted-foreground">({skill.ability})</span>
+                      <span className="text-sm text-muted-foreground">({skill.ability})</span>
                       {isExpertise && (
-                        <span className="text-xs bg-primary/20 text-primary px-1 rounded font-semibold">
+                        <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-semibold">
                           EXP
                         </span>
                       )}
                     </div>
-                    <span className={isProficient ? "text-primary font-semibold" : "text-muted-foreground"}>
+                    <span className={isProficient ? "text-primary font-semibold text-base" : "text-muted-foreground text-base"}>
                       {formatModifier(modifier)}
                     </span>
                   </div>
@@ -252,14 +252,14 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
             {/* Expertise */}
             {character.expertise && character.expertise.length > 0 && (
               <div>
-                <h3 className="font-display text-lg font-semibold border-b border-primary/30 pb-2 mb-2">
+                <h3 className="font-display text-2xl font-semibold border-b border-primary/30 pb-3 mb-3">
                   Expertise
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {character.expertise.map((skill, idx) => (
                     <span
                       key={idx}
-                      className="px-2 py-1 bg-primary/20 text-primary rounded-md font-body text-xs font-semibold"
+                      className="px-3 py-1.5 bg-primary/20 text-primary rounded-md font-body text-sm font-semibold"
                     >
                       {skill}
                     </span>
@@ -273,17 +273,17 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
               <div>
                 <button
                   onClick={() => toggleSection("traits")}
-                  className="flex items-center justify-between w-full mb-2"
+                  className="flex items-center justify-between w-full mb-3"
                 >
-                  <h3 className="font-display text-lg font-semibold border-b border-primary/30 pb-2">
+                  <h3 className="font-display text-2xl font-semibold border-b border-primary/30 pb-3">
                     Traits ({character.traits.length})
                   </h3>
-                  <span className="text-muted-foreground font-body">
+                  <span className="text-muted-foreground font-body text-lg">
                     {expandedSections.traits ? "▼" : "▶"}
                   </span>
                 </button>
                 {expandedSections.traits && (
-                  <ul className="list-disc list-inside space-y-1 pl-2 text-sm font-body text-muted-foreground">
+                  <ul className="list-disc list-inside space-y-2 pl-2 text-base font-body text-muted-foreground">
                     {character.traits.map((trait, idx) => (
                       <li key={idx}>{trait}</li>
                     ))}
@@ -296,15 +296,15 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
 
         {/* Spells Section */}
         {character.spells && character.spells.length > 0 && (
-          <div className="border-t border-border pt-4">
+          <div className="border-t border-border pt-6">
             <button
               onClick={() => toggleSection("spells")}
-              className="flex items-center justify-between w-full mb-3"
+              className="flex items-center justify-between w-full mb-4"
             >
-              <h3 className="font-display text-xl font-semibold">
+              <h3 className="font-display text-2xl font-semibold">
                 Spells ({character.spells.length})
               </h3>
-              <span className="text-muted-foreground font-body">
+              <span className="text-muted-foreground font-body text-lg">
                 {expandedSections.spells ? "▼" : "▶"}
               </span>
             </button>
@@ -313,15 +313,15 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                 {character.spells.map((spell, idx) => (
                   <div
                     key={idx}
-                    className="border border-border rounded-lg p-3 bg-background/50"
+                    className="border border-border rounded-lg p-4 bg-background/50"
                   >
-                    <div className="font-display font-semibold text-base mb-1">
+                    <div className="font-display font-semibold text-lg mb-2">
                       {spell.name}
-                      <span className="text-muted-foreground text-sm font-body ml-2">
+                      <span className="text-muted-foreground text-base font-body ml-2">
                         (Level {spell.level})
                       </span>
                     </div>
-                    <div className="text-sm font-body text-muted-foreground">
+                    <div className="text-base font-body text-muted-foreground leading-relaxed">
                       {spell.description}
                     </div>
                   </div>
@@ -332,20 +332,20 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
         )}
 
         {/* Background Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-border pt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-border pt-6">
           {/* History */}
           <div>
             <button
               onClick={() => toggleSection("history")}
-              className="flex items-center justify-between w-full mb-2"
+              className="flex items-center justify-between w-full mb-3"
             >
-              <h3 className="font-display text-lg font-semibold">History</h3>
-              <span className="text-muted-foreground font-body">
+              <h3 className="font-display text-2xl font-semibold">History</h3>
+              <span className="text-muted-foreground font-body text-lg">
                 {expandedSections.history ? "▼" : "▶"}
               </span>
             </button>
             {expandedSections.history && (
-              <p className="font-body text-sm text-muted-foreground leading-relaxed">
+              <p className="font-body text-base text-muted-foreground leading-relaxed">
                 {character.history}
               </p>
             )}
@@ -355,25 +355,35 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
           <div>
             <button
               onClick={() => toggleSection("personality")}
-              className="flex items-center justify-between w-full mb-2"
+              className="flex items-center justify-between w-full mb-3"
             >
-              <h3 className="font-display text-lg font-semibold">Personality</h3>
-              <span className="text-muted-foreground font-body">
+              <h3 className="font-display text-2xl font-semibold">Personality</h3>
+              <span className="text-muted-foreground font-body text-lg">
                 {expandedSections.personality ? "▼" : "▶"}
               </span>
             </button>
             {expandedSections.personality && (
-              <p className="font-body text-sm text-muted-foreground leading-relaxed">
+              <p className="font-body text-base text-muted-foreground leading-relaxed">
                 {character.personality}
               </p>
             )}
           </div>
         </div>
 
+        {/* Voice Description */}
+        {character.voiceDescription && (
+          <div className="border-t border-border pt-4">
+            <h3 className="font-display text-2xl font-semibold mb-2">Voice</h3>
+            <p className="font-body text-base text-muted-foreground italic">
+              {character.voiceDescription}
+            </p>
+          </div>
+        )}
+
         {/* Associated Mission */}
         {character.associatedMission && (
           <div className="border-t border-border pt-4">
-            <p className="font-body text-sm">
+            <p className="font-body text-base">
               <span className="font-semibold">Related Mission:</span>{" "}
               <span className="text-primary font-semibold">{character.associatedMission}</span>
             </p>

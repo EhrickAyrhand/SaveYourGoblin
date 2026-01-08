@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
 import { LibraryCard } from "@/components/rpg/library-card"
 import { ContentDetailModal } from "@/components/rpg/content-detail-modal"
 
@@ -186,24 +187,13 @@ export default function LibraryPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-4xl font-bold">Your Content Library</h1>
-            <p className="mt-2 text-muted-foreground font-body">
+            <h1 className="font-display text-5xl font-bold mb-3">Your Content Library</h1>
+            <p className="mt-2 text-base text-muted-foreground font-body">
               Browse and manage all your generated RPG content
             </p>
           </div>
           <div className="flex gap-2">
-            <Button asChild variant="outline" className="font-body">
-              <Link href="/generator">Generate New</Link>
-            </Button>
-            <Button asChild variant="outline" className="font-body">
-              <Link href="/profile">Profile</Link>
-            </Button>
-            <Button asChild variant="outline" className="font-body">
-              <Link href="/">Home</Link>
-            </Button>
-            <Button variant="outline" onClick={handleSignOut} className="font-body">
-              Sign Out
-            </Button>
+            <NavigationDropdown onSignOut={handleSignOut} />
           </div>
         </div>
 
@@ -226,10 +216,10 @@ export default function LibraryPage() {
 
         {/* Filters and Search */}
         <Card className="parchment ornate-border">
-          <CardContent className="p-4">
-            <div className="space-y-4">
+          <CardContent className="p-6">
+            <div className="space-y-6">
               {/* Type Filters */}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3">
                 {[
                   { value: "all" as const, label: "All", icon: "📚" },
                   { value: "character" as const, label: "Characters", icon: "🎭" },
@@ -241,13 +231,13 @@ export default function LibraryPage() {
                     type="button"
                     onClick={() => setSelectedType(filter.value)}
                     disabled={isFetching}
-                    className={`rounded-lg border-2 px-4 py-2 text-sm font-body transition-all ${
+                    className={`rounded-lg border-2 px-5 py-2.5 text-base font-body transition-all font-medium ${
                       selectedType === filter.value
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border hover:border-primary/50"
                     } ${isFetching ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                   >
-                    <span className="mr-2">{filter.icon}</span>
+                    <span className="mr-2 text-lg">{filter.icon}</span>
                     {filter.label}
                   </button>
                 ))}
@@ -261,13 +251,13 @@ export default function LibraryPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   disabled={isFetching}
-                  className="w-full rounded-md border border-input bg-background px-4 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-body"
+                  className="w-full rounded-md border border-input bg-background px-4 py-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-body"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-lg"
                   >
                     ✕
                   </button>
@@ -276,7 +266,7 @@ export default function LibraryPage() {
 
               {/* Results Count */}
               {!isFetching && (
-                <p className="text-sm text-muted-foreground font-body">
+                <p className="text-base text-muted-foreground font-body font-medium">
                   {filteredContent.length} {filteredContent.length === 1 ? "item" : "items"} found
                   {selectedType !== "all" && ` (${selectedType}s)`}
                 </p>
@@ -304,17 +294,17 @@ export default function LibraryPage() {
         ) : filteredContent.length === 0 ? (
           <Card className="parchment ornate-border">
             <CardContent className="p-12 text-center">
-              <div className="space-y-4">
-                <div className="text-6xl">📚</div>
+              <div className="space-y-6">
+                <div className="text-7xl">📚</div>
                 <div>
-                  <h3 className="font-display text-2xl font-semibold mb-2">No Content Found</h3>
-                  <p className="font-body text-muted-foreground mb-4">
+                  <h3 className="font-display text-3xl font-semibold mb-3">No Content Found</h3>
+                  <p className="font-body text-base text-muted-foreground mb-6">
                     {content.length === 0
                       ? "You haven't generated any content yet. Start creating amazing RPG content!"
                       : "Try adjusting your filters or search query."}
                   </p>
                   {content.length === 0 && (
-                    <Button asChild className="font-body">
+                    <Button asChild size="lg" className="font-body text-lg px-6 py-6">
                       <Link href="/generator">Generate Your First Content</Link>
                     </Button>
                   )}

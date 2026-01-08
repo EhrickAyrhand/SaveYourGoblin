@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AnimatedBanner } from "@/components/ui/animated-banner"
+import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
 import { CharacterCard } from "@/components/rpg/character-card"
 import { EnvironmentCard } from "@/components/rpg/environment-card"
 import { MissionCard } from "@/components/rpg/mission-card"
@@ -34,6 +36,8 @@ export default function GeneratorPage() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [generationSuccess, setGenerationSuccess] = useState(false)
+  const [showGenerationBanner, setShowGenerationBanner] = useState(false)
+  const [showSaveBanner, setShowSaveBanner] = useState(false)
 
   useEffect(() => {
     async function checkUser() {
@@ -55,12 +59,15 @@ export default function GeneratorPage() {
     checkUser()
   }, [router])
 
-  // Clear generated content when content type changes
+  // Clear generated content and scenario when content type changes
   useEffect(() => {
     setGeneratedContent(null)
     setGenerationSuccess(false)
     setSaveSuccess(false)
     setSaveError(null)
+    setShowGenerationBanner(false)
+    setShowSaveBanner(false)
+    setScenario("") // Clear the input field when content type changes
   }, [contentType])
 
   async function handleGenerate() {
@@ -147,10 +154,7 @@ export default function GeneratorPage() {
 
       // Show success notification
       setGenerationSuccess(true)
-      setTimeout(() => setGenerationSuccess(false), 5000)
-
-      // Auto-save after successful generation
-      await handleAutoSave(parsedContent)
+      setShowGenerationBanner(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate content. Please try again.")
       console.error(err)
@@ -159,9 +163,8 @@ export default function GeneratorPage() {
     }
   }
 
-  async function handleAutoSave(contentToSave?: GeneratedContent) {
-    const content = contentToSave || generatedContent
-    if (!content || !user) return
+  async function handleSaveContent() {
+    if (!generatedContent || !user) return
 
     setIsSaving(true)
     setSaveSuccess(false)
@@ -186,7 +189,7 @@ export default function GeneratorPage() {
         body: JSON.stringify({
           type: contentType,
           scenario: scenario.trim(),
-          contentData: content,
+          contentData: generatedContent,
         }),
       })
 
@@ -199,11 +202,15 @@ export default function GeneratorPage() {
       }
 
       setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 5000)
+      setShowSaveBanner(true)
+      setTimeout(() => {
+        setShowSaveBanner(false)
+        setSaveSuccess(false)
+      }, 5000)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to save content"
       setSaveError(errorMessage)
-      console.error("Auto-save failed:", err)
+      console.error("Save failed:", err)
     } finally {
       setIsSaving(false)
     }
@@ -232,28 +239,43 @@ export default function GeneratorPage() {
 
   return (
     <div className="min-h-screen bg-background p-4">
-      <div className="mx-auto max-w-5xl space-y-6">
+      {/* Animated Banners - Stack properly */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center gap-2 pt-4">
+        {showSaveBanner && (
+          <AnimatedBanner
+            title="Content Saved!"
+            message="Your content has been saved successfully to your library."
+            variant="success"
+            onDismiss={() => {
+              setShowSaveBanner(false)
+              setSaveSuccess(false)
+            }}
+          />
+        )}
+        {showGenerationBanner && !showSaveBanner && (
+          <AnimatedBanner
+            title="Content Generated Successfully!"
+            message={`Your ${contentType} has been created and is displayed below.`}
+            variant="success"
+            onDismiss={() => {
+              setShowGenerationBanner(false)
+              setGenerationSuccess(false)
+            }}
+          />
+        )}
+      </div>
+      
+      <div className="mx-auto max-w-5xl space-y-6 pt-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-4xl font-bold">RPG Content Generator</h1>
-            <p className="mt-2 text-muted-foreground font-body">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="min-w-0">
+            <h1 className="font-display text-5xl font-bold mb-3 whitespace-nowrap">RPG Content Generator</h1>
+            <p className="mt-2 text-base text-muted-foreground font-body">
               Describe what you need, and AI will create it for your campaign
             </p>
           </div>
           <div className="flex gap-2">
-            <Button asChild variant="outline" className="font-body">
-              <Link href="/library">📚 Library</Link>
-            </Button>
-            <Button asChild variant="outline" className="font-body">
-              <Link href="/profile">Profile</Link>
-            </Button>
-            <Button asChild variant="outline" className="font-body">
-              <Link href="/">Home</Link>
-            </Button>
-            <Button variant="outline" onClick={handleSignOut} className="font-body">
-              Sign Out
-            </Button>
+            <NavigationDropdown onSignOut={handleSignOut} />
           </div>
         </div>
 
@@ -279,15 +301,15 @@ export default function GeneratorPage() {
         {/* Generator Form */}
         <Card className="parchment ornate-border">
           <CardHeader>
-            <CardTitle className="font-display text-2xl">What do you need?</CardTitle>
-            <CardDescription className="font-body">
+            <CardTitle className="font-display text-3xl mb-2">What do you need?</CardTitle>
+            <CardDescription className="font-body text-base">
               Describe the situation or what you want to create. For example: "In this tavern there's a Bard who talks about an ancient flute"
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 p-6">
             {/* Content Type Selection */}
-            <div className="space-y-3">
-              <Label className="font-body text-base font-semibold">Content Type</Label>
+            <div className="space-y-4">
+              <Label className="font-body text-lg font-semibold">Content Type</Label>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {[
                   {
@@ -330,39 +352,45 @@ export default function GeneratorPage() {
 
             {/* Scenario Input */}
             <div className="space-y-3">
-              <Label htmlFor="scenario" className="font-body text-base font-semibold">
+              <Label htmlFor="scenario" className="font-body text-lg font-semibold">
                 Describe Your Scenario
               </Label>
               <textarea
                 id="scenario"
                 value={scenario}
                 onChange={(e) => setScenario(e.target.value)}
-                placeholder='Example: "In this tavern there is a Bard and he will talk with the heroes about an ancient flute"'
+                placeholder={
+                  contentType === "character"
+                    ? 'Example: "A bard level 3 with high charisma, expertise in Performance and Persuasion, knows Vicious Mockery and Healing Word"'
+                    : contentType === "environment"
+                    ? 'Example: "A dark, abandoned wizard\'s tower filled with magical traps and ancient artifacts"'
+                    : 'Example: "The heroes must retrieve a stolen magical artifact from a thieves\' guild hideout"'
+                }
                 rows={8}
                 disabled={isGenerating}
-                className="w-full rounded-md border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-body resize-none"
+                className="w-full rounded-md border border-input bg-background px-4 py-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-body resize-none"
               />
-              <p className="text-xs text-muted-foreground font-body">
+              <p className="text-sm text-muted-foreground font-body">
                 Be as detailed or as simple as you want. The AI will expand on your description.
               </p>
             </div>
 
             {/* Generate Button */}
-            <div className="flex justify-end gap-4">
+            <div className="flex justify-end gap-4 pt-2">
               <Button
                 onClick={handleGenerate}
                 disabled={isGenerating || !scenario.trim()}
                 size="lg"
-                className="min-w-[160px] font-display text-lg"
+                className="min-w-[180px] font-display text-lg px-6 py-6"
               >
                 {isGenerating ? (
                   <>
-                    <span className="mr-2">⚡</span>
+                    <span className="mr-2 text-xl">⚡</span>
                     Generating...
                   </>
                 ) : (
                   <>
-                    <span className="mr-2">✨</span>
+                    <span className="mr-2 text-xl">✨</span>
                     Generate Content
                   </>
                 )}
@@ -372,12 +400,12 @@ export default function GeneratorPage() {
         </Card>
 
         {/* Example Cards */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <Card className="parchment ornate-border">
             <CardHeader>
-              <CardTitle className="font-display text-xl">💡 Tips</CardTitle>
+              <CardTitle className="font-display text-2xl mb-2">💡 Tips</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm font-body">
+            <CardContent className="space-y-3 text-base font-body p-6">
               <p>• Be specific about the setting and context</p>
               <p>• Mention important details (race, class, mood, etc.)</p>
               <p>• Include any special requirements or constraints</p>
@@ -387,42 +415,111 @@ export default function GeneratorPage() {
 
           <Card className="parchment ornate-border">
             <CardHeader>
-              <CardTitle className="font-display text-xl">📝 Examples</CardTitle>
+              <CardTitle className="font-display text-2xl mb-2">📝 Examples</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm font-body">
-              <button
-                type="button"
-                onClick={() => {
-                  setContentType("character")
-                  setScenario("In this tavern there's a Bard and he will talk with the heroes about an ancient flute")
-                }}
-                className="text-left text-primary hover:underline w-full"
-                disabled={isGenerating}
-              >
-                "A mysterious Bard in a tavern talking about an ancient flute"
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setContentType("environment")
-                  setScenario("A dark, abandoned wizard's tower filled with magical traps and ancient artifacts")
-                }}
-                className="text-left text-primary hover:underline w-full"
-                disabled={isGenerating}
-              >
-                "A dark wizard's tower with traps and artifacts"
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setContentType("mission")
-                  setScenario("The heroes must retrieve a stolen magical artifact from a thieves' guild hideout")
-                }}
-                className="text-left text-primary hover:underline w-full"
-                disabled={isGenerating}
-              >
-                "Retrieve a stolen artifact from thieves' guild"
-              </button>
+            <CardContent className="space-y-3 text-base font-body p-6">
+              {contentType === "character" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScenario("In this tavern there's a Bard and he will talk with the heroes about an ancient flute")
+                    }}
+                    className="text-left text-primary hover:underline w-full text-base transition-colors"
+                    disabled={isGenerating}
+                  >
+                    "A mysterious Bard in a tavern talking about an ancient flute"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScenario("An elderly Human wizard who runs a magic shop. They're friendly but forgetful, and they have information about a lost spellbook")
+                    }}
+                    className="text-left text-primary hover:underline w-full text-base transition-colors"
+                    disabled={isGenerating}
+                  >
+                    "An elderly wizard shopkeeper with information about a lost spellbook"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScenario("A suspicious Tiefling rogue in the shadows of the marketplace, watching the party with keen interest")
+                    }}
+                    className="text-left text-primary hover:underline w-full text-base transition-colors"
+                    disabled={isGenerating}
+                  >
+                    "A suspicious Tiefling rogue watching from the shadows"
+                  </button>
+                </>
+              )}
+              {contentType === "environment" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScenario("A dark, abandoned wizard's tower filled with magical traps and ancient artifacts")
+                    }}
+                    className="text-left text-primary hover:underline w-full text-base transition-colors"
+                    disabled={isGenerating}
+                  >
+                    "A dark wizard's tower with traps and artifacts"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScenario("A bustling marketplace in the city center. Merchants call out their wares, and the smell of spices fills the air")
+                    }}
+                    className="text-left text-primary hover:underline w-full text-base transition-colors"
+                    disabled={isGenerating}
+                  >
+                    "A bustling marketplace with merchants and spices"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScenario("An ancient forest clearing with glowing mushrooms and a mysterious stone circle")
+                    }}
+                    className="text-left text-primary hover:underline w-full text-base transition-colors"
+                    disabled={isGenerating}
+                  >
+                    "An ancient forest clearing with glowing mushrooms"
+                  </button>
+                </>
+              )}
+              {contentType === "mission" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScenario("The heroes must retrieve a stolen magical artifact from a thieves' guild hideout")
+                    }}
+                    className="text-left text-primary hover:underline w-full text-base transition-colors"
+                    disabled={isGenerating}
+                  >
+                    "Retrieve a stolen artifact from thieves' guild"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScenario("Investigate strange disappearances in a small village. The locals suspect a werewolf is responsible")
+                    }}
+                    className="text-left text-primary hover:underline w-full text-base transition-colors"
+                    disabled={isGenerating}
+                  >
+                    "Investigate disappearances in a village - werewolf suspected"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScenario("Escort a merchant caravan through dangerous mountain passes while protecting valuable cargo")
+                    }}
+                    className="text-left text-primary hover:underline w-full text-base transition-colors"
+                    disabled={isGenerating}
+                  >
+                    "Escort a merchant caravan through dangerous mountains"
+                  </button>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -447,52 +544,38 @@ export default function GeneratorPage() {
           </Card>
         )}
 
-        {/* Generation Success Notification */}
-        {generationSuccess && (
-          <Alert className="bg-green-500/10 border-green-500 animate-in fade-in slide-in-from-top-2 shadow-lg">
-            <AlertDescription className="font-body flex items-center gap-2 text-green-600 dark:text-green-400">
-              <span className="text-2xl">✨</span>
-              <div>
-                <p className="font-display font-semibold text-lg">Content Generated Successfully!</p>
-                <p className="text-sm">Your {contentType} has been created and is displayed below.</p>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
         {generatedContent && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {saveSuccess && (
-              <Alert className="bg-primary/10 border-primary animate-in fade-in slide-in-from-top-2">
-                <AlertDescription className="font-body flex items-center gap-2">
-                  <span className="text-lg">✓</span>
-                  <span>Content saved successfully to your library!</span>
-                </AlertDescription>
-              </Alert>
-            )}
-            {saveError && (
-              <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2">
-                <AlertDescription className="font-body">
-                  <strong>Save failed:</strong> {saveError}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="ml-4 mt-2 font-body"
-                    onClick={() => handleAutoSave()}
-                    disabled={isSaving}
-                  >
-                    Retry Save
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-            {isSaving && (
-              <Alert className="animate-pulse">
-                <AlertDescription className="font-body">
-                  Saving content...
-                </AlertDescription>
-              </Alert>
-            )}
+            {/* Save Button and Status */}
+            <div className="flex items-center justify-between gap-4">
+              <Button
+                onClick={handleSaveContent}
+                disabled={isSaving || !generatedContent}
+                size="lg"
+                className="font-display text-lg min-w-[180px]"
+              >
+                {isSaving ? (
+                  <>
+                    <span className="mr-2">💾</span>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <span className="mr-2">💾</span>
+                    Save to Library
+                  </>
+                )}
+              </Button>
+              {saveError && (
+                <Alert variant="destructive" className="flex-1 animate-in fade-in slide-in-from-top-2">
+                  <AlertDescription className="font-body">
+                    <strong>Save failed:</strong> {saveError}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+
+            {/* Generated Content Cards */}
             {contentType === "character" && "name" in generatedContent && "race" in generatedContent && (
               <CharacterCard character={generatedContent as Character} />
             )}

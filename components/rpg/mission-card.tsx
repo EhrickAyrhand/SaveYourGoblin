@@ -48,22 +48,22 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
 
   return (
     <Card className="parchment ornate-border">
-      <CardHeader>
-        <div className="flex items-start justify-between mb-2">
-          <CardTitle className="font-display text-3xl">{mission.title}</CardTitle>
-          <span className={`font-display text-sm font-semibold ${difficultyColors[mission.difficulty]}`}>
+      <CardHeader className="px-6 pt-6">
+        <div className="flex items-start justify-between mb-3">
+          <CardTitle className="font-display text-4xl">{mission.title}</CardTitle>
+          <span className={`font-display text-base font-semibold ${difficultyColors[mission.difficulty]}`}>
             {difficultyBadges[mission.difficulty]}
           </span>
         </div>
-        <CardDescription className="font-body text-base">
+        <CardDescription className="font-body text-base leading-relaxed">
           {mission.context}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="p-6 space-y-6">
         {/* Description */}
         <div>
-          <h3 className="font-display text-lg font-semibold mb-2">Mission Brief</h3>
-          <p className="font-body text-sm text-muted-foreground leading-relaxed">
+          <h3 className="font-display text-2xl font-semibold mb-3">Mission Brief</h3>
+          <p className="font-body text-base text-muted-foreground leading-relaxed">
             {mission.description}
           </p>
         </div>
@@ -71,22 +71,22 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
         {/* Objectives */}
         {mission.objectives && mission.objectives.length > 0 && (
           <div>
-            <h3 className="font-display text-lg font-semibold mb-3">Objectives</h3>
-            <div className="space-y-2">
+            <h3 className="font-display text-2xl font-semibold mb-4">Objectives</h3>
+            <div className="space-y-3">
               {mission.objectives.map((objective, idx) => (
                 <div
                   key={idx}
-                  className={`font-body text-sm p-3 rounded-md border-l-4 ${
+                  className={`font-body text-base p-4 rounded-md border-l-4 ${
                     objective.primary
                       ? "bg-primary/10 border-primary"
                       : "bg-muted/50 border-muted-foreground/30"
                   }`}
                 >
-                  <div className="flex items-start gap-2">
-                    <span className="font-semibold text-primary mt-0.5">
+                  <div className="flex items-start gap-3">
+                    <span className="font-semibold text-primary text-lg mt-0.5">
                       {objective.primary ? "★" : "○"}
                     </span>
-                    <span className={objective.primary ? "" : "text-muted-foreground"}>
+                    <span className={objective.primary ? "font-medium" : "text-muted-foreground"}>
                       {objective.description}
                     </span>
                   </div>
@@ -99,41 +99,41 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
         {/* Rewards */}
         {mission.rewards && (
         <div>
-          <h3 className="font-display text-lg font-semibold mb-3">Rewards</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+          <h3 className="font-display text-2xl font-semibold mb-4">Rewards</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             {mission.rewards.xp !== undefined && (
-              <div className="p-3 rounded-md bg-muted/50 border border-border">
-                <p className="font-body text-xs text-muted-foreground mb-1">Experience</p>
-                <p className="font-display text-lg font-semibold text-primary">
+              <div className="p-4 rounded-md bg-muted/50 border border-border">
+                <p className="font-body text-sm text-muted-foreground mb-2">Experience</p>
+                <p className="font-display text-2xl font-semibold text-primary">
                   {mission.rewards.xp.toLocaleString()} XP
                 </p>
               </div>
             )}
             {mission.rewards.gold !== undefined && (
-              <div className="p-3 rounded-md bg-muted/50 border border-border">
-                <p className="font-body text-xs text-muted-foreground mb-1">Gold</p>
-                <p className="font-display text-lg font-semibold text-primary">
+              <div className="p-4 rounded-md bg-muted/50 border border-border">
+                <p className="font-body text-sm text-muted-foreground mb-2">Gold</p>
+                <p className="font-display text-2xl font-semibold text-primary">
                   {mission.rewards.gold.toLocaleString()} gp
                 </p>
               </div>
             )}
             {mission.rewards.items && mission.rewards.items.length > 0 && (
-              <div className="p-3 rounded-md bg-muted/50 border border-border">
-                <p className="font-body text-xs text-muted-foreground mb-1">Items</p>
-                <p className="font-display text-lg font-semibold text-primary">
+              <div className="p-4 rounded-md bg-muted/50 border border-border">
+                <p className="font-body text-sm text-muted-foreground mb-2">Items</p>
+                <p className="font-display text-2xl font-semibold text-primary">
                   {mission.rewards.items.length} item{mission.rewards.items.length !== 1 ? "s" : ""}
                 </p>
               </div>
             )}
           </div>
           {mission.rewards.items && mission.rewards.items.length > 0 && (
-            <div className="mt-2">
-              <p className="font-body text-xs text-muted-foreground mb-2">Item List:</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="mt-3">
+              <p className="font-body text-sm text-muted-foreground mb-3">Item List:</p>
+              <div className="flex flex-wrap gap-3">
                 {mission.rewards.items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="font-body text-sm px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20"
+                    className="font-body text-base px-4 py-2 rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold"
                   >
                     {item}
                   </div>
@@ -147,12 +147,12 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
         {/* Related NPCs */}
         {mission.relatedNPCs && mission.relatedNPCs.length > 0 && (
           <div>
-            <h3 className="font-display text-lg font-semibold mb-3">Related NPCs</h3>
-            <div className="flex flex-wrap gap-2">
+            <h3 className="font-display text-2xl font-semibold mb-4">Related NPCs</h3>
+            <div className="flex flex-wrap gap-3">
               {mission.relatedNPCs.map((npc, idx) => (
                 <div
                   key={idx}
-                  className="font-body text-sm px-3 py-1.5 rounded-full bg-muted/50 border border-border"
+                  className="font-body text-base px-4 py-2 rounded-full bg-muted/50 border border-border font-medium"
                 >
                   {npc}
                 </div>
@@ -164,12 +164,12 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
         {/* Related Locations */}
         {mission.relatedLocations && mission.relatedLocations.length > 0 && (
           <div>
-            <h3 className="font-display text-lg font-semibold mb-3">Related Locations</h3>
-            <div className="flex flex-wrap gap-2">
+            <h3 className="font-display text-2xl font-semibold mb-4">Related Locations</h3>
+            <div className="flex flex-wrap gap-3">
               {mission.relatedLocations.map((location, idx) => (
                 <div
                   key={idx}
-                  className="font-body text-sm px-3 py-1.5 rounded-full bg-muted/50 border border-border"
+                  className="font-body text-base px-4 py-2 rounded-full bg-muted/50 border border-border font-medium"
                 >
                   🗺️ {location}
                 </div>
