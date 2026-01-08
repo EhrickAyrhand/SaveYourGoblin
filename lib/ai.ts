@@ -28,6 +28,15 @@ const skillSchema = z.object({
   modifier: z.number().int().describe('The skill modifier (typically -5 to +10)'),
 })
 
+const attributesSchema = z.object({
+  strength: z.number().int().min(1).max(30).describe('Strength attribute value (1-30, typically 8-15 for starting characters)'),
+  dexterity: z.number().int().min(1).max(30).describe('Dexterity attribute value (1-30, typically 8-15 for starting characters)'),
+  constitution: z.number().int().min(1).max(30).describe('Constitution attribute value (1-30, typically 8-15 for starting characters)'),
+  intelligence: z.number().int().min(1).max(30).describe('Intelligence attribute value (1-30, typically 8-15 for starting characters)'),
+  wisdom: z.number().int().min(1).max(30).describe('Wisdom attribute value (1-30, typically 8-15 for starting characters)'),
+  charisma: z.number().int().min(1).max(30).describe('Charisma attribute value (1-30, typically 8-15 for starting characters)'),
+})
+
 const characterSchema = z.object({
   name: z.string().describe('The character\'s full name'),
   race: z.string().describe('D&D 5e race (e.g., Human, Elf, Dwarf, Tiefling)'),
@@ -36,10 +45,12 @@ const characterSchema = z.object({
   background: z.string().describe('Character background (e.g., Entertainer, Sage, Noble)'),
   history: z.string().describe('A detailed backstory and history of the character'),
   personality: z.string().describe('A description of the character\'s personality traits and demeanor'),
+  attributes: attributesSchema.describe('D&D 5e ability scores (STR, DEX, CON, INT, WIS, CHA)'),
+  expertise: z.array(z.string()).describe('Array of skill names that the character has expertise in (double proficiency bonus). Typically 2-4 skills for classes like Rogue or Bard.'),
   spells: z.array(spellSchema).describe('Array of spells the character knows'),
   skills: z.array(skillSchema).describe('Array of skills with proficiency and modifiers'),
   traits: z.array(z.string()).describe('Character traits, quirks, or notable features'),
-  voiceLines: z.array(z.string()).describe('Sample dialogue lines the character might say'),
+  voiceDescription: z.string().describe('Voice description (e.g., "Hoarse voice", "Sweet voice", "Angry voice", "Deep voice", "Melodic voice", "Raspy voice") - NOT dialogue lines, just the voice quality/characteristics'),
   associatedMission: z.string().optional().describe('Optional: Name of a related mission or quest'),
 })
 
@@ -103,12 +114,14 @@ export async function generateRPGContent(
 Generate a complete character with:
 - A fitting name, race, class, and background
 - Level between 1-10 (choose appropriately based on the scenario)
+- D&D 5e ability scores (STR, DEX, CON, INT, WIS, CHA) - values typically 8-15 for starting characters, with one or two higher stats (15-17) based on class
 - A compelling backstory that connects to the scenario
 - Distinct personality traits
+- Expertise in 2-4 skills (if the class grants expertise, like Rogue or Bard)
 - Appropriate spells for their class and level
 - Relevant skills with proficiency bonuses
 - Character traits and quirks
-- 3-5 memorable voice lines they might say
+- Voice description (e.g., "Hoarse voice", "Sweet voice", "Angry voice", "Deep voice", "Melodic voice", "Raspy voice") - NOT dialogue phrases, just the voice quality
 - Optional associated mission if relevant
 
 Make the character feel alive and ready to use in a campaign.`
@@ -190,6 +203,7 @@ function generateMockCharacter(scenario: string): Character {
   const races = ['Human', 'Elf', 'Dwarf', 'Halfling', 'Tiefling', 'Dragonborn', 'Gnome', 'Half-Elf']
   const classes = ['Bard', 'Wizard', 'Fighter', 'Rogue', 'Cleric', 'Paladin', 'Ranger', 'Sorcerer']
   const backgrounds = ['Entertainer', 'Sage', 'Noble', 'Criminal', 'Acolyte', 'Folk Hero', 'Hermit', 'Soldier']
+  const voiceDescriptions = ['Hoarse voice', 'Sweet voice', 'Angry voice', 'Deep voice', 'Melodic voice', 'Raspy voice', 'Gentle voice', 'Commanding voice', 'Whispery voice', 'Boisterous voice']
   
   const race = races[Math.floor(Math.random() * races.length)]
   const charClass = classes[Math.floor(Math.random() * classes.length)]
@@ -199,6 +213,58 @@ function generateMockCharacter(scenario: string): Character {
   const nameMatch = scenario.match(/\b([A-Z][a-z]+)\b/)
   const name = nameMatch ? nameMatch[1] : `${race} ${charClass}`
 
+  // Generate ability scores (standard array or point buy equivalent)
+  // One primary stat higher (15-17), secondary (13-15), others (10-12)
+  const primaryStat = 15 + Math.floor(Math.random() * 3) // 15-17
+  const secondaryStat = 13 + Math.floor(Math.random() * 3) // 13-15
+  const otherStats = Array(4).fill(0).map(() => 10 + Math.floor(Math.random() * 3)) // 10-12
+  
+  // Assign stats based on class
+  let attributes
+  if (charClass === 'Wizard' || charClass === 'Sorcerer') {
+    attributes = {
+      strength: otherStats[0],
+      dexterity: secondaryStat,
+      constitution: otherStats[1],
+      intelligence: primaryStat,
+      wisdom: otherStats[2],
+      charisma: otherStats[3],
+    }
+  } else if (charClass === 'Bard' || charClass === 'Paladin' || charClass === 'Sorcerer') {
+    attributes = {
+      strength: otherStats[0],
+      dexterity: secondaryStat,
+      constitution: otherStats[1],
+      intelligence: otherStats[2],
+      wisdom: otherStats[3],
+      charisma: primaryStat,
+    }
+  } else if (charClass === 'Rogue' || charClass === 'Ranger') {
+    attributes = {
+      strength: otherStats[0],
+      dexterity: primaryStat,
+      constitution: secondaryStat,
+      intelligence: otherStats[1],
+      wisdom: otherStats[2],
+      charisma: otherStats[3],
+    }
+  } else {
+    // Fighter, Paladin, etc.
+    attributes = {
+      strength: primaryStat,
+      dexterity: otherStats[0],
+      constitution: secondaryStat,
+      intelligence: otherStats[1],
+      wisdom: otherStats[2],
+      charisma: otherStats[3],
+    }
+  }
+
+  // Expertise for classes that get it (Rogue, Bard)
+  const expertise = (charClass === 'Rogue' || charClass === 'Bard')
+    ? ['Stealth', 'Persuasion'].slice(0, 2)
+    : []
+
   return {
     name,
     race,
@@ -207,6 +273,8 @@ function generateMockCharacter(scenario: string): Character {
     background,
     history: `Born in a ${scenario.toLowerCase().includes('tavern') ? 'tavern' : 'distant land'}, ${name} has always been drawn to ${charClass.toLowerCase()} magic. Their past is shrouded in mystery, but their connection to ${scenario} is undeniable.`,
     personality: `A ${charClass.toLowerCase()} with a ${background.toLowerCase()} background, ${name} is known for their quick wit and ${scenario.toLowerCase().includes('ancient') ? 'deep knowledge of ancient lore' : 'charming demeanor'}.`,
+    attributes,
+    expertise,
     spells: [
       { name: 'Magic Missile', level: 1, description: 'A dart of force strikes the target' },
       { name: 'Charm Person', level: 1, description: 'Attempt to charm a humanoid' },
@@ -223,11 +291,7 @@ function generateMockCharacter(scenario: string): Character {
       'Loves telling stories',
       'Always carries a musical instrument',
     ],
-    voiceLines: [
-      `"Ah, ${scenario.toLowerCase().includes('ancient') ? 'ancient mysteries' : 'travelers'}! Come, sit and hear a tale..."`,
-      '"The stories I could tell you would make your head spin!"',
-      '"Every adventure begins with a single step, and every story with a single word."',
-    ],
+    voiceDescription: voiceDescriptions[Math.floor(Math.random() * voiceDescriptions.length)],
     associatedMission: scenario.toLowerCase().includes('flute') ? 'The Lost Melody' : undefined,
   }
 }

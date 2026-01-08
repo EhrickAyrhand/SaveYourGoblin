@@ -16,6 +16,15 @@ export interface Skill {
   modifier: number
 }
 
+export interface Attributes {
+  strength: number // STR value (1-20)
+  dexterity: number // DEX value (1-20)
+  constitution: number // CON value (1-20)
+  intelligence: number // INT value (1-20)
+  wisdom: number // WIS value (1-20)
+  charisma: number // CHA value (1-20)
+}
+
 export interface Character {
   name: string
   race: string
@@ -24,10 +33,12 @@ export interface Character {
   background: string
   history: string
   personality: string
+  attributes: Attributes
+  expertise: string[] // Array of skill names with expertise
   spells: Spell[]
   skills: Skill[]
   traits: string[]
-  voiceLines: string[]
+  voiceDescription: string // Voice description (e.g., "Hoarse voice", "Sweet voice", "Angry voice")
   associatedMission?: string
 }
 

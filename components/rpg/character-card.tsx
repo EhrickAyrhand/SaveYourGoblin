@@ -17,16 +17,25 @@ interface CharacterCardProps {
 
 export function CharacterCard({ character, isLoading = false }: CharacterCardProps) {
   const [expandedSections, setExpandedSections] = useState<{
+    attributes: boolean
     spells: boolean
     skills: boolean
     traits: boolean
-    voiceLines: boolean
   }>({
+    attributes: false,
     spells: false,
     skills: false,
     traits: false,
-    voiceLines: false,
   })
+
+  // Calculate ability modifiers (D&D 5e: (score - 10) / 2, rounded down)
+  const getModifier = (score: number): number => {
+    return Math.floor((score - 10) / 2)
+  }
+
+  const formatModifier = (modifier: number): string => {
+    return modifier >= 0 ? `+${modifier}` : `${modifier}`
+  }
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -61,6 +70,72 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Attributes */}
+        {character.attributes && (
+          <div>
+            <button
+              onClick={() => toggleSection("attributes")}
+              className="flex items-center justify-between w-full mb-2"
+            >
+              <h3 className="font-display text-lg font-semibold">
+                Ability Scores
+              </h3>
+              <span className="text-muted-foreground font-body">
+                {expandedSections.attributes ? "▼" : "▶"}
+              </span>
+            </button>
+            {expandedSections.attributes && (
+              <div className="grid grid-cols-3 gap-3 pl-4 border-l-2 border-primary/30">
+                <div className="font-body text-sm">
+                  <span className="font-semibold">STR:</span> {character.attributes.strength} ({formatModifier(getModifier(character.attributes.strength))})
+                </div>
+                <div className="font-body text-sm">
+                  <span className="font-semibold">DEX:</span> {character.attributes.dexterity} ({formatModifier(getModifier(character.attributes.dexterity))})
+                </div>
+                <div className="font-body text-sm">
+                  <span className="font-semibold">CON:</span> {character.attributes.constitution} ({formatModifier(getModifier(character.attributes.constitution))})
+                </div>
+                <div className="font-body text-sm">
+                  <span className="font-semibold">INT:</span> {character.attributes.intelligence} ({formatModifier(getModifier(character.attributes.intelligence))})
+                </div>
+                <div className="font-body text-sm">
+                  <span className="font-semibold">WIS:</span> {character.attributes.wisdom} ({formatModifier(getModifier(character.attributes.wisdom))})
+                </div>
+                <div className="font-body text-sm">
+                  <span className="font-semibold">CHA:</span> {character.attributes.charisma} ({formatModifier(getModifier(character.attributes.charisma))})
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Expertise */}
+        {character.expertise && character.expertise.length > 0 && (
+          <div>
+            <h3 className="font-display text-lg font-semibold mb-2">Expertise</h3>
+            <div className="flex flex-wrap gap-2">
+              {character.expertise.map((skill, idx) => (
+                <span
+                  key={idx}
+                  className="px-2 py-1 bg-primary/20 text-primary rounded-md font-body text-sm font-semibold"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Voice Description */}
+        {character.voiceDescription && (
+          <div>
+            <h3 className="font-display text-lg font-semibold mb-2">Voice</h3>
+            <p className="font-body text-sm text-muted-foreground italic">
+              {character.voiceDescription}
+            </p>
+          </div>
+        )}
+
         {/* History */}
         <div>
           <h3 className="font-display text-lg font-semibold mb-2">History</h3>
@@ -122,15 +197,19 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
             </button>
             {expandedSections.skills && (
               <div className="grid grid-cols-2 gap-2 pl-4 border-l-2 border-primary/30">
-                {character.skills.map((skill, idx) => (
-                  <div key={idx} className="font-body text-sm">
-                    <span className="font-semibold">{skill.name}:</span>{" "}
-                    <span className={skill.proficiency ? "text-primary" : "text-muted-foreground"}>
-                      {skill.modifier >= 0 ? "+" : ""}{skill.modifier}
-                      {skill.proficiency && " (Proficient)"}
-                    </span>
-                  </div>
-                ))}
+                {character.skills.map((skill, idx) => {
+                  const isExpertise = character.expertise && character.expertise.includes(skill.name)
+                  return (
+                    <div key={idx} className="font-body text-sm">
+                      <span className="font-semibold">{skill.name}:</span>{" "}
+                      <span className={skill.proficiency ? "text-primary" : "text-muted-foreground"}>
+                        {skill.modifier >= 0 ? "+" : ""}{skill.modifier}
+                        {isExpertise && " (Expertise)"}
+                        {skill.proficiency && !isExpertise && " (Proficient)"}
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -162,34 +241,6 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
           </div>
         )}
 
-        {/* Voice Lines */}
-        {character.voiceLines && character.voiceLines.length > 0 && (
-          <div>
-            <button
-              onClick={() => toggleSection("voiceLines")}
-              className="flex items-center justify-between w-full mb-2"
-            >
-              <h3 className="font-display text-lg font-semibold">
-                Voice Lines ({character.voiceLines.length})
-              </h3>
-              <span className="text-muted-foreground font-body">
-                {expandedSections.voiceLines ? "▼" : "▶"}
-              </span>
-            </button>
-            {expandedSections.voiceLines && (
-              <div className="space-y-3 pl-4 border-l-2 border-primary/30">
-                {character.voiceLines.map((line, idx) => (
-                  <div
-                    key={idx}
-                    className="font-body text-sm italic text-muted-foreground border-l-4 border-primary/50 pl-3 py-1"
-                  >
-                    {line}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Associated Mission */}
         {character.associatedMission && (
