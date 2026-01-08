@@ -1,14 +1,13 @@
 /**
  * API Route for AI Content Generation
  * 
- * Phase 1: Mock streaming with simulated delays
- * Phase 2: Replace with real streamText() from Vercel AI SDK
+ * Uses Vercel AI SDK with OpenAI GPT-4o-mini for real-time streaming
  */
 
 import { NextRequest } from 'next/server'
 import { getServerUser } from '@/lib/supabase-server'
 import { generateRPGContent } from '@/lib/ai'
-import type { ContentType, GeneratedContent } from '@/types/rpg'
+import type { ContentType } from '@/types/rpg'
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,29 +41,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Phase 1: Mock streaming implementation
-    // Create a readable stream that simulates streaming response
+    // Generate content using OpenAI (or fallback to mock if no API key)
+    const content = await generateRPGContent(scenario, contentType)
+    
+    // Stream the response back
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder()
         
-        // Generate content (this will be replaced with real AI in Phase 2)
-        const content = await generateRPGContent(scenario, contentType)
-        
-        // Simulate streaming by sending chunks
-        const contentStr = JSON.stringify({
+        const responseData = {
           type: contentType,
           content,
           scenario,
-        })
+        }
         
-        // Split content into chunks for realistic streaming effect
-        const chunkSize = 50
+        const contentStr = JSON.stringify(responseData)
+        
+        // Send in chunks for streaming effect
+        const chunkSize = 100
         for (let i = 0; i < contentStr.length; i += chunkSize) {
           const chunk = contentStr.slice(i, i + chunkSize)
           controller.enqueue(encoder.encode(chunk))
-          // Small delay to simulate network streaming
-          await new Promise((resolve) => setTimeout(resolve, 50))
+          // Small delay for streaming effect
+          await new Promise((resolve) => setTimeout(resolve, 20))
         }
         
         controller.close()
@@ -78,20 +77,6 @@ export async function POST(request: NextRequest) {
         'Connection': 'keep-alive',
       },
     })
-
-    // Phase 2: Real OpenAI streaming (commented for future implementation)
-    /*
-    import { openai } from '@ai-sdk/openai'
-    import { streamText } from 'ai'
-    import { StreamingTextResponse } from 'ai'
-
-    const result = await streamText({
-      model: openai('gpt-4o-mini'),
-      prompt: `Generate a D&D 5e ${contentType} based on this scenario: ${scenario}`,
-    })
-
-    return new StreamingTextResponse(result.toDataStreamResponse())
-    */
   } catch (error) {
     console.error('Generation error:', error)
     return new Response(

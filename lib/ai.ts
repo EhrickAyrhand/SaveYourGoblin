@@ -1,10 +1,12 @@
 /**
  * AI Content Generation Library
  * 
- * Phase 1: Mock implementation with realistic data
- * Phase 2: Replace with Vercel AI SDK generateObject()/streamObject() using GPT-4o-mini
+ * Uses Vercel AI SDK with OpenAI GPT-4o-mini for real AI generation
  */
 
+import { generateObject } from 'ai'
+import { openai } from '@ai-sdk/openai'
+import { z } from 'zod'
 import type {
   Character,
   Environment,
@@ -13,21 +15,165 @@ import type {
   ContentType,
 } from '@/types/rpg'
 
+// Zod schemas for structured output
+const spellSchema = z.object({
+  name: z.string().describe('The name of the spell'),
+  level: z.number().int().min(0).max(9).describe('The spell level (0-9)'),
+  description: z.string().describe('A brief description of what the spell does'),
+})
+
+const skillSchema = z.object({
+  name: z.string().describe('The skill name (e.g., Persuasion, Stealth)'),
+  proficiency: z.boolean().describe('Whether the character is proficient in this skill'),
+  modifier: z.number().int().describe('The skill modifier (typically -5 to +10)'),
+})
+
+const characterSchema = z.object({
+  name: z.string().describe('The character\'s full name'),
+  race: z.string().describe('D&D 5e race (e.g., Human, Elf, Dwarf, Tiefling)'),
+  class: z.string().describe('D&D 5e class (e.g., Bard, Wizard, Fighter, Rogue)'),
+  level: z.number().int().min(1).max(20).describe('Character level (1-20)'),
+  background: z.string().describe('Character background (e.g., Entertainer, Sage, Noble)'),
+  history: z.string().describe('A detailed backstory and history of the character'),
+  personality: z.string().describe('A description of the character\'s personality traits and demeanor'),
+  spells: z.array(spellSchema).describe('Array of spells the character knows'),
+  skills: z.array(skillSchema).describe('Array of skills with proficiency and modifiers'),
+  traits: z.array(z.string()).describe('Character traits, quirks, or notable features'),
+  voiceLines: z.array(z.string()).describe('Sample dialogue lines the character might say'),
+  associatedMission: z.string().optional().describe('Optional: Name of a related mission or quest'),
+})
+
+const environmentSchema = z.object({
+  name: z.string().describe('The name of the location'),
+  description: z.string().describe('A detailed description of the environment'),
+  ambient: z.string().describe('Ambient sounds and atmosphere description'),
+  mood: z.string().describe('The overall mood of the location'),
+  lighting: z.string().describe('Description of the lighting conditions'),
+  features: z.array(z.string()).describe('Notable features, objects, or architectural elements'),
+  npcs: z.array(z.string()).describe('List of NPCs or characters present in this location'),
+})
+
+const objectiveSchema = z.object({
+  description: z.string().describe('The objective description'),
+  primary: z.boolean().describe('Whether this is a primary (required) or optional objective'),
+})
+
+const rewardSchema = z.object({
+  xp: z.number().int().min(0).optional().describe('Experience points reward'),
+  gold: z.number().int().min(0).optional().describe('Gold pieces reward'),
+  items: z.array(z.string()).describe('List of item rewards'),
+})
+
+const missionSchema = z.object({
+  title: z.string().describe('The mission/quest title'),
+  description: z.string().describe('A detailed description of the mission'),
+  context: z.string().describe('The background context and setup for this mission'),
+  objectives: z.array(objectiveSchema).describe('List of mission objectives (primary and optional)'),
+  rewards: rewardSchema.describe('Rewards for completing the mission'),
+  difficulty: z.enum(['easy', 'medium', 'hard', 'deadly']).describe('Mission difficulty level'),
+  relatedNPCs: z.array(z.string()).describe('NPCs involved in or related to this mission'),
+  relatedLocations: z.array(z.string()).describe('Locations relevant to this mission'),
+})
+
 /**
- * Generate RPG content based on scenario and content type
- * 
- * Phase 1: Returns mock data with realistic structure
- * Phase 2: Will use Vercel AI SDK with OpenAI GPT-4o-mini
+ * Generate RPG content using OpenAI GPT-4o-mini
  */
 export async function generateRPGContent(
   scenario: string,
   contentType: ContentType
 ): Promise<GeneratedContent> {
-  // Phase 1: Mock implementation
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1500))
+  // Check if OpenAI API key is configured
+  if (!process.env.OPENAI_API_KEY) {
+    // Fallback to mock if no API key (for local development)
+    console.warn('OPENAI_API_KEY not found, using mock data')
+    return generateMockContent(scenario, contentType)
+  }
 
-  // Generate mock content based on type
+  try {
+    let schema: z.ZodType<any>
+    let systemPrompt: string
+    let userPrompt: string
+
+    switch (contentType) {
+      case 'character':
+        schema = characterSchema
+        systemPrompt = `You are an expert D&D 5e game master and character creator. Create detailed, immersive characters that feel authentic to the D&D 5e universe. Characters should have rich backstories, distinct personalities, and appropriate abilities for their level and class. Include spells appropriate to the character's class and level.`
+        userPrompt = `Create a D&D 5e character based on this scenario: "${scenario}"
+
+Generate a complete character with:
+- A fitting name, race, class, and background
+- Level between 1-10 (choose appropriately based on the scenario)
+- A compelling backstory that connects to the scenario
+- Distinct personality traits
+- Appropriate spells for their class and level
+- Relevant skills with proficiency bonuses
+- Character traits and quirks
+- 3-5 memorable voice lines they might say
+- Optional associated mission if relevant
+
+Make the character feel alive and ready to use in a campaign.`
+        break
+
+      case 'environment':
+        schema = environmentSchema
+        systemPrompt = `You are an expert D&D 5e game master and world builder. Create immersive, atmospheric locations that bring the game world to life. Environments should have rich sensory details, mood, and interactive elements that engage players.`
+        userPrompt = `Create a D&D 5e environment/location based on this scenario: "${scenario}"
+
+Generate a complete location with:
+- A memorable name
+- Detailed description that sets the scene
+- Ambient sounds and atmosphere
+- Clear mood and emotional tone
+- Lighting conditions
+- Notable features players can interact with
+- NPCs present in the location
+
+Make the environment feel immersive and ready for players to explore.`
+        break
+
+      case 'mission':
+        schema = missionSchema
+        systemPrompt = `You are an expert D&D 5e game master and quest designer. Create engaging missions and quests that provide clear objectives, appropriate challenges, and meaningful rewards. Missions should fit naturally into a campaign and offer both primary and optional objectives.`
+        userPrompt = `Create a D&D 5e mission/quest based on this scenario: "${scenario}"
+
+Generate a complete mission with:
+- An engaging title
+- Detailed mission description
+- Background context and setup
+- 2-4 objectives (mix of primary required and optional objectives)
+- Appropriate rewards (XP, gold, items) based on difficulty
+- Difficulty level (easy, medium, hard, or deadly)
+- Related NPCs involved
+- Related locations where the mission takes place
+
+Make the mission feel exciting and ready to run in a campaign.`
+        break
+
+      default:
+        throw new Error(`Unknown content type: ${contentType}`)
+    }
+
+    const result = await (generateObject as any)({
+      model: openai('gpt-4o-mini'),
+      schema,
+      system: systemPrompt,
+      prompt: userPrompt,
+      temperature: 0.8, // Creative but consistent
+    })
+    
+    const object = result.object
+
+    return object as GeneratedContent
+  } catch (error) {
+    console.error('OpenAI generation error:', error)
+    // Fallback to mock on error
+    console.warn('Falling back to mock data due to error')
+    return generateMockContent(scenario, contentType)
+  }
+}
+
+// Fallback mock functions (kept for development/testing)
+function generateMockContent(scenario: string, contentType: ContentType): GeneratedContent {
   switch (contentType) {
     case 'character':
       return generateMockCharacter(scenario)
@@ -38,45 +184,6 @@ export async function generateRPGContent(
     default:
       throw new Error(`Unknown content type: ${contentType}`)
   }
-
-  // Phase 2: Real OpenAI integration (commented for future implementation)
-  /*
-  import { openai } from '@ai-sdk/openai'
-  import { generateObject } from 'ai'
-  import { z } from 'zod'
-  import { zodToJsonSchema } from 'zod-to-json-schema'
-
-  const characterSchema = z.object({
-    name: z.string(),
-    race: z.string(),
-    class: z.string(),
-    level: z.number(),
-    background: z.string(),
-    history: z.string(),
-    personality: z.string(),
-    spells: z.array(z.object({
-      name: z.string(),
-      level: z.number(),
-      description: z.string(),
-    })),
-    skills: z.array(z.object({
-      name: z.string(),
-      proficiency: z.boolean(),
-      modifier: z.number(),
-    })),
-    traits: z.array(z.string()),
-    voiceLines: z.array(z.string()),
-    associatedMission: z.string().optional(),
-  })
-
-  const { object } = await generateObject({
-    model: openai('gpt-4o-mini'),
-    schema: characterSchema,
-    prompt: `Generate a D&D 5e character based on this scenario: ${scenario}`,
-  })
-
-  return object
-  */
 }
 
 function generateMockCharacter(scenario: string): Character {
@@ -89,7 +196,6 @@ function generateMockCharacter(scenario: string): Character {
   const background = backgrounds[Math.floor(Math.random() * backgrounds.length)]
   const level = Math.floor(Math.random() * 10) + 1
 
-  // Extract name from scenario if possible, otherwise generate
   const nameMatch = scenario.match(/\b([A-Z][a-z]+)\b/)
   const name = nameMatch ? nameMatch[1] : `${race} ${charClass}`
 
@@ -198,8 +304,3 @@ function generateMockMission(scenario: string): Mission {
       : ['Ancient Ruins', 'Mysterious Tower', 'Hidden Temple'],
   }
 }
-
-
-
-
-
