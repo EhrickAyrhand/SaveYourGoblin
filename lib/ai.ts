@@ -50,6 +50,7 @@ const characterSchema = z.object({
   spells: z.array(spellSchema).describe('Array of spells the character knows'),
   skills: z.array(skillSchema).describe('Array of skills with proficiency and modifiers'),
   traits: z.array(z.string()).describe('Character traits, quirks, or notable features'),
+  racialTraits: z.array(z.string()).optional().describe('Array of racial traits and features (e.g., "Darkvision 60ft", "Hellish Resistance", "Infernal Legacy", "Fey Ancestry", "Dwarven Resilience"). Include all standard D&D 5e racial features for the character\'s race.'),
   voiceDescription: z.string().describe('Voice description (e.g., "Hoarse voice", "Sweet voice", "Angry voice", "Deep voice", "Melodic voice", "Raspy voice") - NOT dialogue lines, just the voice quality/characteristics'),
   associatedMission: z.string().optional().describe('Optional: Name of a related mission or quest'),
 })
@@ -87,6 +88,81 @@ const missionSchema = z.object({
 })
 
 /**
+ * Validate and correct skill modifiers based on proficiency flags
+ * Ensures skill modifiers match: ability modifier + proficiency bonus (if proficient) + proficiency bonus (if expertise)
+ */
+function validateCharacterSkills(character: Character): Character {
+  const proficiencyBonus = Math.floor((character.level + 7) / 4)
+  
+  // Helper to calculate ability modifier
+  const getAbilityModifier = (score: number): number => {
+    return Math.floor((score - 10) / 2)
+  }
+  
+  // Helper to get ability modifier for a skill
+  const getSkillAbilityModifier = (ability: string): number => {
+    switch (ability) {
+      case 'STR': return getAbilityModifier(character.attributes.strength)
+      case 'DEX': return getAbilityModifier(character.attributes.dexterity)
+      case 'CON': return getAbilityModifier(character.attributes.constitution)
+      case 'INT': return getAbilityModifier(character.attributes.intelligence)
+      case 'WIS': return getAbilityModifier(character.attributes.wisdom)
+      case 'CHA': return getAbilityModifier(character.attributes.charisma)
+      default: return 0
+    }
+  }
+  
+  // Map of skills to their abilities (standard D&D 5e)
+  const skillToAbility: Record<string, string> = {
+    'Acrobatics': 'DEX',
+    'Animal Handling': 'WIS',
+    'Arcana': 'INT',
+    'Athletics': 'STR',
+    'Deception': 'CHA',
+    'History': 'INT',
+    'Insight': 'WIS',
+    'Intimidation': 'CHA',
+    'Investigation': 'INT',
+    'Medicine': 'WIS',
+    'Nature': 'INT',
+    'Perception': 'WIS',
+    'Performance': 'CHA',
+    'Persuasion': 'CHA',
+    'Religion': 'INT',
+    'Sleight of Hand': 'DEX',
+    'Stealth': 'DEX',
+    'Survival': 'WIS',
+  }
+  
+  // Validate and correct skill modifiers
+  const validatedSkills = character.skills.map(skill => {
+    const ability = skillToAbility[skill.name] || 'STR'
+    const baseMod = getSkillAbilityModifier(ability)
+    const isExpertise = character.expertise?.includes(skill.name) || false
+    const isProficient = skill.proficiency
+    
+    // Calculate expected modifier
+    let expectedModifier = baseMod
+    if (isExpertise) {
+      expectedModifier = baseMod + (proficiencyBonus * 2)
+    } else if (isProficient) {
+      expectedModifier = baseMod + proficiencyBonus
+    }
+    
+    // Return skill with corrected modifier if needed
+    return {
+      ...skill,
+      modifier: expectedModifier,
+    }
+  })
+  
+  return {
+    ...character,
+    skills: validatedSkills,
+  }
+}
+
+/**
  * Generate RPG content using OpenAI GPT-4o-mini
  */
 export async function generateRPGContent(
@@ -108,7 +184,7 @@ export async function generateRPGContent(
     switch (contentType) {
       case 'character':
         schema = characterSchema
-        systemPrompt = `You are an expert D&D 5e game master and character creator. Create detailed, immersive characters that feel authentic to the D&D 5e universe. Characters should have rich backstories, distinct personalities, and appropriate abilities for their level and class. Include spells appropriate to the character's class and level.`
+        systemPrompt = `You are an expert D&D 5e game master and character creator. Create detailed, immersive characters that feel authentic to the D&D 5e universe. Characters should have rich backstories, distinct personalities, and appropriate abilities for their level and class. Include spells appropriate to the character's class and level. IMPORTANT: Ensure all skill proficiency flags are correctly set based on class, background, and race. Include all standard racial traits for the character's race.`
         userPrompt = `Create a D&D 5e character based on this scenario: "${scenario}"
 
 Generate a complete character with:
@@ -119,12 +195,13 @@ Generate a complete character with:
 - Distinct personality traits
 - Expertise in 2-4 skills (if the class grants expertise, like Rogue or Bard)
 - Appropriate spells for their class and level
-- Relevant skills with proficiency bonuses
+- ALL skills with accurate proficiency flags - mark proficiency: true for skills granted by class, background, or race. The modifier field should match: ability modifier + proficiency bonus (if proficient) or ability modifier + 2×proficiency bonus (if expertise)
+- Racial traits: Include ALL standard D&D 5e racial features for the character's race (e.g., Tiefling: Darkvision, Hellish Resistance, Infernal Legacy; Elf: Darkvision, Fey Ancestry, Keen Senses; Dwarf: Darkvision, Dwarven Resilience, Stonecunning)
 - Character traits and quirks
 - Voice description (e.g., "Hoarse voice", "Sweet voice", "Angry voice", "Deep voice", "Melodic voice", "Raspy voice") - NOT dialogue phrases, just the voice quality
 - Optional associated mission if relevant
 
-Make the character feel alive and ready to use in a campaign.`
+CRITICAL: Ensure skill modifiers are calculated correctly. For each skill, proficiency: true means the modifier should be (ability modifier + proficiency bonus). For expertise, it should be (ability modifier + 2×proficiency bonus). Make the character feel alive and ready to use in a campaign.`
         break
 
       case 'environment':
@@ -174,7 +251,12 @@ Make the mission feel exciting and ready to run in a campaign.`
       temperature: 0.8, // Creative but consistent
     })
     
-    const object = result.object
+    let object = result.object
+
+    // Validate and correct skill modifiers for characters
+    if (contentType === 'character' && 'skills' in object && 'level' in object && 'attributes' in object) {
+      object = validateCharacterSkills(object as Character)
+    }
 
     return object as GeneratedContent
   } catch (error) {
@@ -265,6 +347,39 @@ function generateMockCharacter(scenario: string): Character {
     ? ['Stealth', 'Persuasion'].slice(0, 2)
     : []
 
+  // Calculate proficiency bonus for mock character
+  const mockProficiencyBonus = Math.floor((level + 7) / 4)
+  const getMockModifier = (score: number): number => Math.floor((score - 10) / 2)
+  
+  // Get racial traits based on race
+  const getRacialTraits = (raceName: string): string[] => {
+    const raceLower = raceName.toLowerCase()
+    if (raceLower.includes('tiefling')) {
+      return ['Darkvision 60ft', 'Hellish Resistance', 'Infernal Legacy']
+    } else if (raceLower.includes('elf')) {
+      return ['Darkvision 60ft', 'Fey Ancestry', 'Keen Senses', 'Trance']
+    } else if (raceLower.includes('dwarf')) {
+      return ['Darkvision 60ft', 'Dwarven Resilience', 'Stonecunning']
+    } else if (raceLower.includes('halfling')) {
+      return ['Brave', 'Halfling Luck', 'Nimble']
+    } else if (raceLower.includes('dragonborn')) {
+      return ['Draconic Ancestry', 'Breath Weapon', 'Damage Resistance']
+    } else if (raceLower.includes('gnome')) {
+      return ['Darkvision 60ft', 'Gnome Cunning']
+    } else if (raceLower.includes('half-elf')) {
+      return ['Darkvision 60ft', 'Fey Ancestry', 'Skill Versatility']
+    } else {
+      // Human - no standard racial traits in base 5e
+      return []
+    }
+  }
+  
+  const racialTraits = getRacialTraits(race)
+  
+  // Calculate skill modifiers correctly
+  const chaMod = getMockModifier(attributes.charisma)
+  const intMod = getMockModifier(attributes.intelligence)
+  
   return {
     name,
     race,
@@ -281,16 +396,17 @@ function generateMockCharacter(scenario: string): Character {
       { name: 'Detect Magic', level: 1, description: 'Sense the presence of magic' },
     ].slice(0, Math.min(3, level)),
     skills: [
-      { name: 'Persuasion', proficiency: true, modifier: 3 },
-      { name: 'Performance', proficiency: true, modifier: 2 },
-      { name: 'Investigation', proficiency: false, modifier: 1 },
-      { name: 'History', proficiency: true, modifier: 2 },
+      { name: 'Persuasion', proficiency: true, modifier: chaMod + mockProficiencyBonus },
+      { name: 'Performance', proficiency: true, modifier: chaMod + mockProficiencyBonus },
+      { name: 'Investigation', proficiency: false, modifier: intMod },
+      { name: 'History', proficiency: true, modifier: intMod + mockProficiencyBonus },
     ],
     traits: [
       'Quick to make friends',
       'Loves telling stories',
       'Always carries a musical instrument',
     ],
+    racialTraits: racialTraits.length > 0 ? racialTraits : undefined,
     voiceDescription: voiceDescriptions[Math.floor(Math.random() * voiceDescriptions.length)],
     associatedMission: scenario.toLowerCase().includes('flute') ? 'The Lost Melody' : undefined,
   }

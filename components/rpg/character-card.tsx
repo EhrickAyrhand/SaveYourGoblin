@@ -41,11 +41,13 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
   const [expandedSections, setExpandedSections] = useState<{
     spells: boolean
     traits: boolean
+    racialTraits: boolean
     history: boolean
     personality: boolean
   }>({
     spells: false,
     traits: false,
+    racialTraits: false,
     history: false,
     personality: false,
   })
@@ -219,26 +221,38 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                 const isProficient = skillData?.proficiency || false
                 const modifier = getSkillModifier(skill.name, skill.ability)
                 
+                // Determine proficiency status label
+                let proficiencyLabel = null
+                if (isExpertise) {
+                  proficiencyLabel = (
+                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-semibold">
+                      EXPERTISE
+                    </span>
+                  )
+                } else if (isProficient) {
+                  proficiencyLabel = (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded font-semibold">
+                      PROFICIENT
+                    </span>
+                  )
+                }
+                
                 return (
                   <div
                     key={skill.name}
                     className="flex items-center justify-between py-2 border-b border-border/30"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
                       {(isProficient || isExpertise) && (
-                        <span className="text-primary font-bold text-lg">✓</span>
+                        <span className="text-primary font-bold text-lg flex-shrink-0">✓</span>
                       )}
-                      <span className={isProficient ? "font-semibold text-base" : "text-base"}>
+                      <span className={isProficient || isExpertise ? "font-semibold text-base" : "text-base"}>
                         {skill.name}
                       </span>
                       <span className="text-sm text-muted-foreground">({skill.ability})</span>
-                      {isExpertise && (
-                        <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-semibold">
-                          EXP
-                        </span>
-                      )}
+                      {proficiencyLabel}
                     </div>
-                    <span className={isProficient ? "text-primary font-semibold text-base" : "text-muted-foreground text-base"}>
+                    <span className={`flex-shrink-0 ml-2 ${isProficient || isExpertise ? "text-primary font-semibold text-base" : "text-muted-foreground text-base"}`}>
                       {formatModifier(modifier)}
                     </span>
                   </div>
@@ -265,6 +279,30 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                     </span>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Racial Traits */}
+            {character.racialTraits && character.racialTraits.length > 0 && (
+              <div>
+                <button
+                  onClick={() => toggleSection("racialTraits")}
+                  className="flex items-center justify-between w-full mb-3"
+                >
+                  <h3 className="font-display text-2xl font-semibold border-b border-primary/30 pb-3">
+                    Racial Traits ({character.racialTraits.length})
+                  </h3>
+                  <span className="text-muted-foreground font-body text-lg">
+                    {expandedSections.racialTraits ? "▼" : "▶"}
+                  </span>
+                </button>
+                {expandedSections.racialTraits && (
+                  <ul className="list-disc list-inside space-y-2 pl-2 text-base font-body text-muted-foreground">
+                    {character.racialTraits.map((trait, idx) => (
+                      <li key={idx}>{trait}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
 

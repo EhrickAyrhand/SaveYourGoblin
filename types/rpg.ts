@@ -38,6 +38,7 @@ export interface Character {
   spells: Spell[]
   skills: Skill[]
   traits: string[]
+  racialTraits?: string[] // Array of racial traits (e.g., Darkvision, Hellish Resistance, Infernal Legacy)
   voiceDescription: string // Voice description (e.g., "Hoarse voice", "Sweet voice", "Angry voice")
   associatedMission?: string
 }
