@@ -74,6 +74,16 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
           </div>
         )}
 
+        {/* Current Conflict */}
+        {environment.currentConflict && (
+          <div>
+            <h3 className="font-display text-2xl font-semibold mb-3">Current Conflict</h3>
+            <p className="font-body text-base text-muted-foreground leading-relaxed p-4 rounded-md bg-destructive/10 border border-destructive/20">
+              {environment.currentConflict}
+            </p>
+          </div>
+        )}
+
         {/* NPCs */}
         {environment.npcs && environment.npcs.length > 0 && (
           <div>
@@ -85,6 +95,23 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
                   className="font-body text-base px-4 py-2 rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold"
                 >
                   {npc}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Adventure Hooks */}
+        {environment.adventureHooks && environment.adventureHooks.length > 0 && (
+          <div>
+            <h3 className="font-display text-2xl font-semibold mb-4">Adventure Hooks</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {environment.adventureHooks.map((hook, idx) => (
+                <div
+                  key={idx}
+                  className="font-body text-base p-4 rounded-md bg-primary/10 border border-primary/30"
+                >
+                  <span className="text-primary font-semibold text-lg">⚡</span> {hook}
                 </div>
               ))}
             </div>

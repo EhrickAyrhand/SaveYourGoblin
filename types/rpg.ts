@@ -51,17 +51,31 @@ export interface Environment {
   lighting: string
   features: string[]
   npcs: string[] // array of NPC names/references
+  currentConflict?: string // What is currently wrong or unstable in this location
+  adventureHooks?: string[] // 2-3 concrete hooks that can immediately involve the players
 }
 
 export interface Objective {
   description: string
   primary: boolean
+  isAlternative?: boolean // Marks if this objective is an alternative path (mutually exclusive with others)
+  pathType?: 'combat' | 'social' | 'stealth' | 'mixed' // Type of approach this objective represents
 }
 
 export interface Reward {
   xp?: number
   gold?: number
   items: string[]
+}
+
+export interface PowerfulItem {
+  name: string
+  status: string // e.g., "Dormant Artifact", "DM-controlled", "Narrative-only"
+}
+
+export interface ChoiceBasedReward {
+  condition: string // e.g., "If negotiated", "If combat", "If artifact kept"
+  rewards: Reward
 }
 
 export interface Mission {
@@ -73,6 +87,10 @@ export interface Mission {
   difficulty: 'easy' | 'medium' | 'hard' | 'deadly'
   relatedNPCs: string[]
   relatedLocations: string[]
+  recommendedLevel?: string // Recommended party level range (e.g., "Level 4-6", "Level 8-10")
+  powerfulItems?: PowerfulItem[] // Powerful items/artifacts with clarification
+  possibleOutcomes?: string[] // 3-4 possible outcomes based on player choices
+  choiceBasedRewards?: ChoiceBasedReward[] // Optional rewards tied to specific choices/paths
 }
 
 export type GeneratedContent = Character | Environment | Mission

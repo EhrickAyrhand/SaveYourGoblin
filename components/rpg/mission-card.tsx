@@ -51,9 +51,16 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
       <CardHeader className="px-6 pt-6">
         <div className="flex items-start justify-between mb-3">
           <CardTitle className="font-display text-4xl">{mission.title}</CardTitle>
-          <span className={`font-display text-base font-semibold ${difficultyColors[mission.difficulty]}`}>
-            {difficultyBadges[mission.difficulty]}
-          </span>
+          <div className="flex flex-col items-end gap-2">
+            <span className={`font-display text-base font-semibold ${difficultyColors[mission.difficulty]}`}>
+              {difficultyBadges[mission.difficulty]}
+            </span>
+            {mission.recommendedLevel && (
+              <span className="font-body text-sm text-muted-foreground">
+                Recommended: {mission.recommendedLevel}
+              </span>
+            )}
+          </div>
         </div>
         <CardDescription className="font-body text-base leading-relaxed">
           {mission.context}
@@ -72,34 +79,96 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
         {mission.objectives && mission.objectives.length > 0 && (
           <div>
             <h3 className="font-display text-2xl font-semibold mb-4">Objectives</h3>
+            {mission.objectives.some(obj => obj.isAlternative) && (
+              <p className="font-body text-sm text-muted-foreground mb-3 italic">
+                Some objectives are alternative paths - choose one approach
+              </p>
+            )}
             <div className="space-y-3">
-              {mission.objectives.map((objective, idx) => (
+              {mission.objectives.map((objective, idx) => {
+                const pathTypeLabels = {
+                  combat: '⚔️ Combat',
+                  social: '💬 Social',
+                  stealth: '🥷 Stealth',
+                  mixed: '🔄 Mixed',
+                }
+                return (
+                  <div
+                    key={idx}
+                    className={`font-body text-base p-4 rounded-md border-l-4 ${
+                      objective.primary
+                        ? "bg-primary/10 border-primary"
+                        : "bg-muted/50 border-muted-foreground/30"
+                    } ${objective.isAlternative ? "ring-2 ring-destructive/20" : ""}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="font-semibold text-primary text-lg mt-0.5">
+                        {objective.primary ? "★" : "○"}
+                      </span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className={objective.primary ? "font-medium" : "text-muted-foreground"}>
+                            {objective.description}
+                          </span>
+                          {objective.pathType && (
+                            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-semibold">
+                              {pathTypeLabels[objective.pathType]}
+                            </span>
+                          )}
+                          {objective.isAlternative && (
+                            <span className="text-xs bg-destructive/20 text-destructive px-2 py-0.5 rounded font-semibold">
+                              Alternative Path
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Powerful Items */}
+        {mission.powerfulItems && mission.powerfulItems.length > 0 && (
+          <div>
+            <h3 className="font-display text-2xl font-semibold mb-4">Powerful Items</h3>
+            <div className="space-y-3">
+              {mission.powerfulItems.map((item, idx) => (
                 <div
                   key={idx}
-                  className={`font-body text-base p-4 rounded-md border-l-4 ${
-                    objective.primary
-                      ? "bg-primary/10 border-primary"
-                      : "bg-muted/50 border-muted-foreground/30"
-                  }`}
+                  className="font-body text-base p-4 rounded-md bg-warning/10 border border-warning/30"
                 >
-                  <div className="flex items-start gap-3">
-                    <span className="font-semibold text-primary text-lg mt-0.5">
-                      {objective.primary ? "★" : "○"}
-                    </span>
-                    <span className={objective.primary ? "font-medium" : "text-muted-foreground"}>
-                      {objective.description}
-                    </span>
-                  </div>
+                  <div className="font-semibold text-warning mb-1">{item.name}</div>
+                  <div className="text-sm text-muted-foreground">{item.status}</div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Rewards */}
+        {/* Possible Outcomes */}
+        {mission.possibleOutcomes && mission.possibleOutcomes.length > 0 && (
+          <div>
+            <h3 className="font-display text-2xl font-semibold mb-4">Possible Outcomes</h3>
+            <div className="space-y-2">
+              {mission.possibleOutcomes.map((outcome, idx) => (
+                <div
+                  key={idx}
+                  className="font-body text-base p-3 rounded-md bg-muted/50 border border-border"
+                >
+                  <span className="text-primary font-semibold text-lg">→</span> {outcome}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Base Rewards */}
         {mission.rewards && (
         <div>
-          <h3 className="font-display text-2xl font-semibold mb-4">Rewards</h3>
+          <h3 className="font-display text-2xl font-semibold mb-4">Base Rewards</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             {mission.rewards.xp !== undefined && (
               <div className="p-4 rounded-md bg-muted/50 border border-border">
@@ -142,6 +211,61 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
             </div>
           )}
         </div>
+        )}
+
+        {/* Choice-Based Rewards */}
+        {mission.choiceBasedRewards && mission.choiceBasedRewards.length > 0 && (
+          <div>
+            <h3 className="font-display text-2xl font-semibold mb-4">Choice-Based Rewards</h3>
+            <div className="space-y-4">
+              {mission.choiceBasedRewards.map((choiceReward, idx) => (
+                <div
+                  key={idx}
+                  className="p-4 rounded-md bg-primary/5 border border-primary/20"
+                >
+                  <div className="font-semibold text-primary mb-3">{choiceReward.condition}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {choiceReward.rewards.xp !== undefined && (
+                      <div className="p-3 rounded-md bg-background border border-border">
+                        <p className="font-body text-xs text-muted-foreground mb-1">Experience</p>
+                        <p className="font-display text-lg font-semibold text-primary">
+                          {choiceReward.rewards.xp.toLocaleString()} XP
+                        </p>
+                      </div>
+                    )}
+                    {choiceReward.rewards.gold !== undefined && (
+                      <div className="p-3 rounded-md bg-background border border-border">
+                        <p className="font-body text-xs text-muted-foreground mb-1">Gold</p>
+                        <p className="font-display text-lg font-semibold text-primary">
+                          {choiceReward.rewards.gold.toLocaleString()} gp
+                        </p>
+                      </div>
+                    )}
+                    {choiceReward.rewards.items && choiceReward.rewards.items.length > 0 && (
+                      <div className="p-3 rounded-md bg-background border border-border">
+                        <p className="font-body text-xs text-muted-foreground mb-1">Items</p>
+                        <p className="font-display text-lg font-semibold text-primary">
+                          {choiceReward.rewards.items.length} item{choiceReward.rewards.items.length !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {choiceReward.rewards.items && choiceReward.rewards.items.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {choiceReward.rewards.items.map((item, itemIdx) => (
+                        <span
+                          key={itemIdx}
+                          className="font-body text-xs px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/20"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Related NPCs */}

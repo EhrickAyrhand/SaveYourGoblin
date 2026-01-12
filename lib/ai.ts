@@ -62,12 +62,16 @@ const environmentSchema = z.object({
   mood: z.string().describe('The overall mood of the location'),
   lighting: z.string().describe('Description of the lighting conditions'),
   features: z.array(z.string()).describe('Notable features, objects, or architectural elements'),
-  npcs: z.array(z.string()).describe('List of NPCs or characters present in this location'),
+  npcs: z.array(z.string()).describe('List of NPCs present, each with name and short role description (e.g., "Guard Captain - Oversees the gate security")'),
+  currentConflict: z.string().optional().describe('What is currently wrong or unstable in this location'),
+  adventureHooks: z.array(z.string()).optional().describe('2-3 concrete hooks that can immediately involve the players'),
 })
 
 const objectiveSchema = z.object({
   description: z.string().describe('The objective description'),
   primary: z.boolean().describe('Whether this is a primary (required) or optional objective'),
+  isAlternative: z.boolean().optional().describe('Whether this objective is an alternative path (mutually exclusive with other alternative objectives)'),
+  pathType: z.enum(['combat', 'social', 'stealth', 'mixed']).optional().describe('Type of approach this objective represents: combat (direct confrontation), social (negotiation/diplomacy), stealth (infiltration/avoidance), or mixed (combination)'),
 })
 
 const rewardSchema = z.object({
@@ -76,15 +80,29 @@ const rewardSchema = z.object({
   items: z.array(z.string()).describe('List of item rewards'),
 })
 
+const powerfulItemSchema = z.object({
+  name: z.string().describe('The name of the powerful item or artifact'),
+  status: z.string().describe('Clarification of the item\'s status/control (e.g., "Dormant Artifact (awakens later)", "DM-controlled Artifact (unstable)", "Narrative Artifact (limited mechanical use)", "Legendary Item (standard rules apply)")'),
+})
+
+const choiceBasedRewardSchema = z.object({
+  condition: z.string().describe('The condition or path that triggers these rewards (e.g., "If negotiated", "If combat", "If artifact kept")'),
+  rewards: rewardSchema.describe('Rewards for this specific condition/path'),
+})
+
 const missionSchema = z.object({
   title: z.string().describe('The mission/quest title'),
   description: z.string().describe('A detailed description of the mission'),
   context: z.string().describe('The background context and setup for this mission'),
-  objectives: z.array(objectiveSchema).describe('List of mission objectives (primary and optional)'),
+  objectives: z.array(objectiveSchema).describe('List of mission objectives (primary and optional). Mark objectives as alternative paths (isAlternative: true) when they represent mutually exclusive approaches (e.g., negotiate vs. combat).'),
   rewards: rewardSchema.describe('Rewards for completing the mission'),
   difficulty: z.enum(['easy', 'medium', 'hard', 'deadly']).describe('Mission difficulty level'),
   relatedNPCs: z.array(z.string()).describe('NPCs involved in or related to this mission'),
   relatedLocations: z.array(z.string()).describe('Locations relevant to this mission'),
+  recommendedLevel: z.string().optional().describe('Recommended party level range based on difficulty and stakes (e.g., "Level 4-6", "Level 8-10"). Easy: 1-3, Medium: 4-6, Hard: 7-10, Deadly: 11+. World-altering stakes should match higher tier levels.'),
+  powerfulItems: z.array(powerfulItemSchema).optional().describe('Powerful items or artifacts in the mission. Include clear status/control mechanism to help DMs manage game balance (e.g., dormant, DM-controlled, narrative-only).'),
+  possibleOutcomes: z.array(z.string()).optional().describe('3-4 possible outcomes based on different player choices, showing concrete consequences (e.g., "If Lirael succeeds → magic becomes unstable", "If artifact is destroyed → imbalance spreads").'),
+  choiceBasedRewards: z.array(choiceBasedRewardSchema).optional().describe('Optional rewards tied to specific choices or paths (e.g., "If negotiated: alliance + favor", "If combat: reputation + fear").'),
 })
 
 /**
@@ -209,34 +227,43 @@ CRITICAL: Ensure skill modifiers are calculated correctly. For each skill, profi
         systemPrompt = `You are an expert D&D 5e game master and world builder. Create immersive, atmospheric locations that bring the game world to life. Environments should have rich sensory details, mood, and interactive elements that engage players.`
         userPrompt = `Create a D&D 5e environment/location based on this scenario: "${scenario}"
 
-Generate a complete location with:
-- A memorable name
-- Detailed description that sets the scene
-- Ambient sounds and atmosphere
-- Clear mood and emotional tone
-- Lighting conditions
-- Notable features players can interact with
-- NPCs present in the location
+Generate a complete location with the following clearly separated sections:
 
-Make the environment feel immersive and ready for players to explore.`
+- Name: A memorable and unique location name
+- Description: A vivid visual description of the place (do NOT describe mood or lighting here)
+- Atmosphere: Ambient sounds, smells, and environmental details
+- Mood: The emotional tone players should feel upon entering (keep this distinct from the description)
+- Lighting: Lighting conditions and visibility (do NOT repeat description text)
+- Notable Features: Interactive elements players can investigate or use
+- NPCs: Key NPCs present, each with a short role description
+- Current Conflict: What is currently wrong or unstable in this location
+- Adventure Hooks: 2-3 concrete hooks that can immediately involve the players
+
+Make the environment feel immersive, playable, and ready to use at the table.
+Avoid repeating the same text across sections.`
         break
 
       case 'mission':
         schema = missionSchema
-        systemPrompt = `You are an expert D&D 5e game master and quest designer. Create engaging missions and quests that provide clear objectives, appropriate challenges, and meaningful rewards. Missions should fit naturally into a campaign and offer both primary and optional objectives.`
+        systemPrompt = `You are an expert D&D 5e game master and quest designer. Create engaging missions and quests that provide clear objectives, appropriate challenges, and meaningful rewards. Missions should fit naturally into a campaign and offer both primary and optional objectives. CRITICAL: Ensure difficulty matches stakes (world-altering content requires higher tier levels). Clarify artifact power and control mechanisms. Mark alternative objective paths clearly. Define concrete consequences for player choices.`
         userPrompt = `Create a D&D 5e mission/quest based on this scenario: "${scenario}"
 
-Generate a complete mission with:
-- An engaging title
-- Detailed mission description
-- Background context and setup
-- 2-4 objectives (mix of primary required and optional objectives)
-- Appropriate rewards (XP, gold, items) based on difficulty
-- Difficulty level (easy, medium, hard, or deadly)
-- Related NPCs involved
-- Related locations where the mission takes place
+Generate a complete mission with the following:
 
-Make the mission feel exciting and ready to run in a campaign.`
+- Title: An engaging mission title
+- Description: Detailed mission description
+- Context: Background context and setup
+- Recommended Level: Party level range based on difficulty and stakes (Easy: 1-3, Medium: 4-6, Hard: 7-10, Deadly: 11+). World-altering stakes (artifacts, prophecies, world balance) should match higher tier levels.
+- Objectives: 2-4 objectives (mix of primary required and optional). When objectives represent different approaches (e.g., negotiate vs. combat), mark them as alternative paths (isAlternative: true) and specify pathType (combat, social, stealth, or mixed).
+- Powerful Items: If the mission involves artifacts or powerful items, include them with clear status (e.g., "Dormant Artifact (awakens later)", "DM-controlled Artifact (unstable)", "Narrative Artifact (limited mechanical use)") to help DMs manage game balance.
+- Possible Outcomes: 3-4 possible outcomes showing concrete consequences of different player choices (e.g., "If negotiated → alliance formed, sorceress becomes ally", "If combat → reputation gained, but faction becomes hostile", "If artifact kept → future consequences arise").
+- Rewards: Base rewards (XP, gold, items) appropriate for difficulty level
+- Choice-Based Rewards: Optional rewards tied to specific paths/choices (e.g., "If negotiated: alliance + favor + knowledge", "If combat: reputation + fear + loot", "If artifact sealed: future quest hook").
+- Difficulty: Level (easy, medium, hard, or deadly) - must align with stakes and recommended level
+- Related NPCs: NPCs involved in the mission
+- Related Locations: Locations relevant to the mission
+
+Make the mission feel exciting, playable, and ready to run in a campaign. Ensure difficulty matches the scope of stakes.`
         break
 
       default:
@@ -422,9 +449,33 @@ function generateMockEnvironment(scenario: string): Environment {
   if (isTower) name = 'The Abandoned Tower'
   if (scenario.toLowerCase().includes('wizard')) name = "Wizard's Sanctum"
 
+  const currentConflict = isTavern
+    ? 'A heated argument between two merchants is escalating, and the tavern keeper is trying to calm them down before it turns violent.'
+    : isTower
+    ? 'Magical wards are failing, causing unpredictable magical effects throughout the tower.'
+    : 'Strange occurrences have been reported, and the locals are growing increasingly fearful.'
+
+  const adventureHooks = isTavern
+    ? [
+        'The merchants offer gold to anyone who can help resolve their dispute',
+        'A mysterious figure in the corner watches the party with keen interest',
+        'The tavern keeper mentions a missing shipment that needs investigating',
+      ]
+    : isTower
+    ? [
+        'A magical artifact at the top of the tower is causing the instability',
+        'Ancient guardians have awakened and are hostile to all intruders',
+        'A previous explorer left behind valuable notes about the tower\'s secrets',
+      ]
+    : [
+        'Locals are offering a reward for anyone who can solve the mystery',
+        'A witness claims to have seen something important but is too scared to talk',
+        'The strange occurrences follow a pattern that suggests a hidden cause',
+      ]
+
   return {
     name,
-    description: scenario || `A ${isDark ? 'dark and foreboding' : 'welcoming'} place that holds many secrets. The air is thick with ${isDark ? 'mystery and danger' : 'warmth and camaraderie'}.`,
+    description: scenario || `A ${isDark ? 'dark and foreboding' : 'welcoming'} place that holds many secrets.`,
     ambient: isDark 
       ? 'Echoing footsteps, distant whispers, the creaking of old wood'
       : 'Lively chatter, clinking mugs, crackling fire, bardic music',
@@ -436,8 +487,10 @@ function generateMockEnvironment(scenario: string): Environment {
       ? ['Spiral staircase', 'Ancient library', 'Magical traps', 'Observation deck']
       : ['Mysterious artifacts', 'Hidden passages', 'Magical auras'],
     npcs: scenario.toLowerCase().includes('bard')
-      ? ['The Mysterious Bard', 'Tavern Keeper', 'Local Patrons']
-      : ['Guardian Spirit', 'Ancient Wizard', 'Curious Apprentice'],
+      ? ['The Mysterious Bard - Performs nightly and knows many local secrets', 'Tavern Keeper - Owner who keeps a watchful eye on patrons', 'Local Patrons - Regulars who gossip about town happenings']
+      : ['Guardian Spirit - Protects the location from intruders', 'Ancient Wizard - Former owner who left behind magical research', 'Curious Apprentice - Seeks knowledge about the location\'s history'],
+    currentConflict,
+    adventureHooks,
   }
 }
 
@@ -452,8 +505,103 @@ function generateMockMission(scenario: string): Mission {
     ? 'Thieves\' Guild Infiltration'
     : 'A Mysterious Quest'
 
-  const difficulty: 'easy' | 'medium' | 'hard' | 'deadly' = 
+  const difficulty: 'easy' | 'medium' | 'hard' | 'deadly' =
     hasGuild ? 'hard' : hasArtifact ? 'medium' : 'easy'
+
+  // Map difficulty to recommended level
+  const recommendedLevel = 
+    difficulty === 'easy' ? 'Level 1-3'
+    : difficulty === 'medium' ? 'Level 4-6'
+    : difficulty === 'hard' ? 'Level 7-10'
+    : 'Level 11+'
+
+  // Generate objectives with path types and alternatives
+  const objectives = hasArtifact
+    ? [
+        { description: 'Retrieve the stolen artifact', primary: true, pathType: 'mixed' as const },
+        { description: 'Negotiate with the sorceress for the artifact', primary: false, isAlternative: true, pathType: 'social' as const },
+        { description: 'Defeat the sorceress in combat', primary: false, isAlternative: true, pathType: 'combat' as const },
+        { description: 'Rescue any hostages', primary: false },
+      ]
+    : hasThieves
+    ? [
+        { description: 'Infiltrate the thieves\' guild hideout', primary: true, pathType: 'stealth' as const },
+        { description: 'Negotiate with the guild leader', primary: false, isAlternative: true, pathType: 'social' as const },
+        { description: 'Assault the hideout directly', primary: false, isAlternative: true, pathType: 'combat' as const },
+        { description: 'Rescue any hostages', primary: false },
+      ]
+    : [
+        { description: 'Complete the primary objective', primary: true, pathType: 'mixed' as const },
+        { description: 'Avoid detection', primary: false, pathType: 'stealth' as const },
+        { description: 'Rescue any hostages', primary: false },
+      ]
+
+  // Generate powerful items if artifact is mentioned
+  const powerfulItems = hasArtifact
+    ? [{ name: 'The Heart of Balance', status: 'Dormant Artifact (awakens later, DM-controlled)' }]
+    : undefined
+
+  // Generate possible outcomes
+  const possibleOutcomes = hasArtifact
+    ? [
+        'If artifact is retrieved and sealed → Balance is maintained, but factions seek it later',
+        'If artifact is destroyed → Imbalance spreads, magical instability increases',
+        'If artifact is kept by party → Future consequences arise, attracts powerful enemies',
+        'If negotiation succeeds → Alliance formed, but artifact remains a threat',
+      ]
+    : hasThieves
+    ? [
+        'If guild is infiltrated successfully → Information gained, but guild becomes hostile',
+        'If negotiation succeeds → Temporary alliance, but guild demands favors',
+        'If combat is chosen → Guild is weakened, but other criminal groups take notice',
+        'If hostages are rescued → Reputation gained, but guild seeks revenge',
+      ]
+    : [
+        'If primary objective succeeds → Quest giver becomes ally',
+        'If stealth approach is used → Information gained without confrontation',
+        'If hostages are rescued → Additional rewards and reputation',
+      ]
+
+  // Generate choice-based rewards
+  const choiceBasedRewards = hasArtifact
+    ? [
+        {
+          condition: 'If negotiated with sorceress',
+          rewards: {
+            xp: 300,
+            gold: 150,
+            items: ['Alliance Favor', 'Ancient Knowledge Scroll'],
+          },
+        },
+        {
+          condition: 'If combat is chosen',
+          rewards: {
+            xp: 500,
+            gold: 250,
+            items: ['Sorceress\'s Staff', 'Combat Loot'],
+          },
+        },
+      ]
+    : hasThieves
+    ? [
+        {
+          condition: 'If negotiation succeeds',
+          rewards: {
+            xp: 400,
+            gold: 200,
+            items: ['Guild Favor', 'Information Package'],
+          },
+        },
+        {
+          condition: 'If combat is chosen',
+          rewards: {
+            xp: 600,
+            gold: 300,
+            items: ['Guild Leader\'s Dagger', 'Stolen Goods'],
+          },
+        },
+      ]
+    : undefined
 
   return {
     title,
@@ -463,19 +611,19 @@ function generateMockMission(scenario: string): Mission {
       : hasThieves
       ? 'The local thieves\' guild has been causing trouble, and someone needs to put a stop to their activities.'
       : 'A mysterious figure has approached the heroes with an offer they cannot refuse.',
-    objectives: [
-      { description: hasArtifact ? 'Retrieve the stolen artifact' : hasThieves ? 'Infiltrate the thieves\' guild hideout' : 'Complete the primary objective', primary: true },
-      { description: 'Avoid detection', primary: false },
-      { description: 'Rescue any hostages', primary: false },
-    ],
+    objectives,
     rewards: {
       xp: difficulty === 'easy' ? 200 : difficulty === 'medium' ? 500 : difficulty === 'hard' ? 1000 : 2000,
       gold: difficulty === 'easy' ? 100 : difficulty === 'medium' ? 250 : difficulty === 'hard' ? 500 : 1000,
-      items: hasArtifact 
-        ? ['Ancient Artifact', 'Magical Scroll', 'Potion of Healing']
+      items: hasArtifact
+        ? ['Magical Scroll', 'Potion of Healing']
         : ['Thieves\' Tools', 'Lockpicks', 'Smoke Bomb'],
     },
     difficulty,
+    recommendedLevel,
+    powerfulItems,
+    possibleOutcomes,
+    choiceBasedRewards,
     relatedNPCs: hasGuild
       ? ['Guild Master', 'Thief Leader', 'Innocent Bystander']
       : ['Quest Giver', 'Ancient Guardian', 'Mysterious Benefactor'],
