@@ -1,0 +1,148 @@
+{
+  "common": {
+    "home": "Home",
+    "generator": "Generator",
+    "library": "Library",
+    "profile": "Profile",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close"
+  },
+  "home": {
+    "title": "SaveYourGoblin",
+    "subtitle": "Your AI-powered D&D 5e Content Generator",
+    "description": "Generate characters, environments, and missions instantly when players go off-script",
+    "footerTitle": "SaveYourGoblin",
+    "copyright": "© 2024 SaveYourGoblin. All rights reserved."
+  },
+  "generator": {
+    "title": "RPG Content Generator",
+    "description": "Describe your scenario and generate content",
+    "cardTitle": "What do you need?",
+    "cardDescription": "Describe the situation or what you want to create. For example: \"In this tavern there's a Bard who talks about an ancient flute\"",
+    "contentType": {
+      "character": "Character/NPC",
+      "environment": "Environment",
+      "mission": "Mission/Quest"
+    },
+    "contentTypeLabel": "Content Type",
+    "contentTypeDesc": {
+      "character": "Generate a character with background, skills, and personality",
+      "environment": "Create a location with atmosphere and details",
+      "mission": "Design a quest with objectives and rewards"
+    },
+    "scenarioLabel": "Describe Your Scenario",
+    "scenarioHelper": "Be as detailed or as simple as you want. The AI will expand on your description.",
+    "placeholderCharacter": "Example: A mysterious Tiefling bard in a tavern who knows stories about an ancient magical flute",
+    "placeholderEnvironment": "Example: A dark, abandoned wizard's tower filled with magical traps, glowing crystals, and ancient spellbooks",
+    "placeholderMission": "Example: Retrieve a stolen magical artifact from a thieves' guild hideout before it falls into the wrong hands",
+    "generateButton": "Generate",
+    "generating": "Generating your content...",
+    "generationSuccessTitle": "Content Generated Successfully!",
+    "generationSuccessMessage": "Your {contentType} has been created and is displayed below.",
+    "saveSuccess": "Content saved successfully!",
+    "saveError": "Failed to save content",
+    "saveFailed": "Save failed:",
+    "saving": "Saving...",
+    "retry": "Retry",
+    "tipsTitle": "Tips",
+    "tips": {
+      "tip1": "Be specific about the setting and context",
+      "tip2": "Mention important details (race, class, mood, etc.)",
+      "tip3": "Include any special requirements or constraints",
+      "tip4": "The more context you provide, the better the results"
+    },
+    "examplesTitle": "Examples"
+  },
+  "library": {
+    "title": "My Library",
+    "empty": "No saved content yet",
+    "emptyDescription": "Generate content and save it to your library"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "SaveYourGoblin Profile",
+    "email": "Email",
+    "signOut": "Sign Out",
+    "basicInfoTitle": "Basic Information",
+    "basicInfoDescription": "Your account details and preferences",
+    "emailCannotChange": "Email cannot be changed",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Enter your display name",
+    "favoriteRPG": "Favorite RPG System",
+    "bio": "Bio",
+    "bioPlaceholder": "Tell us about yourself...",
+    "appearanceTitle": "Appearance & Style",
+    "appearanceDescription": "Customize your profile appearance",
+    "preferredTheme": "Preferred Theme",
+    "themeDesc": {
+      "dark": "Default",
+      "parchment": "Light",
+      "royal": "Elegant"
+    },
+    "avatarStyle": "Avatar Style",
+    "saving": "Saving...",
+    "saveProfile": "Save Profile"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign In",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign In",
+      "forgotPassword": "Forgot password?",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up"
+    },
+    "register": {
+      "title": "Sign Up",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "submit": "Sign Up",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in"
+    },
+    "forgotPassword": {
+      "title": "Forgot Password",
+      "email": "Email",
+      "submit": "Send Reset Link",
+      "backToLogin": "Back to login"
+    },
+    "resetPassword": {
+      "title": "Reset Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm Password",
+      "submit": "Reset Password"
+    },
+    "verifyEmail": {
+      "title": "Verify Email",
+      "token": "Verification Token",
+      "submit": "Verify Email"
+    }
+  },
+  "rpg": {
+    "abilityScores": "Ability Scores",
+    "proficiencyBonus": "Proficiency Bonus",
+    "skills": "Skills",
+    "expertise": "Expertise",
+    "racialTraits": "Racial Traits",
+    "classFeatures": "Class Features",
+    "spells": "Spells",
+    "history": "History",
+    "personality": "Personality",
+    "voice": "Voice"
+  },
+  "errors": {
+    "generic": "An error occurred",
+    "network": "Network error. Please try again.",
+    "unauthorized": "Unauthorized. Please sign in.",
+    "notFound": "Not found"
+  },
+  "success": {
+    "saved": "Saved successfully",
+    "deleted": "Deleted successfully"
+  }
+}

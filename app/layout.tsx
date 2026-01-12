@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { Cinzel, Cinzel_Decorative, MedievalSharp } from "next/font/google";
 import "./globals.css";
 import { ThemeLoader } from "@/components/theme-loader";
@@ -22,19 +21,13 @@ const medievalSharp = MedievalSharp({
   weight: ["400"],
 });
 
-export const metadata: Metadata = {
-  title: "RPG Master's Assistant",
-  description: "An AI-powered tool for RPG masters to generate characters, NPCs, missions, and environments on-the-fly when players go off-script",
-};
-
 export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+  children
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en">
-      {/* ThemeLoader will apply the user's preferred theme on mount */}
+    <html>
       <body
         className={`${cinzel.variable} ${cinzelDecorative.variable} ${medievalSharp.variable} antialiased`}
       >
@@ -43,5 +36,5 @@ export default function RootLayout({
         <ThemeSelector />
       </body>
     </html>
-  );
+  )
 }

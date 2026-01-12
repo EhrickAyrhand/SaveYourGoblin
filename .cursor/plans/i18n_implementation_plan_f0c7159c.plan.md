@@ -1,9 +1,3 @@
----
-name: i18n Implementation Plan
-overview: Implement internationalization (i18n) for Portuguese (Brazil), English, and Spanish using next-intl. This involves restructuring the app directory, creating translation files, adding middleware for locale routing, and updating all components to use translations.
-todos: []
----
-
 # i18n Implementation Plan
 
 ## Overview

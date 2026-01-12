@@ -10,6 +10,12 @@ export interface Spell {
   description: string
 }
 
+export interface ClassFeature {
+  name: string // Feature name (e.g., "Rage", "Sneak Attack")
+  description: string // Brief description of what the feature does
+  level: number // Level at which this feature is obtained (1-20)
+}
+
 export interface Skill {
   name: string
   proficiency: boolean
@@ -39,6 +45,7 @@ export interface Character {
   skills: Skill[]
   traits: string[]
   racialTraits?: string[] // Array of racial traits (e.g., Darkvision, Hellish Resistance, Infernal Legacy)
+  classFeatures?: ClassFeature[] // Array of class features with name, description, and level obtained
   voiceDescription: string // Voice description (e.g., "Hoarse voice", "Sweet voice", "Angry voice")
   associatedMission?: string
 }

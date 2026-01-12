@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useTranslations, useLocale } from 'next-intl'
+import { useRouter } from '@/i18n/routing'
 import { getCurrentUser, signOut } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
 import type { User } from "@/types/auth"
@@ -30,6 +31,8 @@ interface GeneratorState {
 }
 
 export default function GeneratorPage() {
+  const t = useTranslations()
+  const locale = useLocale()
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -257,7 +260,7 @@ export default function GeneratorPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
-        const errorMessage = errorData.error || errorData.message || "Failed to save content"
+        const errorMessage = errorData.error || errorData.message || t('generator.saveError')
         setSaveError(errorMessage)
         console.error("Save error:", errorMessage)
         return
@@ -270,7 +273,7 @@ export default function GeneratorPage() {
         setSaveSuccess(false)
       }, 5000)
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to save content"
+      const errorMessage = err instanceof Error ? err.message : t('generator.saveError')
       setSaveError(errorMessage)
       console.error("Save failed:", err)
     } finally {
@@ -304,8 +307,8 @@ export default function GeneratorPage() {
       <div className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center gap-2 pt-4">
         {showSaveBanner && (
           <AnimatedBanner
-            title="Content Saved!"
-            message="Your content has been saved successfully to your library."
+            title={t('generator.saveSuccess')}
+            message={t('success.saved')}
             variant="success"
             onDismiss={() => {
               setShowSaveBanner(false)
@@ -315,8 +318,8 @@ export default function GeneratorPage() {
         )}
         {showGenerationBanner && !showSaveBanner && (
           <AnimatedBanner
-            title="Content Generated Successfully!"
-            message={`Your ${contentType} has been created and is displayed below.`}
+            title={t('generator.generationSuccessTitle')}
+            message={t('generator.generationSuccessMessage', { contentType: t(`generator.contentType.${contentType}`) })}
             variant="success"
             onDismiss={() => {
               setShowGenerationBanner(false)
@@ -329,9 +332,9 @@ export default function GeneratorPage() {
       <div className="mx-auto max-w-5xl space-y-6 pt-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="min-w-0">
-            <h1 className="font-display text-5xl font-bold mb-3 whitespace-nowrap">RPG Content Generator</h1>
+            <h1 className="font-display text-5xl font-bold mb-3 whitespace-nowrap">{t('generator.title')}</h1>
             <p className="mt-2 text-base text-muted-foreground font-body">
-              Describe what you need, and AI will create it for your campaign
+              {t('generator.description')}
             </p>
           </div>
           <div className="flex gap-2">
@@ -351,7 +354,7 @@ export default function GeneratorPage() {
                   onClick={handleGenerate}
                   disabled={isGenerating}
                 >
-                  Retry
+                  {t('generator.retry')}
                 </Button>
               )}
             </AlertDescription>
@@ -360,37 +363,37 @@ export default function GeneratorPage() {
 
         <Card className="parchment ornate-border">
           <CardHeader>
-            <CardTitle className="font-display text-3xl mb-2">What do you need?</CardTitle>
+            <CardTitle className="font-display text-3xl mb-2">{t('generator.cardTitle')}</CardTitle>
             <CardDescription className="font-body text-base">
-              Describe the situation or what you want to create. For example: "In this tavern there's a Bard who talks about an ancient flute"
+              {t('generator.cardDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 p-6">
             <div className="space-y-4">
-              <Label className="font-body text-lg font-semibold">Content Type</Label>
+              <Label className="font-body text-lg font-semibold">{t('generator.contentTypeLabel')}</Label>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 {[
                   {
                     value: "character" as ContentType,
                     icon: "🎭",
-                    label: "Character/NPC",
-                    desc: "Generate a character with background, skills, and personality",
+                    label: t('generator.contentType.character'),
+                    desc: t('generator.contentTypeDesc.character'),
                     color: "from-purple-500/20 to-blue-500/20",
                     borderColor: "border-purple-500/50",
                   },
                   {
                     value: "environment" as ContentType,
                     icon: "🗺️",
-                    label: "Environment",
-                    desc: "Create a location with atmosphere and details",
+                    label: t('generator.contentType.environment'),
+                    desc: t('generator.contentTypeDesc.environment'),
                     color: "from-green-500/20 to-emerald-500/20",
                     borderColor: "border-green-500/50",
                   },
                   {
                     value: "mission" as ContentType,
                     icon: "⚔️",
-                    label: "Mission/Quest",
-                    desc: "Design a quest with objectives and rewards",
+                    label: t('generator.contentType.mission'),
+                    desc: t('generator.contentTypeDesc.mission'),
                     color: "from-red-500/20 to-orange-500/20",
                     borderColor: "border-red-500/50",
                   },
@@ -424,7 +427,7 @@ export default function GeneratorPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label htmlFor="scenario" className="font-body text-lg font-semibold">
-                  Describe Your Scenario
+                  {t('generator.scenarioLabel')}
                 </Label>
                 <span className="text-xs text-muted-foreground font-body">
                   {scenario.length} characters
@@ -437,10 +440,10 @@ export default function GeneratorPage() {
                   onChange={(e) => setScenario(e.target.value)}
                   placeholder={
                     contentType === "character"
-                      ? 'Example: "A bard level 3 with high charisma, expertise in Performance and Persuasion, knows Vicious Mockery and Healing Word"'
+                      ? t('generator.placeholderCharacter')
                       : contentType === "environment"
-                      ? 'Example: "A dark, abandoned wizard\'s tower filled with magical traps and ancient artifacts"'
-                      : 'Example: "The heroes must retrieve a stolen magical artifact from a thieves\' guild hideout"'
+                      ? t('generator.placeholderEnvironment')
+                      : t('generator.placeholderMission')
                   }
                   rows={8}
                   disabled={isGenerating}
@@ -456,7 +459,7 @@ export default function GeneratorPage() {
                 )}
               </div>
               <p className="text-sm text-muted-foreground font-body">
-                Be as detailed or as simple as you want. The AI will expand on your description.
+                {t('generator.scenarioHelper')}
               </p>
             </div>
 
@@ -470,12 +473,12 @@ export default function GeneratorPage() {
                 {isGenerating ? (
                   <>
                     <span className="mr-2 text-xl animate-spin">⚡</span>
-                    Generating...
+                    {t('generator.generating')}
                   </>
                 ) : (
                   <>
                     <span className="mr-2 text-xl">✨</span>
-                    Generate Content
+                    {t('generator.generateButton')}
                   </>
                 )}
               </Button>
@@ -486,19 +489,19 @@ export default function GeneratorPage() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="parchment ornate-border">
             <CardHeader>
-              <CardTitle className="font-display text-2xl mb-2">💡 Tips</CardTitle>
+              <CardTitle className="font-display text-2xl mb-2">💡 {t('generator.tipsTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-base font-body p-6">
-              <p>• Be specific about the setting and context</p>
-              <p>• Mention important details (race, class, mood, etc.)</p>
-              <p>• Include any special requirements or constraints</p>
-              <p>• The more context you provide, the better the results</p>
+              <p>• {t('generator.tips.tip1')}</p>
+              <p>• {t('generator.tips.tip2')}</p>
+              <p>• {t('generator.tips.tip3')}</p>
+              <p>• {t('generator.tips.tip4')}</p>
             </CardContent>
           </Card>
 
           <Card className="parchment ornate-border">
             <CardHeader>
-              <CardTitle className="font-display text-2xl mb-2">📝 Examples</CardTitle>
+              <CardTitle className="font-display text-2xl mb-2">📝 {t('generator.examplesTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-base font-body p-6">
               {contentType === "character" && (
@@ -616,9 +619,9 @@ export default function GeneratorPage() {
                   <div className="absolute inset-0 text-6xl animate-ping opacity-20">⚡</div>
                 </div>
                 <div>
-                  <p className="font-display text-2xl font-semibold mb-2">Generating your content...</p>
+                  <p className="font-display text-2xl font-semibold mb-2">{t('generator.generating')}</p>
                   <p className="font-body text-base text-muted-foreground">
-                    The AI is crafting your {contentType} based on your scenario
+                    The AI is crafting your {t(`generator.contentType.${contentType}`)} based on your scenario
                   </p>
                 </div>
                 <div className="flex justify-center gap-2 pt-4">
@@ -651,14 +654,14 @@ export default function GeneratorPage() {
                 ) : (
                   <>
                     <span className="mr-2">💾</span>
-                    Save to Library
+                    {t('common.save')}
                   </>
                 )}
               </Button>
               {saveError && (
                 <Alert variant="destructive" className="flex-1 animate-in fade-in slide-in-from-top-2">
                   <AlertDescription className="font-body">
-                    <strong>Save failed:</strong> {saveError}
+                    <strong>{t('generator.saveFailed')}</strong> {saveError}
                   </AlertDescription>
                 </Alert>
               )}

@@ -22,6 +22,12 @@ const spellSchema = z.object({
   description: z.string().describe('A brief description of what the spell does'),
 })
 
+const classFeatureSchema = z.object({
+  name: z.string().describe('The name of the class feature (e.g., "Rage", "Sneak Attack", "Bardic Inspiration")'),
+  description: z.string().describe('A brief description of what the feature does'),
+  level: z.number().int().min(1).max(20).describe('The level at which this feature is obtained (1-20)'),
+})
+
 const skillSchema = z.object({
   name: z.string().describe('The skill name (e.g., Persuasion, Stealth)'),
   proficiency: z.boolean().describe('Whether the character is proficient in this skill'),
@@ -51,6 +57,7 @@ const characterSchema = z.object({
   skills: z.array(skillSchema).describe('Array of skills with proficiency and modifiers'),
   traits: z.array(z.string()).describe('Character traits, quirks, or notable features'),
   racialTraits: z.array(z.string()).optional().describe('Array of racial traits and features (e.g., "Darkvision 60ft", "Hellish Resistance", "Infernal Legacy", "Fey Ancestry", "Dwarven Resilience"). Include all standard D&D 5e racial features for the character\'s race.'),
+  classFeatures: z.array(classFeatureSchema).optional().describe('Array of ALL mandatory class features for this class and level. MUST include every class feature the character has access to at their level. Examples: Barbarian (Level 3) should include Rage, Unarmored Defense, Reckless Attack, Danger Sense, Primal Path feature. Rogue (Level 3) should include Sneak Attack, Thieves\' Cant, Cunning Action, Expertise, Roguish Archetype feature. Every class has mandatory features that must be included, even non-spellcasting classes.'),
   voiceDescription: z.string().describe('Voice description (e.g., "Hoarse voice", "Sweet voice", "Angry voice", "Deep voice", "Melodic voice", "Raspy voice") - NOT dialogue lines, just the voice quality/characteristics'),
   associatedMission: z.string().optional().describe('Optional: Name of a related mission or quest'),
 })
@@ -202,7 +209,7 @@ export async function generateRPGContent(
     switch (contentType) {
       case 'character':
         schema = characterSchema
-        systemPrompt = `You are an expert D&D 5e game master and character creator. Create detailed, immersive characters that feel authentic to the D&D 5e universe. Characters should have rich backstories, distinct personalities, and appropriate abilities for their level and class. Include spells appropriate to the character's class and level. IMPORTANT: Ensure all skill proficiency flags are correctly set based on class, background, and race. Include all standard racial traits for the character's race.`
+        systemPrompt = `You are an expert D&D 5e game master and character creator. Create detailed, immersive characters that feel authentic to the D&D 5e universe. Characters should have rich backstories, distinct personalities, and appropriate abilities for their level and class. Include spells appropriate to the character's class and level. IMPORTANT: Ensure all skill proficiency flags are correctly set based on class, background, and race. Include all standard racial traits for the character's race. CRITICAL: Every character MUST include ALL mandatory class features for their class and level - this is non-negotiable. Non-spellcasting classes (Barbarian, Rogue, Fighter, Monk) must have their complete feature list.`
         userPrompt = `Create a D&D 5e character based on this scenario: "${scenario}"
 
 Generate a complete character with:
@@ -212,14 +219,23 @@ Generate a complete character with:
 - A compelling backstory that connects to the scenario
 - Distinct personality traits
 - Expertise in 2-4 skills (if the class grants expertise, like Rogue or Bard)
-- Appropriate spells for their class and level
+- Appropriate spells for their class and level (if spellcasting class)
 - ALL skills with accurate proficiency flags - mark proficiency: true for skills granted by class, background, or race. The modifier field should match: ability modifier + proficiency bonus (if proficient) or ability modifier + 2×proficiency bonus (if expertise)
 - Racial traits: Include ALL standard D&D 5e racial features for the character's race (e.g., Tiefling: Darkvision, Hellish Resistance, Infernal Legacy; Elf: Darkvision, Fey Ancestry, Keen Senses; Dwarf: Darkvision, Dwarven Resilience, Stonecunning)
+- Class Features: Include ALL mandatory class features for this class and level. This is REQUIRED for every character. Examples:
+  * Barbarian (Level 3): Rage (Level 1), Unarmored Defense (Level 1), Reckless Attack (Level 2), Danger Sense (Level 2), Primal Path feature (Level 3)
+  * Rogue (Level 3): Sneak Attack (Level 1), Thieves' Cant (Level 1), Expertise (Level 1), Cunning Action (Level 2), Roguish Archetype feature (Level 3)
+  * Fighter (Level 3): Fighting Style (Level 1), Second Wind (Level 1), Action Surge (Level 2), Martial Archetype feature (Level 3)
+  * Monk (Level 3): Unarmored Defense (Level 1), Martial Arts (Level 1), Ki (Level 2), Unarmored Movement (Level 2), Monastic Tradition feature (Level 3)
+  * Spellcasting classes (Bard, Wizard, etc.) must also include their class features (e.g., Bardic Inspiration for Bard, Arcane Recovery for Wizard)
 - Character traits and quirks
 - Voice description (e.g., "Hoarse voice", "Sweet voice", "Angry voice", "Deep voice", "Melodic voice", "Raspy voice") - NOT dialogue phrases, just the voice quality
 - Optional associated mission if relevant
 
-CRITICAL: Ensure skill modifiers are calculated correctly. For each skill, proficiency: true means the modifier should be (ability modifier + proficiency bonus). For expertise, it should be (ability modifier + 2×proficiency bonus). Make the character feel alive and ready to use in a campaign.`
+CRITICAL: 
+1. Ensure skill modifiers are calculated correctly. For each skill, proficiency: true means the modifier should be (ability modifier + proficiency bonus). For expertise, it should be (ability modifier + 2×proficiency bonus).
+2. Class features are MANDATORY - every character must have their complete class feature list. Non-spellcasting classes cannot rely on spells alone.
+3. Make the character feel alive and ready to use in a campaign.`
         break
 
       case 'environment':
@@ -402,11 +418,112 @@ function generateMockCharacter(scenario: string): Character {
   }
   
   const racialTraits = getRacialTraits(race)
-  
+
+  // Get class features based on class and level
+  const getClassFeatures = (className: string, charLevel: number): Array<{name: string, description: string, level: number}> => {
+    const classLower = className.toLowerCase()
+    const features: Array<{name: string, description: string, level: number}> = []
+
+    if (classLower.includes('barbarian')) {
+      features.push({ name: 'Rage', description: 'In battle, you can enter a berserker rage, gaining advantage on Strength checks and saving throws, bonus damage, and resistance to bludgeoning, piercing, and slashing damage.', level: 1 })
+      features.push({ name: 'Unarmored Defense', description: 'While not wearing armor, your AC equals 10 + Dexterity modifier + Constitution modifier.', level: 1 })
+      if (charLevel >= 2) {
+        features.push({ name: 'Reckless Attack', description: 'When you make your first attack on your turn, you can decide to attack recklessly, giving you advantage on melee weapon attack rolls but attacks against you have advantage until your next turn.', level: 2 })
+        features.push({ name: 'Danger Sense', description: 'You gain advantage on Dexterity saving throws against effects you can see.', level: 2 })
+      }
+      if (charLevel >= 3) {
+        features.push({ name: 'Primal Path', description: 'You choose a path that shapes the nature of your rage.', level: 3 })
+      }
+    } else if (classLower.includes('rogue')) {
+      features.push({ name: 'Sneak Attack', description: 'Once per turn, you can deal extra damage to one creature you hit with an attack if you have advantage on the attack roll.', level: 1 })
+      features.push({ name: 'Thieves\' Cant', description: 'You learn the secret language of thieves, allowing you to hide messages in seemingly normal conversation.', level: 1 })
+      features.push({ name: 'Expertise', description: 'Your proficiency bonus is doubled for two skills of your choice.', level: 1 })
+      if (charLevel >= 2) {
+        features.push({ name: 'Cunning Action', description: 'Your quick thinking and agility allow you to take a bonus action on each of your turns to Dash, Disengage, or Hide.', level: 2 })
+      }
+      if (charLevel >= 3) {
+        features.push({ name: 'Roguish Archetype', description: 'You choose an archetype that reflects the nature of your training.', level: 3 })
+      }
+    } else if (classLower.includes('fighter')) {
+      features.push({ name: 'Fighting Style', description: 'You adopt a particular style of fighting as your specialty.', level: 1 })
+      features.push({ name: 'Second Wind', description: 'You have a limited well of stamina that you can draw on to protect yourself from harm. On your turn, you can use a bonus action to regain hit points.', level: 1 })
+      if (charLevel >= 2) {
+        features.push({ name: 'Action Surge', description: 'You can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action.', level: 2 })
+      }
+      if (charLevel >= 3) {
+        features.push({ name: 'Martial Archetype', description: 'You choose an archetype that embodies the martial traditions you follow.', level: 3 })
+      }
+    } else if (classLower.includes('monk')) {
+      features.push({ name: 'Unarmored Defense', description: 'While you are not wearing any armor, your AC equals 10 + Dexterity modifier + Wisdom modifier.', level: 1 })
+      features.push({ name: 'Martial Arts', description: 'Your practice of martial arts gives you mastery of combat styles that use unarmed strikes and monk weapons.', level: 1 })
+      if (charLevel >= 2) {
+        features.push({ name: 'Ki', description: 'Your training allows you to harness the mystic energy of ki. You have a number of ki points equal to your monk level.', level: 2 })
+        features.push({ name: 'Unarmored Movement', description: 'Your speed increases by 10 feet while you are not wearing armor or wielding a shield.', level: 2 })
+      }
+      if (charLevel >= 3) {
+        features.push({ name: 'Monastic Tradition', description: 'You commit yourself to a monastic tradition that shapes your technique and philosophy.', level: 3 })
+      }
+    } else if (classLower.includes('bard')) {
+      features.push({ name: 'Bardic Inspiration', description: 'You can inspire others through stirring words or music. A creature that has a Bardic Inspiration die can add it to one ability check, attack roll, or saving throw.', level: 1 })
+      features.push({ name: 'Spellcasting', description: 'You have learned to cast spells through your study of magic and music.', level: 1 })
+      if (charLevel >= 2) {
+        features.push({ name: 'Jack of All Trades', description: 'You can add half your proficiency bonus, rounded down, to any ability check you make that doesn\'t already include your proficiency bonus.', level: 2 })
+        features.push({ name: 'Song of Rest', description: 'You can use soothing music or oration to help revitalize your wounded allies during a short rest.', level: 2 })
+      }
+      if (charLevel >= 3) {
+        features.push({ name: 'Bard College', description: 'You delve into the advanced techniques of a bard college of your choice.', level: 3 })
+        features.push({ name: 'Expertise', description: 'Your proficiency bonus is doubled for two skills of your choice.', level: 3 })
+      }
+    } else if (classLower.includes('wizard')) {
+      features.push({ name: 'Spellcasting', description: 'As a student of arcane magic, you have a spellbook containing spells that show the first glimmerings of your true power.', level: 1 })
+      features.push({ name: 'Arcane Recovery', description: 'You have learned to regain some of your magical energy by studying your spellbook. Once per day when you finish a short rest, you can recover expended spell slots.', level: 1 })
+      if (charLevel >= 2) {
+        features.push({ name: 'Arcane Tradition', description: 'You choose an arcane tradition, shaping your practice of magic through one of eight schools.', level: 2 })
+      }
+    } else if (classLower.includes('cleric')) {
+      features.push({ name: 'Spellcasting', description: 'As a conduit for divine power, you can cast cleric spells.', level: 1 })
+      features.push({ name: 'Divine Domain', description: 'You choose a domain related to your deity, granting you domain spells and other features.', level: 1 })
+      if (charLevel >= 2) {
+        features.push({ name: 'Channel Divinity', description: 'You gain the ability to channel divine energy directly from your deity, using that energy to fuel magical effects.', level: 2 })
+      }
+    } else if (classLower.includes('paladin')) {
+      features.push({ name: 'Divine Sense', description: 'The presence of strong evil registers on your senses like a noxious odor, and powerful good rings like heavenly music in your ears.', level: 1 })
+      features.push({ name: 'Lay on Hands', description: 'Your blessed touch can heal wounds. You have a pool of healing power that replenishes when you take a long rest.', level: 1 })
+      if (charLevel >= 2) {
+        features.push({ name: 'Fighting Style', description: 'You adopt a particular style of fighting as your specialty.', level: 2 })
+        features.push({ name: 'Spellcasting', description: 'By 2nd level, you have learned to draw on divine magic through meditation and prayer to cast spells as a cleric does.', level: 2 })
+        features.push({ name: 'Divine Smite', description: 'When you hit a creature with a melee weapon attack, you can expend one spell slot to deal radiant damage to the target.', level: 2 })
+      }
+      if (charLevel >= 3) {
+        features.push({ name: 'Sacred Oath', description: 'When you reach 3rd level, you swear the oath that binds you as a paladin forever.', level: 3 })
+      }
+    } else if (classLower.includes('ranger')) {
+      features.push({ name: 'Favored Enemy', description: 'You have significant experience studying, tracking, hunting, and even talking to a certain type of enemy.', level: 1 })
+      features.push({ name: 'Natural Explorer', description: 'You are particularly familiar with one type of natural environment and are adept at traveling and surviving in such regions.', level: 1 })
+      if (charLevel >= 2) {
+        features.push({ name: 'Fighting Style', description: 'You adopt a particular style of fighting as your specialty.', level: 2 })
+        features.push({ name: 'Spellcasting', description: 'By the time you reach 2nd level, you have learned to use the magical essence of nature to cast spells.', level: 2 })
+      }
+      if (charLevel >= 3) {
+        features.push({ name: 'Ranger Archetype', description: 'You choose an archetype that you strive to emulate in your combat styles and techniques.', level: 3 })
+      }
+    } else if (classLower.includes('sorcerer')) {
+      features.push({ name: 'Spellcasting', description: 'An event in your past, or in the life of a parent or ancestor, left an indelible mark on you, infusing you with arcane magic.', level: 1 })
+      features.push({ name: 'Sorcerous Origin', description: 'Your innate magic comes from a magical bloodline, a connection to a powerful magical source, or exposure to raw magic.', level: 1 })
+      if (charLevel >= 2) {
+        features.push({ name: 'Font of Magic', description: 'You tap into a deep wellspring of magic within yourself. This wellspring is represented by sorcery points.', level: 2 })
+      }
+    }
+
+    return features
+  }
+
+  const classFeatures = getClassFeatures(charClass, level)
+
   // Calculate skill modifiers correctly
   const chaMod = getMockModifier(attributes.charisma)
   const intMod = getMockModifier(attributes.intelligence)
-  
+
   return {
     name,
     race,
@@ -434,6 +551,7 @@ function generateMockCharacter(scenario: string): Character {
       'Always carries a musical instrument',
     ],
     racialTraits: racialTraits.length > 0 ? racialTraits : undefined,
+    classFeatures: classFeatures.length > 0 ? classFeatures : undefined,
     voiceDescription: voiceDescriptions[Math.floor(Math.random() * voiceDescriptions.length)],
     associatedMission: scenario.toLowerCase().includes('flute') ? 'The Lost Melody' : undefined,
   }

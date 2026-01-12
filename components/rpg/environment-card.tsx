@@ -8,6 +8,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import type { Environment } from "@/types/rpg"
+import { MoodBadge } from "./mood-badge"
+import { LightingIndicator } from "./lighting-indicator"
 
 interface EnvironmentCardProps {
   environment: Environment
@@ -32,103 +34,264 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
     )
   }
 
+  // Get mood theme for header gradient
+  const getMoodTheme = (moodText: string): string => {
+    const lower = moodText.toLowerCase()
+    if (lower.includes('tense') || lower.includes('dangerous') || lower.includes('hostile')) {
+      return 'from-red-500/10 to-orange-500/5 border-red-500/30'
+    }
+    if (lower.includes('peaceful') || lower.includes('calm') || lower.includes('serene')) {
+      return 'from-green-500/10 to-blue-500/5 border-green-500/30'
+    }
+    if (lower.includes('mysterious') || lower.includes('eerie') || lower.includes('ominous')) {
+      return 'from-purple-500/10 to-indigo-500/5 border-purple-500/30'
+    }
+    return 'from-slate-500/10 to-blue-500/5 border-primary/30'
+  }
+
+  const headerTheme = getMoodTheme(environment.mood)
+
   return (
-    <Card className="parchment ornate-border">
-      <CardHeader className="px-6 pt-6">
-        <CardTitle className="font-display text-4xl mb-3">{environment.name}</CardTitle>
-        <CardDescription className="font-body text-base">
-          {environment.mood} • {environment.lighting}
-        </CardDescription>
+    <Card className="parchment ornate-border border-2 border-primary/20">
+      <CardHeader className={`px-6 pt-6 pb-4 border-b-2 bg-gradient-to-r ${headerTheme}`}>
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="flex-1">
+            <CardTitle className="font-display text-4xl mb-3 flex items-center gap-3">
+              <span className="text-3xl">🗺️</span>
+              {environment.name}
+            </CardTitle>
+            <div className="flex flex-wrap items-center gap-3">
+              <MoodBadge mood={environment.mood} size="md" />
+              <LightingIndicator lighting={environment.lighting} size="md" />
+            </div>
+          </div>
+          {/* Location Icon Placeholder */}
+          <div className="w-20 h-20 rounded-full border-4 border-primary/30 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-4xl flex-shrink-0">
+            🏛️
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="p-6 space-y-6">
+      <CardContent className="p-6 space-y-4">
         {/* Description */}
-        <div>
-          <h3 className="font-display text-2xl font-semibold mb-3">Description</h3>
-          <p className="font-body text-base text-muted-foreground leading-relaxed">
-            {environment.description}
-          </p>
+        <div className="border-2 border-teal-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-teal-500/10 via-teal-500/5 to-transparent">
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-teal-500/20 border-2 border-teal-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                📖
+              </div>
+              <div className="text-left">
+                <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                  Description
+                </h3>
+                <p className="text-xs text-muted-foreground font-body mt-0.5">
+                  Location details
+                </p>
+              </div>
+            </div>
+            <div className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-teal-500/20">
+              <p className="font-body text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                {environment.description}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Ambient Sounds */}
-        <div>
-          <h3 className="font-display text-2xl font-semibold mb-3">Ambient Atmosphere</h3>
-          <p className="font-body text-base text-muted-foreground italic leading-relaxed">
-            {environment.ambient}
-          </p>
+        <div className="border-2 border-blue-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent">
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/20 border-2 border-blue-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                🎵
+              </div>
+              <div className="text-left">
+                <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                  Ambient Atmosphere
+                </h3>
+                <p className="text-xs text-muted-foreground font-body mt-0.5">
+                  Sounds and atmosphere
+                </p>
+              </div>
+            </div>
+            <div className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-blue-500/20">
+              <p className="font-body text-sm text-foreground italic leading-relaxed">
+                {environment.ambient}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Features */}
         {environment.features && environment.features.length > 0 && (
-          <div>
-            <h3 className="font-display text-2xl font-semibold mb-4">Notable Features</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {environment.features.map((feature, idx) => (
-                <div
-                  key={idx}
-                  className="font-body text-base p-4 rounded-md bg-muted/50 border border-border"
-                >
-                  <span className="text-primary font-semibold text-lg">•</span> {feature}
+          <div className="border-2 border-amber-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/20 border-2 border-amber-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                    ✨
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                      Notable Features
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      {environment.features.length} {environment.features.length === 1 ? 'feature' : 'features'}
+                    </p>
+                  </div>
                 </div>
-              ))}
+                <span className="px-2 py-1 bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded text-xs font-bold">
+                  {environment.features.length}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {environment.features.map((feature, idx) => {
+                  // Determine feature icon based on content
+                  const getFeatureIcon = (text: string): string => {
+                    const lower = text.toLowerCase()
+                    if (lower.includes('trap') || lower.includes('danger') || lower.includes('hazard')) return '⚠️'
+                    if (lower.includes('door') || lower.includes('entrance') || lower.includes('exit')) return '🚪'
+                    if (lower.includes('chest') || lower.includes('treasure') || lower.includes('loot')) return '💎'
+                    if (lower.includes('book') || lower.includes('scroll') || lower.includes('document')) return '📜'
+                    if (lower.includes('altar') || lower.includes('shrine') || lower.includes('temple')) return '⛩️'
+                    if (lower.includes('fire') || lower.includes('torch') || lower.includes('candle')) return '🔥'
+                    return '📍'
+                  }
+                  
+                  return (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-amber-500/20 hover:border-amber-500/40 hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-lg flex-shrink-0">
+                          {getFeatureIcon(feature)}
+                        </div>
+                        <p className="text-sm font-body text-foreground leading-relaxed flex-1">{feature}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )}
 
         {/* Current Conflict */}
         {environment.currentConflict && (
-          <div>
-            <h3 className="font-display text-2xl font-semibold mb-3">Current Conflict</h3>
-            <p className="font-body text-base text-muted-foreground leading-relaxed p-4 rounded-md bg-destructive/10 border border-destructive/20">
-              {environment.currentConflict}
-            </p>
+          <div className="border-2 border-red-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent">
+            <div className="p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-lg bg-red-500/20 border-2 border-red-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                  ⚔️
+                </div>
+                <div className="text-left">
+                  <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                    Current Conflict
+                  </h3>
+                  <p className="text-xs text-muted-foreground font-body mt-0.5">
+                    Active issues
+                  </p>
+                </div>
+              </div>
+              <div className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-red-500/40 ring-2 ring-red-500/20">
+                <div className="flex items-start gap-3">
+                  <span className="text-xl flex-shrink-0">⚠️</span>
+                  <p className="font-body text-sm text-foreground leading-relaxed flex-1">
+                    {environment.currentConflict}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
         {/* NPCs */}
         {environment.npcs && environment.npcs.length > 0 && (
-          <div>
-            <h3 className="font-display text-2xl font-semibold mb-4">Present NPCs</h3>
-            <div className="flex flex-wrap gap-3">
-              {environment.npcs.map((npc, idx) => (
-                <div
-                  key={idx}
-                  className="font-body text-base px-4 py-2 rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold"
-                >
-                  {npc}
+          <div className="border-2 border-violet-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-violet-500/10 via-violet-500/5 to-transparent">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-violet-500/20 border-2 border-violet-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                    👥
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                      Present NPCs
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      {environment.npcs.length} {environment.npcs.length === 1 ? 'NPC' : 'NPCs'}
+                    </p>
+                  </div>
                 </div>
-              ))}
+                <span className="px-2 py-1 bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/30 rounded text-xs font-bold">
+                  {environment.npcs.length}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {environment.npcs.map((npc, idx) => (
+                  <div
+                    key={idx}
+                    className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-violet-500/20 hover:border-violet-500/40 text-primary font-semibold text-sm transition-all hover:shadow-md flex items-center gap-2"
+                  >
+                    <span className="text-base">👤</span>
+                    <span>{npc}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {/* Adventure Hooks */}
         {environment.adventureHooks && environment.adventureHooks.length > 0 && (
-          <div>
-            <h3 className="font-display text-2xl font-semibold mb-4">Adventure Hooks</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {environment.adventureHooks.map((hook, idx) => (
-                <div
-                  key={idx}
-                  className="font-body text-base p-4 rounded-md bg-primary/10 border border-primary/30"
-                >
-                  <span className="text-primary font-semibold text-lg">⚡</span> {hook}
+          <div className="border-2 border-emerald-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border-2 border-emerald-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                    🎣
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                      Adventure Hooks
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      {environment.adventureHooks.length} {environment.adventureHooks.length === 1 ? 'hook' : 'hooks'}
+                    </p>
+                  </div>
                 </div>
-              ))}
+                <span className="px-2 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded text-xs font-bold">
+                  {environment.adventureHooks.length}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {environment.adventureHooks.map((hook, idx) => {
+                  // Determine hook type icon
+                  const getHookIcon = (text: string): string => {
+                    const lower = text.toLowerCase()
+                    if (lower.includes('fight') || lower.includes('combat') || lower.includes('battle')) return '⚔️'
+                    if (lower.includes('explore') || lower.includes('investigate') || lower.includes('search')) return '🔍'
+                    if (lower.includes('talk') || lower.includes('negotiate') || lower.includes('persuade')) return '💬'
+                    return '⚡'
+                  }
+                  
+                  return (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-lg flex-shrink-0">
+                          {getHookIcon(hook)}
+                        </div>
+                        <p className="text-sm font-body text-foreground leading-relaxed flex-1">{hook}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )}
-
-        {/* Mood & Lighting Summary */}
-        <div className="pt-6 border-t border-border grid grid-cols-2 gap-6">
-          <div>
-            <p className="font-body text-sm text-muted-foreground mb-2">Mood</p>
-            <p className="font-display text-lg font-semibold">{environment.mood}</p>
-          </div>
-          <div>
-            <p className="font-body text-sm text-muted-foreground mb-2">Lighting</p>
-            <p className="font-display text-lg font-semibold">{environment.lighting}</p>
-          </div>
-        </div>
       </CardContent>
     </Card>
   )

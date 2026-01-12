@@ -1,0 +1,148 @@
+{
+  "common": {
+    "home": "Inicio",
+    "generator": "Generador",
+    "library": "Biblioteca",
+    "profile": "Perfil",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar"
+  },
+  "home": {
+    "title": "SaveYourGoblin",
+    "subtitle": "Tu Generador de Contenido D&D 5e con IA",
+    "description": "Genera personajes, entornos y misiones al instante cuando los jugadores se salen del guión",
+    "footerTitle": "SaveYourGoblin",
+    "copyright": "© 2024 SaveYourGoblin. Todos los derechos reservados."
+  },
+  "generator": {
+    "title": "Generador de Contenido RPG",
+    "description": "Describe tu escenario y genera contenido",
+    "cardTitle": "¿Qué necesitas?",
+    "cardDescription": "Describe la situación o lo que quieres crear. Por ejemplo: \"En esta taberna hay un Bardo que habla sobre una flauta antigua\"",
+    "contentType": {
+      "character": "Personaje/NPC",
+      "environment": "Entorno",
+      "mission": "Misión/Quest"
+    },
+    "contentTypeLabel": "Tipo de Contenido",
+    "contentTypeDesc": {
+      "character": "Genera un personaje con trasfondo, habilidades y personalidad",
+      "environment": "Crea un lugar con atmósfera y detalles",
+      "mission": "Diseña una misión con objetivos y recompensas"
+    },
+    "scenarioLabel": "Describe tu Escenario",
+    "scenarioHelper": "Sé tan detallado o simple como quieras. La IA expandirá tu descripción.",
+    "placeholderCharacter": "Ejemplo: Un bardo Tiefling misterioso en una taberna que conoce historias sobre una flauta mágica antigua",
+    "placeholderEnvironment": "Ejemplo: Una torre de mago abandonada y oscura llena de trampas mágicas, cristales brillantes y grimorios antiguos",
+    "placeholderMission": "Ejemplo: Recuperar un artefacto mágico robado de un escondite de gremio de ladrones antes de que caiga en manos equivocadas",
+    "generateButton": "Generar",
+    "generating": "Generando tu contenido...",
+    "generationSuccessTitle": "¡Contenido Generado Exitosamente!",
+    "generationSuccessMessage": "Tu {contentType} ha sido creado y se muestra a continuación.",
+    "saveSuccess": "¡Contenido guardado exitosamente!",
+    "saveError": "Error al guardar contenido",
+    "saveFailed": "Error al guardar:",
+    "saving": "Guardando...",
+    "retry": "Reintentar",
+    "tipsTitle": "Consejos",
+    "tips": {
+      "tip1": "Sé específico sobre el escenario y contexto",
+      "tip2": "Menciona detalles importantes (raza, clase, humor, etc.)",
+      "tip3": "Incluye requisitos o restricciones especiales",
+      "tip4": "Cuanto más contexto proporciones, mejores serán los resultados"
+    },
+    "examplesTitle": "Ejemplos"
+  },
+  "library": {
+    "title": "Mi Biblioteca",
+    "empty": "Aún no hay contenido guardado",
+    "emptyDescription": "Genera contenido y guárdalo en tu biblioteca"
+  },
+  "profile": {
+    "title": "Perfil",
+    "subtitle": "Perfil SaveYourGoblin",
+    "email": "Correo",
+    "signOut": "Cerrar Sesión",
+    "basicInfoTitle": "Información Básica",
+    "basicInfoDescription": "Detalles de tu cuenta y preferencias",
+    "emailCannotChange": "El correo no puede ser cambiado",
+    "displayName": "Nombre de Mostrar",
+    "displayNamePlaceholder": "Ingresa tu nombre de mostrar",
+    "favoriteRPG": "Sistema RPG Favorito",
+    "bio": "Biografía",
+    "bioPlaceholder": "Cuéntanos sobre ti...",
+    "appearanceTitle": "Apariencia y Estilo",
+    "appearanceDescription": "Personaliza la apariencia de tu perfil",
+    "preferredTheme": "Tema Preferido",
+    "themeDesc": {
+      "dark": "Por defecto",
+      "parchment": "Claro",
+      "royal": "Elegante"
+    },
+    "avatarStyle": "Estilo de Avatar",
+    "saving": "Guardando...",
+    "saveProfile": "Guardar Perfil"
+  },
+  "auth": {
+    "login": {
+      "title": "Iniciar Sesión",
+      "email": "Correo",
+      "password": "Contraseña",
+      "submit": "Iniciar Sesión",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "noAccount": "¿No tienes una cuenta?",
+      "signUp": "Regístrate"
+    },
+    "register": {
+      "title": "Registrarse",
+      "email": "Correo",
+      "password": "Contraseña",
+      "confirmPassword": "Confirmar Contraseña",
+      "submit": "Registrarse",
+      "hasAccount": "¿Ya tienes una cuenta?",
+      "signIn": "Iniciar sesión"
+    },
+    "forgotPassword": {
+      "title": "Olvidé mi Contraseña",
+      "email": "Correo",
+      "submit": "Enviar Enlace de Restablecimiento",
+      "backToLogin": "Volver al inicio de sesión"
+    },
+    "resetPassword": {
+      "title": "Restablecer Contraseña",
+      "newPassword": "Nueva Contraseña",
+      "confirmPassword": "Confirmar Contraseña",
+      "submit": "Restablecer Contraseña"
+    },
+    "verifyEmail": {
+      "title": "Verificar Correo",
+      "token": "Token de Verificación",
+      "submit": "Verificar Correo"
+    }
+  },
+  "rpg": {
+    "abilityScores": "Atributos",
+    "proficiencyBonus": "Bonificador de Competencia",
+    "skills": "Habilidades",
+    "expertise": "Experticia",
+    "racialTraits": "Rasgos Raciales",
+    "classFeatures": "Características de Clase",
+    "spells": "Hechizos",
+    "history": "Historia",
+    "personality": "Personalidad",
+    "voice": "Voz"
+  },
+  "errors": {
+    "generic": "Ocurrió un error",
+    "network": "Error de red. Por favor, inténtalo de nuevo.",
+    "unauthorized": "No autorizado. Por favor, inicia sesión.",
+    "notFound": "No encontrado"
+  },
+  "success": {
+    "saved": "Guardado exitosamente",
+    "deleted": "Eliminado exitosamente"
+  }
+}

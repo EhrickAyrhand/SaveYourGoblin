@@ -8,24 +8,13 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import type { Mission } from "@/types/rpg"
+import { DifficultyMeter } from "./difficulty-meter"
+import { ObjectiveCard } from "./objective-card"
+import { RewardCard } from "./reward-card"
 
 interface MissionCardProps {
   mission: Mission
   isLoading?: boolean
-}
-
-const difficultyColors = {
-  easy: "text-green-600 dark:text-green-400",
-  medium: "text-yellow-600 dark:text-yellow-400",
-  hard: "text-orange-600 dark:text-orange-400",
-  deadly: "text-red-600 dark:text-red-400",
-}
-
-const difficultyBadges = {
-  easy: "🟢 Easy",
-  medium: "🟡 Medium",
-  hard: "🟠 Hard",
-  deadly: "🔴 Deadly",
 }
 
 export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
@@ -46,258 +35,392 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
     )
   }
 
+  // Get difficulty theme for header
+  const getDifficultyTheme = (difficulty: string): string => {
+    switch (difficulty) {
+      case 'easy': return 'from-green-500/10 to-emerald-500/5 border-green-500/30'
+      case 'medium': return 'from-yellow-500/10 to-orange-500/5 border-yellow-500/30'
+      case 'hard': return 'from-orange-500/10 to-red-500/5 border-orange-500/30'
+      case 'deadly': return 'from-red-500/10 to-red-600/5 border-red-500/30'
+      default: return 'from-primary/10 to-primary/5 border-primary/30'
+    }
+  }
+
+  const headerTheme = getDifficultyTheme(mission.difficulty)
+
   return (
-    <Card className="parchment ornate-border">
-      <CardHeader className="px-6 pt-6">
-        <div className="flex items-start justify-between mb-3">
-          <CardTitle className="font-display text-4xl">{mission.title}</CardTitle>
-          <div className="flex flex-col items-end gap-2">
-            <span className={`font-display text-base font-semibold ${difficultyColors[mission.difficulty]}`}>
-              {difficultyBadges[mission.difficulty]}
-            </span>
-            {mission.recommendedLevel && (
-              <span className="font-body text-sm text-muted-foreground">
-                Recommended: {mission.recommendedLevel}
-              </span>
-            )}
+    <Card className="parchment ornate-border border-2 border-primary/20">
+      <CardHeader className={`px-6 pt-6 pb-4 border-b-2 bg-gradient-to-r ${headerTheme}`}>
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="flex-1">
+            <CardTitle className="font-display text-4xl mb-3 flex items-center gap-3">
+              <span className="text-3xl">⚔️</span>
+              {mission.title}
+            </CardTitle>
+            <div className="flex flex-wrap items-center gap-3">
+              <DifficultyMeter difficulty={mission.difficulty} size="md" />
+              {mission.recommendedLevel && (
+                <div className="px-3 py-1.5 rounded-lg border-2 border-primary/50 bg-primary/20 text-primary font-semibold text-sm">
+                  📊 {mission.recommendedLevel}
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Mission Icon Placeholder */}
+          <div className="w-20 h-20 rounded-full border-4 border-primary/30 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-4xl flex-shrink-0">
+            🎯
           </div>
         </div>
-        <CardDescription className="font-body text-base leading-relaxed">
+        <CardDescription className="font-body text-base leading-relaxed p-3 rounded-lg bg-background/50 border border-border/50">
           {mission.context}
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-6 space-y-6">
+      <CardContent className="p-6 space-y-4">
         {/* Description */}
-        <div>
-          <h3 className="font-display text-2xl font-semibold mb-3">Mission Brief</h3>
-          <p className="font-body text-base text-muted-foreground leading-relaxed">
-            {mission.description}
-          </p>
+        <div className="border-2 border-slate-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-slate-500/10 via-slate-500/5 to-transparent">
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-slate-500/20 border-2 border-slate-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                📋
+              </div>
+              <div className="text-left">
+                <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                  Mission Brief
+                </h3>
+                <p className="text-xs text-muted-foreground font-body mt-0.5">
+                  Mission details
+                </p>
+              </div>
+            </div>
+            <div className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-slate-500/20">
+              <p className="font-body text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                {mission.description}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Objectives */}
         {mission.objectives && mission.objectives.length > 0 && (
-          <div>
-            <h3 className="font-display text-2xl font-semibold mb-4">Objectives</h3>
-            {mission.objectives.some(obj => obj.isAlternative) && (
-              <p className="font-body text-sm text-muted-foreground mb-3 italic">
-                Some objectives are alternative paths - choose one approach
-              </p>
-            )}
-            <div className="space-y-3">
-              {mission.objectives.map((objective, idx) => {
-                const pathTypeLabels = {
-                  combat: '⚔️ Combat',
-                  social: '💬 Social',
-                  stealth: '🥷 Stealth',
-                  mixed: '🔄 Mixed',
-                }
-                return (
-                  <div
-                    key={idx}
-                    className={`font-body text-base p-4 rounded-md border-l-4 ${
-                      objective.primary
-                        ? "bg-primary/10 border-primary"
-                        : "bg-muted/50 border-muted-foreground/30"
-                    } ${objective.isAlternative ? "ring-2 ring-destructive/20" : ""}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="font-semibold text-primary text-lg mt-0.5">
-                        {objective.primary ? "★" : "○"}
-                      </span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className={objective.primary ? "font-medium" : "text-muted-foreground"}>
-                            {objective.description}
-                          </span>
-                          {objective.pathType && (
-                            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded font-semibold">
-                              {pathTypeLabels[objective.pathType]}
-                            </span>
-                          )}
-                          {objective.isAlternative && (
-                            <span className="text-xs bg-destructive/20 text-destructive px-2 py-0.5 rounded font-semibold">
-                              Alternative Path
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+          <div className="border-2 border-orange-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-orange-500/20 border-2 border-orange-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                    🎯
                   </div>
-                )
-              })}
+                  <div className="text-left">
+                    <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                      Objectives
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      {mission.objectives.length} {mission.objectives.length === 1 ? 'objective' : 'objectives'}
+                    </p>
+                  </div>
+                </div>
+                <span className="px-2 py-1 bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30 rounded text-xs font-bold">
+                  {mission.objectives.length}
+                </span>
+              </div>
+              {mission.objectives.some(obj => obj.isAlternative) && (
+                <div className="mb-4 p-3 rounded-lg bg-orange-500/20 border-2 border-orange-500/40">
+                  <p className="font-body text-xs text-foreground flex items-center gap-2">
+                    <span className="text-base">⚠️</span>
+                    Some objectives are alternative paths - choose one approach
+                  </p>
+                </div>
+              )}
+              <div className="space-y-3">
+                {mission.objectives.map((objective, idx) => (
+                  <ObjectiveCard key={idx} objective={objective} index={idx} />
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {/* Powerful Items */}
         {mission.powerfulItems && mission.powerfulItems.length > 0 && (
-          <div>
-            <h3 className="font-display text-2xl font-semibold mb-4">Powerful Items</h3>
-            <div className="space-y-3">
-              {mission.powerfulItems.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="font-body text-base p-4 rounded-md bg-warning/10 border border-warning/30"
-                >
-                  <div className="font-semibold text-warning mb-1">{item.name}</div>
-                  <div className="text-sm text-muted-foreground">{item.status}</div>
+          <div className="border-2 border-yellow-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-yellow-500/10 via-yellow-500/5 to-transparent">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-yellow-500/20 border-2 border-yellow-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                    💎
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                      Powerful Items
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      {mission.powerfulItems.length} {mission.powerfulItems.length === 1 ? 'item' : 'items'}
+                    </p>
+                  </div>
                 </div>
-              ))}
+                <span className="px-2 py-1 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border border-yellow-500/30 rounded text-xs font-bold">
+                  {mission.powerfulItems.length}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {mission.powerfulItems.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-yellow-500/40 ring-2 ring-yellow-500/20 hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-yellow-500/20 border-2 border-yellow-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                        ⚡
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-yellow-600 dark:text-yellow-400 mb-2 text-base">{item.name}</div>
+                        <div className="text-sm text-muted-foreground font-body">{item.status}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {/* Possible Outcomes */}
         {mission.possibleOutcomes && mission.possibleOutcomes.length > 0 && (
-          <div>
-            <h3 className="font-display text-2xl font-semibold mb-4">Possible Outcomes</h3>
-            <div className="space-y-2">
-              {mission.possibleOutcomes.map((outcome, idx) => (
-                <div
-                  key={idx}
-                  className="font-body text-base p-3 rounded-md bg-muted/50 border border-border"
-                >
-                  <span className="text-primary font-semibold text-lg">→</span> {outcome}
+          <div className="border-2 border-teal-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-teal-500/10 via-teal-500/5 to-transparent">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-teal-500/20 border-2 border-teal-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                    🌳
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                      Possible Outcomes
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      {mission.possibleOutcomes.length} {mission.possibleOutcomes.length === 1 ? 'outcome' : 'outcomes'}
+                    </p>
+                  </div>
                 </div>
-              ))}
+                <span className="px-2 py-1 bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/30 rounded text-xs font-bold">
+                  {mission.possibleOutcomes.length}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {mission.possibleOutcomes.map((outcome, idx) => {
+                  // Determine outcome type for color coding
+                  const getOutcomeTheme = (text: string): { bg: string; border: string; icon: string } => {
+                    const lower = text.toLowerCase()
+                    if (lower.includes('success') || lower.includes('positive') || lower.includes('good')) {
+                      return { bg: 'from-green-500/10 to-green-500/5', border: 'border-green-500/30', icon: '✅' }
+                    }
+                    if (lower.includes('fail') || lower.includes('negative') || lower.includes('bad') || lower.includes('consequence')) {
+                      return { bg: 'from-red-500/10 to-red-500/5', border: 'border-red-500/30', icon: '❌' }
+                    }
+                    return { bg: 'from-blue-500/10 to-blue-500/5', border: 'border-blue-500/30', icon: '➡️' }
+                  }
+                  
+                  const theme = getOutcomeTheme(outcome)
+                  
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-4 rounded-lg bg-gradient-to-r ${theme.bg} border-2 ${theme.border} transition-all hover:shadow-md`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-background/50 border border-current/30 flex items-center justify-center text-lg flex-shrink-0">
+                          {theme.icon}
+                        </div>
+                        <p className="text-sm font-body text-foreground leading-relaxed flex-1">{outcome}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )}
 
         {/* Base Rewards */}
         {mission.rewards && (
-        <div>
-          <h3 className="font-display text-2xl font-semibold mb-4">Base Rewards</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            {mission.rewards.xp !== undefined && (
-              <div className="p-4 rounded-md bg-muted/50 border border-border">
-                <p className="font-body text-sm text-muted-foreground mb-2">Experience</p>
-                <p className="font-display text-2xl font-semibold text-primary">
-                  {mission.rewards.xp.toLocaleString()} XP
+        <div className="border-2 border-green-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent">
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-green-500/20 border-2 border-green-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                💰
+              </div>
+              <div className="text-left">
+                <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                  Base Rewards
+                </h3>
+                <p className="text-xs text-muted-foreground font-body mt-0.5">
+                  Mission completion rewards
                 </p>
               </div>
-            )}
-            {mission.rewards.gold !== undefined && (
-              <div className="p-4 rounded-md bg-muted/50 border border-border">
-                <p className="font-body text-sm text-muted-foreground mb-2">Gold</p>
-                <p className="font-display text-2xl font-semibold text-primary">
-                  {mission.rewards.gold.toLocaleString()} gp
-                </p>
-              </div>
-            )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+              {mission.rewards.xp !== undefined && (
+                <RewardCard type="xp" value={mission.rewards.xp} />
+              )}
+              {mission.rewards.gold !== undefined && (
+                <RewardCard type="gold" value={mission.rewards.gold} />
+              )}
+              {mission.rewards.items && mission.rewards.items.length > 0 && (
+                <RewardCard type="items" value={mission.rewards.items.length} />
+              )}
+            </div>
             {mission.rewards.items && mission.rewards.items.length > 0 && (
-              <div className="p-4 rounded-md bg-muted/50 border border-border">
-                <p className="font-body text-sm text-muted-foreground mb-2">Items</p>
-                <p className="font-display text-2xl font-semibold text-primary">
-                  {mission.rewards.items.length} item{mission.rewards.items.length !== 1 ? "s" : ""}
-                </p>
+              <div className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-green-500/20">
+                <p className="font-body text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wide">Item List:</p>
+                <div className="flex flex-wrap gap-2">
+                  {mission.rewards.items.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary/20 to-primary/10 text-primary border-2 border-primary/40 font-semibold text-xs hover:border-primary/60 transition-all"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
-          {mission.rewards.items && mission.rewards.items.length > 0 && (
-            <div className="mt-3">
-              <p className="font-body text-sm text-muted-foreground mb-3">Item List:</p>
-              <div className="flex flex-wrap gap-3">
-                {mission.rewards.items.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="font-body text-base px-4 py-2 rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         )}
 
         {/* Choice-Based Rewards */}
         {mission.choiceBasedRewards && mission.choiceBasedRewards.length > 0 && (
-          <div>
-            <h3 className="font-display text-2xl font-semibold mb-4">Choice-Based Rewards</h3>
-            <div className="space-y-4">
-              {mission.choiceBasedRewards.map((choiceReward, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 rounded-md bg-primary/5 border border-primary/20"
-                >
-                  <div className="font-semibold text-primary mb-3">{choiceReward.condition}</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {choiceReward.rewards.xp !== undefined && (
-                      <div className="p-3 rounded-md bg-background border border-border">
-                        <p className="font-body text-xs text-muted-foreground mb-1">Experience</p>
-                        <p className="font-display text-lg font-semibold text-primary">
-                          {choiceReward.rewards.xp.toLocaleString()} XP
-                        </p>
+          <div className="border-2 border-rose-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-rose-500/20 border-2 border-rose-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                    🎁
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                      Choice-Based Rewards
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      {mission.choiceBasedRewards.length} {mission.choiceBasedRewards.length === 1 ? 'path' : 'paths'}
+                    </p>
+                  </div>
+                </div>
+                <span className="px-2 py-1 bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 rounded text-xs font-bold">
+                  {mission.choiceBasedRewards.length}
+                </span>
+              </div>
+              <div className="space-y-4">
+                {mission.choiceBasedRewards.map((choiceReward, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-rose-500/20 hover:border-rose-500/40 transition-all hover:shadow-md"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-lg flex-shrink-0">
+                        🔀
                       </div>
-                    )}
-                    {choiceReward.rewards.gold !== undefined && (
-                      <div className="p-3 rounded-md bg-background border border-border">
-                        <p className="font-body text-xs text-muted-foreground mb-1">Gold</p>
-                        <p className="font-display text-lg font-semibold text-primary">
-                          {choiceReward.rewards.gold.toLocaleString()} gp
-                        </p>
-                      </div>
-                    )}
+                      <div className="font-semibold text-rose-600 dark:text-rose-400 text-sm">{choiceReward.condition}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {choiceReward.rewards.xp !== undefined && (
+                        <RewardCard type="xp" value={choiceReward.rewards.xp} />
+                      )}
+                      {choiceReward.rewards.gold !== undefined && (
+                        <RewardCard type="gold" value={choiceReward.rewards.gold} />
+                      )}
+                      {choiceReward.rewards.items && choiceReward.rewards.items.length > 0 && (
+                        <RewardCard type="items" value={choiceReward.rewards.items.length} />
+                      )}
+                    </div>
                     {choiceReward.rewards.items && choiceReward.rewards.items.length > 0 && (
-                      <div className="p-3 rounded-md bg-background border border-border">
-                        <p className="font-body text-xs text-muted-foreground mb-1">Items</p>
-                        <p className="font-display text-lg font-semibold text-primary">
-                          {choiceReward.rewards.items.length} item{choiceReward.rewards.items.length !== 1 ? "s" : ""}
-                        </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {choiceReward.rewards.items.map((item, itemIdx) => (
+                          <span
+                            key={itemIdx}
+                            className="px-2 py-1 rounded-lg bg-primary/20 text-primary border border-primary/40 font-semibold text-xs"
+                          >
+                            {item}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </div>
-                  {choiceReward.rewards.items && choiceReward.rewards.items.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {choiceReward.rewards.items.map((item, itemIdx) => (
-                        <span
-                          key={itemIdx}
-                          className="font-body text-xs px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/20"
-                        >
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {/* Related NPCs */}
         {mission.relatedNPCs && mission.relatedNPCs.length > 0 && (
-          <div>
-            <h3 className="font-display text-2xl font-semibold mb-4">Related NPCs</h3>
-            <div className="flex flex-wrap gap-3">
-              {mission.relatedNPCs.map((npc, idx) => (
-                <div
-                  key={idx}
-                  className="font-body text-base px-4 py-2 rounded-full bg-muted/50 border border-border font-medium"
-                >
-                  {npc}
+          <div className="border-2 border-violet-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-violet-500/10 via-violet-500/5 to-transparent">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-violet-500/20 border-2 border-violet-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                    👥
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                      Related NPCs
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      {mission.relatedNPCs.length} {mission.relatedNPCs.length === 1 ? 'NPC' : 'NPCs'}
+                    </p>
+                  </div>
                 </div>
-              ))}
+                <span className="px-2 py-1 bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/30 rounded text-xs font-bold">
+                  {mission.relatedNPCs.length}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {mission.relatedNPCs.map((npc, idx) => (
+                  <div
+                    key={idx}
+                    className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-violet-500/20 hover:border-violet-500/40 font-medium text-sm transition-all hover:shadow-md flex items-center gap-2"
+                  >
+                    <span className="text-base">👤</span>
+                    <span>{npc}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {/* Related Locations */}
         {mission.relatedLocations && mission.relatedLocations.length > 0 && (
-          <div>
-            <h3 className="font-display text-2xl font-semibold mb-4">Related Locations</h3>
-            <div className="flex flex-wrap gap-3">
-              {mission.relatedLocations.map((location, idx) => (
-                <div
-                  key={idx}
-                  className="font-body text-base px-4 py-2 rounded-full bg-muted/50 border border-border font-medium"
-                >
-                  🗺️ {location}
+          <div className="border-2 border-sky-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-sky-500/20 border-2 border-sky-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                    🗺️
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                      Related Locations
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      {mission.relatedLocations.length} {mission.relatedLocations.length === 1 ? 'location' : 'locations'}
+                    </p>
+                  </div>
                 </div>
-              ))}
+                <span className="px-2 py-1 bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30 rounded text-xs font-bold">
+                  {mission.relatedLocations.length}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {mission.relatedLocations.map((location, idx) => (
+                  <div
+                    key={idx}
+                    className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-sky-500/20 hover:border-sky-500/40 font-medium text-sm transition-all hover:shadow-md flex items-center gap-2"
+                  >
+                    <span className="text-base">📍</span>
+                    <span>{location}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
