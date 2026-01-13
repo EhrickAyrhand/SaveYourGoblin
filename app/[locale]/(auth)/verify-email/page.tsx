@@ -1,6 +1,8 @@
 import { Suspense } from "react"
 import { VerifyEmailForm } from "@/components/auth/verify-email-form"
 
+export const dynamic = 'force-dynamic'
+
 function VerifyEmailFormWrapper() {
   return <VerifyEmailForm />
 }

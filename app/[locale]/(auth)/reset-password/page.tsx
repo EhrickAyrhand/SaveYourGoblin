@@ -1,6 +1,8 @@
 import { Suspense } from "react"
 import { ResetPasswordForm } from "@/components/auth/reset-password-form"
 
+export const dynamic = 'force-dynamic'
+
 function ResetPasswordFormWrapper() {
   return <ResetPasswordForm />
 }
