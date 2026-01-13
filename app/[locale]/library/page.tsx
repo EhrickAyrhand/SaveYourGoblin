@@ -191,7 +191,7 @@ export default function LibraryPage() {
           <div>
             <h1 className="font-display text-5xl font-bold mb-3">{t('library.title')}</h1>
             <p className="mt-2 text-base text-muted-foreground font-body">
-              Browse and manage all your generated RPG content
+              {t('library.subtitle')}
             </p>
           </div>
           <div className="flex gap-2">
@@ -210,7 +210,7 @@ export default function LibraryPage() {
                 onClick={fetchContent}
                 disabled={isFetching}
               >
-                Retry
+                {t('library.retry')}
               </Button>
             </AlertDescription>
           </Alert>
@@ -223,7 +223,7 @@ export default function LibraryPage() {
               {/* Type Filters */}
               <div className="flex flex-wrap gap-3">
                 {[
-                  { value: "all" as const, label: "All", icon: "📚" },
+                  { value: "all" as const, label: t('library.all'), icon: "📚" },
                   { value: "character" as const, label: t('generator.contentType.character'), icon: "🎭" },
                   { value: "environment" as const, label: t('generator.contentType.environment'), icon: "🗺️" },
                   { value: "mission" as const, label: t('generator.contentType.mission'), icon: "⚔️" },
@@ -249,7 +249,7 @@ export default function LibraryPage() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search by scenario or content name..."
+                  placeholder={t('library.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   disabled={isFetching}
@@ -269,7 +269,7 @@ export default function LibraryPage() {
               {/* Results Count */}
               {!isFetching && (
                 <p className="text-base text-muted-foreground font-body font-medium">
-                  {filteredContent.length} {filteredContent.length === 1 ? "item" : "items"} found
+                  {filteredContent.length} {filteredContent.length === 1 ? t('library.item') : t('library.items')} found
                   {selectedType !== "all" && ` (${selectedType}s)`}
                 </p>
               )}
@@ -303,11 +303,11 @@ export default function LibraryPage() {
                   <p className="font-body text-base text-muted-foreground mb-6">
                     {content.length === 0
                       ? t('library.emptyDescription')
-                      : "Try adjusting your filters or search query."}
+                      : t('library.tryAdjustingFilters')}
                   </p>
                   {content.length === 0 && (
                     <Button asChild size="lg" className="font-body text-lg px-6 py-6">
-                      <Link href="/generator">Generate Your First Content</Link>
+                      <Link href="/generator">{t('library.generateFirstContent')}</Link>
                     </Button>
                   )}
                 </div>

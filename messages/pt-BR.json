@@ -14,6 +14,48 @@
     "title": "SaveYourGoblin",
     "subtitle": "Seu Gerador de Conteúdo D&D 5e com IA",
     "description": "Gere personagens, ambientes e missões instantaneamente quando os jogadores saem do roteiro",
+    "beginQuest": "Comece Sua Jornada",
+    "features": {
+      "characters": {
+        "title": "Personagens & NPCs",
+        "description": "Gere personagens completos com nomes, históricos, habilidades, magias e traços de personalidade em segundos.",
+        "example": "\"Nesta taverna há um Bardo...\" se torna um personagem completo com história, falas e ganchos de missão."
+      },
+      "environments": {
+        "title": "Ambientes",
+        "description": "Crie locais imersivos com detalhes ambientais, clima, iluminação e características interativas que trazem seu mundo à vida.",
+        "example": "Transforme uma descrição simples em um cenário rico e atmosférico que seus jogadores lembrarão."
+      },
+      "missions": {
+        "title": "Missões & Quests",
+        "description": "Gere instantaneamente missões com objetivos, recompensas, níveis de dificuldade e conexões com sua história existente.",
+        "example": "Transforme ações inesperadas dos jogadores em missões secundárias envolventes que aprimoram sua campanha principal."
+      }
+    },
+    "howItWorks": {
+      "title": "Como Funciona",
+      "step1": {
+        "title": "Descreva",
+        "description": "Simplesmente descreva a situação ou o que você precisa. Sem formulários complexos ou modelos necessários."
+      },
+      "step2": {
+        "title": "Gere",
+        "description": "Nossa IA cria conteúdo detalhado e compatível com D&D 5e adaptado ao seu cenário."
+      },
+      "step3": {
+        "title": "Salve e Use",
+        "description": "Salve seu conteúdo gerado e use-o imediatamente em sua campanha."
+      }
+    },
+    "footer": {
+      "title": "SaveYourGoblin",
+      "tagline": "Geração de conteúdo com IA para campanhas D&D 5e",
+      "quickLinks": "Links Rápidos",
+      "about": "Sobre",
+      "register": "Cadastrar",
+      "poweredBy": "Desenvolvido com OpenAI",
+      "builtWith": "Construído com Next.js"
+    },
     "footerTitle": "SaveYourGoblin",
     "copyright": "© 2024 SaveYourGoblin. Todos os direitos reservados."
   },
@@ -25,7 +67,7 @@
     "contentType": {
       "character": "Personagem/NPC",
       "environment": "Ambiente",
-      "mission": "Missão/Missão"
+      "mission": "Missões"
     },
     "contentTypeLabel": "Tipo de Conteúdo",
     "contentTypeDesc": {
@@ -54,12 +96,65 @@
       "tip3": "Inclua requisitos ou restrições especiais",
       "tip4": "Quanto mais contexto você fornecer, melhores serão os resultados"
     },
-    "examplesTitle": "Exemplos"
+    "examplesTitle": "Exemplos",
+    "examples": {
+      "character": {
+        "example1": {
+          "text": "Um Bardo misterioso em uma taverna falando sobre uma flauta antiga",
+          "scenario": "Nesta taverna há um Bardo e ele falará com os heróis sobre uma flauta antiga"
+        },
+        "example2": {
+          "text": "Um lojista mago idoso com informações sobre um grimório perdido",
+          "scenario": "Um mago Humano idoso que administra uma loja de magia. Eles são amigáveis mas esquecidos, e têm informações sobre um grimório perdido"
+        },
+        "example3": {
+          "text": "Um ladino Tiefling suspeito observando das sombras",
+          "scenario": "Um ladino Tiefling suspeito nas sombras do mercado, observando o grupo com grande interesse"
+        }
+      },
+      "environment": {
+        "example1": {
+          "text": "Uma torre de mago escura com armadilhas e artefatos",
+          "scenario": "Uma torre de mago abandonada e escura cheia de armadilhas mágicas e artefatos antigos"
+        },
+        "example2": {
+          "text": "Um mercado movimentado com comerciantes e especiarias",
+          "scenario": "Um mercado movimentado no centro da cidade. Comerciantes anunciam suas mercadorias, e o cheiro de especiarias enche o ar"
+        },
+        "example3": {
+          "text": "Uma clareira de floresta antiga com cogumelos brilhantes",
+          "scenario": "Uma clareira de floresta antiga com cogumelos brilhantes e um círculo de pedras misterioso"
+        }
+      },
+      "mission": {
+        "example1": {
+          "text": "Recuperar um artefato roubado da guilda de ladrões",
+          "scenario": "Os heróis devem recuperar um artefato mágico roubado de um esconderijo da guilda de ladrões"
+        },
+        "example2": {
+          "text": "Investigar desaparecimentos em uma vila - lobisomem suspeito",
+          "scenario": "Investigar desaparecimentos estranhos em uma pequena vila. Os locais suspeitam que um lobisomem é responsável"
+        },
+        "example3": {
+          "text": "Escoltar uma caravana de mercadores através de montanhas perigosas",
+          "scenario": "Escoltar uma caravana de mercadores através de passagens montanhosas perigosas enquanto protege carga valiosa"
+        }
+      }
+    }
   },
   "library": {
     "title": "Minha Biblioteca",
+    "subtitle": "Navegue e gerencie todo o seu conteúdo RPG gerado",
     "empty": "Nenhum conteúdo salvo ainda",
-    "emptyDescription": "Gere conteúdo e salve-o em sua biblioteca"
+    "emptyDescription": "Gere conteúdo e salve-o em sua biblioteca",
+    "all": "Todos",
+    "retry": "Tentar novamente",
+    "searchPlaceholder": "Pesquisar por cenário ou nome do conteúdo...",
+    "item": "item",
+    "items": "itens",
+    "itemsFound": "{count} {item} encontrado",
+    "tryAdjustingFilters": "Tente ajustar seus filtros ou consulta de pesquisa.",
+    "generateFirstContent": "Gere Seu Primeiro Conteúdo"
   },
   "profile": {
     "title": "Perfil",
@@ -89,12 +184,20 @@
   "auth": {
     "login": {
       "title": "Entrar",
+      "description": "Digite seu e-mail e senha para acessar sua conta",
       "email": "E-mail",
       "password": "Senha",
+      "emailPlaceholder": "voce@exemplo.com",
       "submit": "Entrar",
-      "forgotPassword": "Esqueceu a senha?",
+      "signingIn": "Entrando...",
+      "forgotPassword": "Esqueceu sua senha?",
       "noAccount": "Não tem uma conta?",
-      "signUp": "Cadastre-se"
+      "signUp": "Cadastre-se",
+      "backToHome": "← Voltar para Início",
+      "validation": {
+        "emailInvalid": "Por favor, digite um endereço de e-mail válido",
+        "passwordMin": "A senha deve ter pelo menos 6 caracteres"
+      }
     },
     "register": {
       "title": "Cadastrar",

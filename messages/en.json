@@ -14,6 +14,48 @@
     "title": "SaveYourGoblin",
     "subtitle": "Your AI-powered D&D 5e Content Generator",
     "description": "Generate characters, environments, and missions instantly when players go off-script",
+    "beginQuest": "Begin Your Quest",
+    "features": {
+      "characters": {
+        "title": "Characters & NPCs",
+        "description": "Generate fully fleshed-out characters with names, backgrounds, skills, spells, and personality traits in seconds.",
+        "example": "\"In this tavern there's a Bard...\" becomes a complete character with history, voice lines, and mission hooks."
+      },
+      "environments": {
+        "title": "Environments",
+        "description": "Create immersive locations with ambient details, mood, lighting, and interactive features that bring your world to life.",
+        "example": "Transform a simple description into a rich, atmospheric setting your players will remember."
+      },
+      "missions": {
+        "title": "Missions & Quests",
+        "description": "Instantly generate quests with objectives, rewards, difficulty levels, and connections to your existing story.",
+        "example": "Turn unexpected player actions into engaging side quests that enhance your main campaign."
+      }
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "step1": {
+        "title": "Describe",
+        "description": "Simply describe the situation or what you need. No complex forms or templates required."
+      },
+      "step2": {
+        "title": "Generate",
+        "description": "Our AI creates detailed, D&D 5e-compatible content tailored to your scenario."
+      },
+      "step3": {
+        "title": "Save & Use",
+        "description": "Save your generated content and use it immediately in your campaign."
+      }
+    },
+    "footer": {
+      "title": "SaveYourGoblin",
+      "tagline": "AI-powered content generation for D&D 5e campaigns",
+      "quickLinks": "Quick Links",
+      "about": "About",
+      "register": "Register",
+      "poweredBy": "Powered by OpenAI",
+      "builtWith": "Built with Next.js"
+    },
     "footerTitle": "SaveYourGoblin",
     "copyright": "© 2024 SaveYourGoblin. All rights reserved."
   },
@@ -25,7 +67,7 @@
     "contentType": {
       "character": "Character/NPC",
       "environment": "Environment",
-      "mission": "Mission/Quest"
+      "mission": "Quests"
     },
     "contentTypeLabel": "Content Type",
     "contentTypeDesc": {
@@ -54,12 +96,65 @@
       "tip3": "Include any special requirements or constraints",
       "tip4": "The more context you provide, the better the results"
     },
-    "examplesTitle": "Examples"
+    "examplesTitle": "Examples",
+    "examples": {
+      "character": {
+        "example1": {
+          "text": "A mysterious Bard in a tavern talking about an ancient flute",
+          "scenario": "In this tavern there's a Bard and he will talk with the heroes about an ancient flute"
+        },
+        "example2": {
+          "text": "An elderly wizard shopkeeper with information about a lost spellbook",
+          "scenario": "An elderly Human wizard who runs a magic shop. They're friendly but forgetful, and they have information about a lost spellbook"
+        },
+        "example3": {
+          "text": "A suspicious Tiefling rogue watching from the shadows",
+          "scenario": "A suspicious Tiefling rogue in the shadows of the marketplace, watching the party with keen interest"
+        }
+      },
+      "environment": {
+        "example1": {
+          "text": "A dark wizard's tower with traps and artifacts",
+          "scenario": "A dark, abandoned wizard's tower filled with magical traps and ancient artifacts"
+        },
+        "example2": {
+          "text": "A bustling marketplace with merchants and spices",
+          "scenario": "A bustling marketplace in the city center. Merchants call out their wares, and the smell of spices fills the air"
+        },
+        "example3": {
+          "text": "An ancient forest clearing with glowing mushrooms",
+          "scenario": "An ancient forest clearing with glowing mushrooms and a mysterious stone circle"
+        }
+      },
+      "mission": {
+        "example1": {
+          "text": "Retrieve a stolen artifact from thieves' guild",
+          "scenario": "The heroes must retrieve a stolen magical artifact from a thieves' guild hideout"
+        },
+        "example2": {
+          "text": "Investigate disappearances in a village - werewolf suspected",
+          "scenario": "Investigate strange disappearances in a small village. The locals suspect a werewolf is responsible"
+        },
+        "example3": {
+          "text": "Escort a merchant caravan through dangerous mountains",
+          "scenario": "Escort a merchant caravan through dangerous mountain passes while protecting valuable cargo"
+        }
+      }
+    }
   },
   "library": {
     "title": "My Library",
+    "subtitle": "Browse and manage all your generated RPG content",
     "empty": "No saved content yet",
-    "emptyDescription": "Generate content and save it to your library"
+    "emptyDescription": "Generate content and save it to your library",
+    "all": "All",
+    "retry": "Retry",
+    "searchPlaceholder": "Search by scenario or content name...",
+    "item": "item",
+    "items": "items",
+    "itemsFound": "{count} {item} found",
+    "tryAdjustingFilters": "Try adjusting your filters or search query.",
+    "generateFirstContent": "Generate Your First Content"
   },
   "profile": {
     "title": "Profile",
@@ -89,12 +184,20 @@
   "auth": {
     "login": {
       "title": "Sign In",
+      "description": "Enter your email and password to access your account",
       "email": "Email",
       "password": "Password",
+      "emailPlaceholder": "you@example.com",
       "submit": "Sign In",
-      "forgotPassword": "Forgot password?",
+      "signingIn": "Signing in...",
+      "forgotPassword": "Forgot your password?",
       "noAccount": "Don't have an account?",
-      "signUp": "Sign up"
+      "signUp": "Sign up",
+      "backToHome": "← Back to Home",
+      "validation": {
+        "emailInvalid": "Please enter a valid email address",
+        "passwordMin": "Password must be at least 6 characters"
+      }
     },
     "register": {
       "title": "Sign Up",

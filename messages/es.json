@@ -14,6 +14,48 @@
     "title": "SaveYourGoblin",
     "subtitle": "Tu Generador de Contenido D&D 5e con IA",
     "description": "Genera personajes, entornos y misiones al instante cuando los jugadores se salen del guión",
+    "beginQuest": "Comienza Tu Aventura",
+    "features": {
+      "characters": {
+        "title": "Personajes & NPCs",
+        "description": "Genera personajes completamente desarrollados con nombres, historias, habilidades, hechizos y rasgos de personalidad en segundos.",
+        "example": "\"En esta taberna hay un Bardo...\" se convierte en un personaje completo con historia, líneas de voz y ganchos de misión."
+      },
+      "environments": {
+        "title": "Entornos",
+        "description": "Crea ubicaciones inmersivas con detalles ambientales, ambiente, iluminación y características interactivas que dan vida a tu mundo.",
+        "example": "Transforma una descripción simple en un escenario rico y atmosférico que tus jugadores recordarán."
+      },
+      "missions": {
+        "title": "Misiones & Quests",
+        "description": "Genera instantáneamente misiones con objetivos, recompensas, niveles de dificultad y conexiones con tu historia existente.",
+        "example": "Convierte acciones inesperadas de los jugadores en misiones secundarias atractivas que mejoran tu campaña principal."
+      }
+    },
+    "howItWorks": {
+      "title": "Cómo Funciona",
+      "step1": {
+        "title": "Describe",
+        "description": "Simplemente describe la situación o lo que necesitas. No se requieren formularios complejos o plantillas."
+      },
+      "step2": {
+        "title": "Genera",
+        "description": "Nuestra IA crea contenido detallado y compatible con D&D 5e adaptado a tu escenario."
+      },
+      "step3": {
+        "title": "Guarda y Usa",
+        "description": "Guarda tu contenido generado y úsalo inmediatamente en tu campaña."
+      }
+    },
+    "footer": {
+      "title": "SaveYourGoblin",
+      "tagline": "Generación de contenido con IA para campañas D&D 5e",
+      "quickLinks": "Enlaces Rápidos",
+      "about": "Acerca de",
+      "register": "Registrarse",
+      "poweredBy": "Desarrollado con OpenAI",
+      "builtWith": "Construido con Next.js"
+    },
     "footerTitle": "SaveYourGoblin",
     "copyright": "© 2024 SaveYourGoblin. Todos los derechos reservados."
   },
@@ -25,7 +67,7 @@
     "contentType": {
       "character": "Personaje/NPC",
       "environment": "Entorno",
-      "mission": "Misión/Quest"
+      "mission": "Misiones"
     },
     "contentTypeLabel": "Tipo de Contenido",
     "contentTypeDesc": {
@@ -54,12 +96,65 @@
       "tip3": "Incluye requisitos o restricciones especiales",
       "tip4": "Cuanto más contexto proporciones, mejores serán los resultados"
     },
-    "examplesTitle": "Ejemplos"
+    "examplesTitle": "Ejemplos",
+    "examples": {
+      "character": {
+        "example1": {
+          "text": "Un Bardo misterioso en una taberna hablando sobre una flauta antigua",
+          "scenario": "En esta taberna hay un Bardo y hablará con los héroes sobre una flauta antigua"
+        },
+        "example2": {
+          "text": "Un tendero mago anciano con información sobre un grimorio perdido",
+          "scenario": "Un mago Humano anciano que dirige una tienda de magia. Son amigables pero olvidadizos, y tienen información sobre un grimorio perdido"
+        },
+        "example3": {
+          "text": "Un pícaro Tiefling sospechoso observando desde las sombras",
+          "scenario": "Un pícaro Tiefling sospechoso en las sombras del mercado, observando al grupo con gran interés"
+        }
+      },
+      "environment": {
+        "example1": {
+          "text": "Una torre de mago oscura con trampas y artefactos",
+          "scenario": "Una torre de mago abandonada y oscura llena de trampas mágicas y artefactos antiguos"
+        },
+        "example2": {
+          "text": "Un mercado bullicioso con comerciantes y especias",
+          "scenario": "Un mercado bullicioso en el centro de la ciudad. Los comerciantes proclaman sus mercancías, y el olor de las especias llena el aire"
+        },
+        "example3": {
+          "text": "Un claro de bosque antiguo con hongos brillantes",
+          "scenario": "Un claro de bosque antiguo con hongos brillantes y un círculo de piedras misterioso"
+        }
+      },
+      "mission": {
+        "example1": {
+          "text": "Recuperar un artefacto robado del gremio de ladrones",
+          "scenario": "Los héroes deben recuperar un artefacto mágico robado de un escondite del gremio de ladrones"
+        },
+        "example2": {
+          "text": "Investigar desapariciones en un pueblo - lobo sospechoso",
+          "scenario": "Investigar desapariciones extrañas en un pequeño pueblo. Los locales sospechan que un hombre lobo es responsable"
+        },
+        "example3": {
+          "text": "Escoltar una caravana de comerciantes a través de montañas peligrosas",
+          "scenario": "Escoltar una caravana de comerciantes a través de pasos montañosos peligrosos mientras proteges carga valiosa"
+        }
+      }
+    }
   },
   "library": {
     "title": "Mi Biblioteca",
+    "subtitle": "Navega y gestiona todo tu contenido RPG generado",
     "empty": "Aún no hay contenido guardado",
-    "emptyDescription": "Genera contenido y guárdalo en tu biblioteca"
+    "emptyDescription": "Genera contenido y guárdalo en tu biblioteca",
+    "all": "Todos",
+    "retry": "Reintentar",
+    "searchPlaceholder": "Buscar por escenario o nombre del contenido...",
+    "item": "elemento",
+    "items": "elementos",
+    "itemsFound": "{count} {item} encontrado",
+    "tryAdjustingFilters": "Intenta ajustar tus filtros o consulta de búsqueda.",
+    "generateFirstContent": "Genera Tu Primer Contenido"
   },
   "profile": {
     "title": "Perfil",
@@ -89,12 +184,20 @@
   "auth": {
     "login": {
       "title": "Iniciar Sesión",
+      "description": "Ingresa tu correo y contraseña para acceder a tu cuenta",
       "email": "Correo",
       "password": "Contraseña",
+      "emailPlaceholder": "tu@ejemplo.com",
       "submit": "Iniciar Sesión",
+      "signingIn": "Iniciando sesión...",
       "forgotPassword": "¿Olvidaste tu contraseña?",
       "noAccount": "¿No tienes una cuenta?",
-      "signUp": "Regístrate"
+      "signUp": "Regístrate",
+      "backToHome": "← Volver al Inicio",
+      "validation": {
+        "emailInvalid": "Por favor, ingresa una dirección de correo válida",
+        "passwordMin": "La contraseña debe tener al menos 6 caracteres"
+      }
     },
     "register": {
       "title": "Registrarse",

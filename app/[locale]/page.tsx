@@ -64,7 +64,7 @@ export default function Home() {
           ) : (
             <>
               <Button asChild size="lg" className="min-w-[160px] font-display text-lg">
-                <Link href="/register">Begin Your Quest</Link>
+                <Link href="/register">{t('home.beginQuest')}</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="min-w-[160px] font-display text-lg">
                 <Link href="/login">{t('auth.login.title')}</Link>
@@ -101,48 +101,42 @@ export default function Home() {
         <div className="grid w-full max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-4">
           <Card className="parchment ornate-border">
             <CardHeader>
-              <CardTitle className="font-display text-2xl">🎭 Characters & NPCs</CardTitle>
+              <CardTitle className="font-display text-2xl">🎭 {t('home.features.characters.title')}</CardTitle>
               <CardDescription className="font-body">
-                Generate fully fleshed-out characters with names, backgrounds, skills, spells, 
-                and personality traits in seconds.
+                {t('home.features.characters.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-left text-sm text-muted-foreground">
-                "In this tavern there's a Bard..." becomes a complete character with history, 
-                voice lines, and mission hooks.
+                {t('home.features.characters.example')}
               </p>
             </CardContent>
           </Card>
 
           <Card className="parchment ornate-border">
             <CardHeader>
-              <CardTitle className="font-display text-2xl">🗺️ Environments</CardTitle>
+              <CardTitle className="font-display text-2xl">🗺️ {t('home.features.environments.title')}</CardTitle>
               <CardDescription className="font-body">
-                Create immersive locations with ambient details, mood, lighting, and interactive 
-                features that bring your world to life.
+                {t('home.features.environments.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-left text-sm text-muted-foreground">
-                Transform a simple description into a rich, atmospheric setting your players 
-                will remember.
+                {t('home.features.environments.example')}
               </p>
             </CardContent>
           </Card>
 
           <Card className="parchment ornate-border sm:col-span-2 lg:col-span-1">
             <CardHeader>
-              <CardTitle className="font-display text-2xl">⚔️ Missions & Quests</CardTitle>
+              <CardTitle className="font-display text-2xl">⚔️ {t('home.features.missions.title')}</CardTitle>
               <CardDescription className="font-body">
-                Instantly generate quests with objectives, rewards, difficulty levels, and 
-                connections to your existing story.
+                {t('home.features.missions.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-left text-sm text-muted-foreground">
-                Turn unexpected player actions into engaging side quests that enhance your 
-                main campaign.
+                {t('home.features.missions.example')}
               </p>
             </CardContent>
           </Card>
@@ -151,7 +145,7 @@ export default function Home() {
         {/* How It Works */}
         <div className="w-full max-w-3xl mt-16">
           <h2 className="mb-8 font-display text-3xl font-bold sm:text-4xl">
-            How It Works
+            {t('home.howItWorks.title')}
           </h2>
           <div className="grid gap-6 text-left sm:grid-cols-3">
             <div className="flex flex-col gap-3">
@@ -159,10 +153,10 @@ export default function Home() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-primary bg-primary/10 font-display text-xl font-bold text-primary">
                   1
                 </div>
-                <h3 className="font-display text-xl font-semibold">Describe</h3>
+                <h3 className="font-display text-xl font-semibold">{t('home.howItWorks.step1.title')}</h3>
               </div>
               <p className="text-sm text-muted-foreground">
-                Simply describe the situation or what you need. No complex forms or templates required.
+                {t('home.howItWorks.step1.description')}
               </p>
             </div>
 
@@ -171,10 +165,10 @@ export default function Home() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-primary bg-primary/10 font-display text-xl font-bold text-primary">
                   2
                 </div>
-                <h3 className="font-display text-xl font-semibold">Generate</h3>
+                <h3 className="font-display text-xl font-semibold">{t('home.howItWorks.step2.title')}</h3>
               </div>
             <p className="text-sm text-muted-foreground">
-                Our AI creates detailed, D&D 5e-compatible content tailored to your scenario.
+                {t('home.howItWorks.step2.description')}
             </p>
           </div>
           
@@ -183,10 +177,10 @@ export default function Home() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-primary bg-primary/10 font-display text-xl font-bold text-primary">
                   3
                 </div>
-                <h3 className="font-display text-xl font-semibold">Save & Use</h3>
+                <h3 className="font-display text-xl font-semibold">{t('home.howItWorks.step3.title')}</h3>
               </div>
             <p className="text-sm text-muted-foreground">
-                Save your generated content and use it immediately in your campaign.
+                {t('home.howItWorks.step3.description')}
             </p>
             </div>
           </div>
@@ -201,12 +195,12 @@ export default function Home() {
             <div className="text-center md:text-left">
               <h3 className="font-display text-xl font-semibold mb-2">{t('home.footerTitle')}</h3>
               <p className="font-body text-sm text-muted-foreground">
-                AI-powered content generation for D&D 5e campaigns
+                {t('home.footer.tagline')}
               </p>
             </div>
             <div className="flex flex-col md:flex-row gap-4 text-center md:text-left">
               <div>
-                <h4 className="font-display font-semibold mb-2">Quick Links</h4>
+                <h4 className="font-display font-semibold mb-2">{t('home.footer.quickLinks')}</h4>
                 <ul className="space-y-1 font-body text-sm text-muted-foreground">
                   <li>
                     {user ? (
@@ -215,7 +209,7 @@ export default function Home() {
                       </Link>
                     ) : (
                       <Link href="/register" className="hover:text-primary transition-colors">
-                        Register
+                        {t('home.footer.register')}
                       </Link>
                     )}
                   </li>
@@ -233,10 +227,10 @@ export default function Home() {
                 </ul>
               </div>
               <div>
-                <h4 className="font-display font-semibold mb-2">About</h4>
+                <h4 className="font-display font-semibold mb-2">{t('home.footer.about')}</h4>
                 <ul className="space-y-1 font-body text-sm text-muted-foreground">
-                  <li>Powered by OpenAI</li>
-                  <li>Built with Next.js</li>
+                  <li>{t('home.footer.poweredBy')}</li>
+                  <li>{t('home.footer.builtWith')}</li>
                 </ul>
               </div>
             </div>

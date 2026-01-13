@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from '@/i18n/routing'
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Link from "next/link"
+import { useTranslations } from 'next-intl'
+import { Link as I18nLink } from '@/i18n/routing'
 import { signIn } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,17 +29,21 @@ import {
 } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-})
-
-type LoginFormValues = z.infer<typeof loginSchema>
+type LoginFormValues = {
+  email: string
+  password: string
+}
 
 export function LoginForm() {
+  const t = useTranslations()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const loginSchema = z.object({
+    email: z.string().email(t('auth.login.validation.emailInvalid')),
+    password: z.string().min(6, t('auth.login.validation.passwordMin')),
+  })
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -61,7 +67,7 @@ export function LoginForm() {
         router.push("/profile")
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.")
+      setError(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -70,9 +76,9 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>Sign In</CardTitle>
+        <CardTitle>{t('auth.login.title')}</CardTitle>
         <CardDescription>
-          Enter your email and password to access your account
+          {t('auth.login.description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -89,11 +95,11 @@ export function LoginForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>{t('auth.login.email')}</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder={t('auth.login.emailPlaceholder')}
                       disabled={isLoading}
                       {...field}
                     />
@@ -108,7 +114,7 @@ export function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>{t('auth.login.password')}</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
@@ -123,30 +129,30 @@ export function LoginForm() {
             />
             
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? t('auth.login.signingIn') : t('auth.login.submit')}
             </Button>
           </form>
         </Form>
       </CardContent>
       <CardFooter className="flex flex-col space-y-4">
         <Button asChild variant="outline" className="w-full font-body">
-          <Link href="/">
-            ← Back to Home
-          </Link>
+          <I18nLink href="/">
+            {t('auth.login.backToHome')}
+          </I18nLink>
         </Button>
         <div className="text-sm text-center text-muted-foreground">
-          <Link
+          <I18nLink
             href="/forgot-password"
             className="text-primary hover:underline"
           >
-            Forgot your password?
-          </Link>
+            {t('auth.login.forgotPassword')}
+          </I18nLink>
         </div>
         <div className="text-sm text-center text-muted-foreground">
-          Don't have an account?{" "}
-          <Link href="/register" className="text-primary hover:underline">
-            Sign up
-          </Link>
+          {t('auth.login.noAccount')}{" "}
+          <I18nLink href="/register" className="text-primary hover:underline">
+            {t('auth.login.signUp')}
+          </I18nLink>
         </div>
       </CardFooter>
     </Card>

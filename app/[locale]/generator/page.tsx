@@ -509,32 +509,32 @@ export default function GeneratorPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setScenario("In this tavern there's a Bard and he will talk with the heroes about an ancient flute")
+                      setScenario(t('generator.examples.character.example1.scenario'))
                     }}
                     className="text-left text-primary hover:underline w-full text-base transition-colors"
                     disabled={isGenerating}
                   >
-                    "A mysterious Bard in a tavern talking about an ancient flute"
+                    "{t('generator.examples.character.example1.text')}"
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setScenario("An elderly Human wizard who runs a magic shop. They're friendly but forgetful, and they have information about a lost spellbook")
+                      setScenario(t('generator.examples.character.example2.scenario'))
                     }}
                     className="text-left text-primary hover:underline w-full text-base transition-colors"
                     disabled={isGenerating}
                   >
-                    "An elderly wizard shopkeeper with information about a lost spellbook"
+                    "{t('generator.examples.character.example2.text')}"
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setScenario("A suspicious Tiefling rogue in the shadows of the marketplace, watching the party with keen interest")
+                      setScenario(t('generator.examples.character.example3.scenario'))
                     }}
                     className="text-left text-primary hover:underline w-full text-base transition-colors"
                     disabled={isGenerating}
                   >
-                    "A suspicious Tiefling rogue watching from the shadows"
+                    "{t('generator.examples.character.example3.text')}"
                   </button>
                 </>
               )}
@@ -543,32 +543,32 @@ export default function GeneratorPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setScenario("A dark, abandoned wizard's tower filled with magical traps and ancient artifacts")
+                      setScenario(t('generator.examples.environment.example1.scenario'))
                     }}
                     className="text-left text-primary hover:underline w-full text-base transition-colors"
                     disabled={isGenerating}
                   >
-                    "A dark wizard's tower with traps and artifacts"
+                    "{t('generator.examples.environment.example1.text')}"
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setScenario("A bustling marketplace in the city center. Merchants call out their wares, and the smell of spices fills the air")
+                      setScenario(t('generator.examples.environment.example2.scenario'))
                     }}
                     className="text-left text-primary hover:underline w-full text-base transition-colors"
                     disabled={isGenerating}
                   >
-                    "A bustling marketplace with merchants and spices"
+                    "{t('generator.examples.environment.example2.text')}"
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setScenario("An ancient forest clearing with glowing mushrooms and a mysterious stone circle")
+                      setScenario(t('generator.examples.environment.example3.scenario'))
                     }}
                     className="text-left text-primary hover:underline w-full text-base transition-colors"
                     disabled={isGenerating}
                   >
-                    "An ancient forest clearing with glowing mushrooms"
+                    "{t('generator.examples.environment.example3.text')}"
                   </button>
                 </>
               )}
@@ -577,32 +577,32 @@ export default function GeneratorPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setScenario("The heroes must retrieve a stolen magical artifact from a thieves' guild hideout")
+                      setScenario(t('generator.examples.mission.example1.scenario'))
                     }}
                     className="text-left text-primary hover:underline w-full text-base transition-colors"
                     disabled={isGenerating}
                   >
-                    "Retrieve a stolen artifact from thieves' guild"
+                    "{t('generator.examples.mission.example1.text')}"
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setScenario("Investigate strange disappearances in a small village. The locals suspect a werewolf is responsible")
+                      setScenario(t('generator.examples.mission.example2.scenario'))
                     }}
                     className="text-left text-primary hover:underline w-full text-base transition-colors"
                     disabled={isGenerating}
                   >
-                    "Investigate disappearances in a village - werewolf suspected"
+                    "{t('generator.examples.mission.example2.text')}"
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setScenario("Escort a merchant caravan through dangerous mountain passes while protecting valuable cargo")
+                      setScenario(t('generator.examples.mission.example3.scenario'))
                     }}
                     className="text-left text-primary hover:underline w-full text-base transition-colors"
                     disabled={isGenerating}
                   >
-                    "Escort a merchant caravan through dangerous mountains"
+                    "{t('generator.examples.mission.example3.text')}"
                   </button>
                 </>
               )}
