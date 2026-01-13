@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from 'next-intl'
 import {
   Card,
   CardContent,
@@ -17,6 +18,8 @@ interface EnvironmentCardProps {
 }
 
 export function EnvironmentCard({ environment, isLoading = false }: EnvironmentCardProps) {
+  const t = useTranslations()
+  
   if (isLoading) {
     return (
       <Card className="parchment ornate-border animate-pulse">
@@ -81,10 +84,10 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
               </div>
               <div className="text-left">
                 <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                  Description
+                  {t('rpg.environment.description')}
                 </h3>
                 <p className="text-xs text-muted-foreground font-body mt-0.5">
-                  Location details
+                  {t('rpg.environment.locationDetails')}
                 </p>
               </div>
             </div>
@@ -105,10 +108,10 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
               </div>
               <div className="text-left">
                 <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                  Ambient Atmosphere
+                  {t('rpg.environment.ambientAtmosphere')}
                 </h3>
                 <p className="text-xs text-muted-foreground font-body mt-0.5">
-                  Sounds and atmosphere
+                  {t('rpg.environment.soundsAndAtmosphere')}
                 </p>
               </div>
             </div>
@@ -131,10 +134,10 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Notable Features
+                      {t('rpg.environment.notableFeatures')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      {environment.features.length} {environment.features.length === 1 ? 'feature' : 'features'}
+                      {t('rpg.environment.featureCount', { count: environment.features.length })}
                     </p>
                   </div>
                 </div>
@@ -185,10 +188,10 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
                 </div>
                 <div className="text-left">
                   <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                    Current Conflict
+                    {t('rpg.environment.currentConflict')}
                   </h3>
                   <p className="text-xs text-muted-foreground font-body mt-0.5">
-                    Active issues
+                    {t('rpg.environment.activeIssues')}
                   </p>
                 </div>
               </div>
@@ -215,10 +218,10 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Present NPCs
+                      {t('rpg.environment.presentNPCs')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      {environment.npcs.length} {environment.npcs.length === 1 ? 'NPC' : 'NPCs'}
+                      {t('rpg.environment.npcCount', { count: environment.npcs.length })}
                     </p>
                   </div>
                 </div>
@@ -252,10 +255,10 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Adventure Hooks
+                      {t('rpg.environment.adventureHooks')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      {environment.adventureHooks.length} {environment.adventureHooks.length === 1 ? 'hook' : 'hooks'}
+                      {t('rpg.environment.hookCount', { count: environment.adventureHooks.length })}
                     </p>
                   </div>
                 </div>

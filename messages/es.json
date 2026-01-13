@@ -252,7 +252,48 @@
     "spellCount": "{count} {count, plural, one {hechizo} other {hechizos}}",
     "skillCount": "{count} {count, plural, one {habilidad} other {habilidades}}",
     "level": "Nivel",
-    "cantrip": "Truco"
+    "cantrip": "Truco",
+    "environment": {
+      "description": "Descripción",
+      "locationDetails": "Detalles de la ubicación",
+      "ambientAtmosphere": "Atmósfera Ambiental",
+      "soundsAndAtmosphere": "Sonidos y atmósfera",
+      "notableFeatures": "Características Notables",
+      "featureCount": "{count} {count, plural, one {característica} other {características}}",
+      "currentConflict": "Conflicto Actual",
+      "activeIssues": "Problemas activos",
+      "presentNPCs": "NPCs Presentes",
+      "npcCount": "{count} {count, plural, one {NPC} other {NPCs}}",
+      "adventureHooks": "Ganchos de Aventura",
+      "hookCount": "{count} {count, plural, one {gancho} other {ganchos}}"
+    },
+    "mission": {
+      "missionBrief": "Resumen de la Misión",
+      "missionDetails": "Detalles de la misión",
+      "objectives": "Objetivos",
+      "objectiveCount": "{count} {count, plural, one {objetivo} other {objetivos}}",
+      "alternativePaths": "Algunos objetivos son caminos alternativos - elige un enfoque",
+      "powerfulItems": "Objetos Poderosos",
+      "itemCount": "{count} {count, plural, one {objeto} other {objetos}}",
+      "possibleOutcomes": "Posibles Resultados",
+      "outcomeCount": "{count} {count, plural, one {resultado} other {resultados}}",
+      "baseRewards": "Recompensas Base",
+      "missionCompletionRewards": "Recompensas de finalización de misión",
+      "choiceBasedRewards": "Recompensas Basadas en Elecciones",
+      "pathCount": "{count} {count, plural, one {camino} other {caminos}}",
+      "relatedNPCs": "NPCs Relacionados",
+      "relatedLocations": "Ubicaciones Relacionadas",
+      "locationCount": "{count} {count, plural, one {ubicación} other {ubicaciones}}",
+      "itemList": "Lista de Objetos:"
+    }
+  },
+  "navigation": {
+    "menu": "Menú",
+    "generator": "Generador",
+    "library": "Biblioteca",
+    "profile": "Perfil",
+    "home": "Inicio",
+    "signOut": "Cerrar Sesión"
   },
   "errors": {
     "generic": "Ocurrió un error",

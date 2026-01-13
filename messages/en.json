@@ -252,7 +252,48 @@
     "spellCount": "{count} {count, plural, one {spell} other {spells}}",
     "skillCount": "{count} {count, plural, one {skill} other {skills}}",
     "level": "Level",
-    "cantrip": "Cantrip"
+    "cantrip": "Cantrip",
+    "environment": {
+      "description": "Description",
+      "locationDetails": "Location details",
+      "ambientAtmosphere": "Ambient Atmosphere",
+      "soundsAndAtmosphere": "Sounds and atmosphere",
+      "notableFeatures": "Notable Features",
+      "featureCount": "{count} {count, plural, one {feature} other {features}}",
+      "currentConflict": "Current Conflict",
+      "activeIssues": "Active issues",
+      "presentNPCs": "Present NPCs",
+      "npcCount": "{count} {count, plural, one {NPC} other {NPCs}}",
+      "adventureHooks": "Adventure Hooks",
+      "hookCount": "{count} {count, plural, one {hook} other {hooks}}"
+    },
+    "mission": {
+      "missionBrief": "Mission Brief",
+      "missionDetails": "Mission details",
+      "objectives": "Objectives",
+      "objectiveCount": "{count} {count, plural, one {objective} other {objectives}}",
+      "alternativePaths": "Some objectives are alternative paths - choose one approach",
+      "powerfulItems": "Powerful Items",
+      "itemCount": "{count} {count, plural, one {item} other {items}}",
+      "possibleOutcomes": "Possible Outcomes",
+      "outcomeCount": "{count} {count, plural, one {outcome} other {outcomes}}",
+      "baseRewards": "Base Rewards",
+      "missionCompletionRewards": "Mission completion rewards",
+      "choiceBasedRewards": "Choice-Based Rewards",
+      "pathCount": "{count} {count, plural, one {path} other {paths}}",
+      "relatedNPCs": "Related NPCs",
+      "relatedLocations": "Related Locations",
+      "locationCount": "{count} {count, plural, one {location} other {locations}}",
+      "itemList": "Item List:"
+    }
+  },
+  "navigation": {
+    "menu": "Menu",
+    "generator": "Generator",
+    "library": "Library",
+    "profile": "Profile",
+    "home": "Home",
+    "signOut": "Sign Out"
   },
   "errors": {
     "generic": "An error occurred",

@@ -252,7 +252,48 @@
     "spellCount": "{count} {count, plural, one {magia} other {magias}}",
     "skillCount": "{count} {count, plural, one {perícia} other {perícias}}",
     "level": "Nível",
-    "cantrip": "Truque"
+    "cantrip": "Truque",
+    "environment": {
+      "description": "Descrição",
+      "locationDetails": "Detalhes da localização",
+      "ambientAtmosphere": "Atmosfera Ambiente",
+      "soundsAndAtmosphere": "Sons e atmosfera",
+      "notableFeatures": "Características Notáveis",
+      "featureCount": "{count} {count, plural, one {característica} other {características}}",
+      "currentConflict": "Conflito Atual",
+      "activeIssues": "Problemas ativos",
+      "presentNPCs": "NPCs Presentes",
+      "npcCount": "{count} {count, plural, one {NPC} other {NPCs}}",
+      "adventureHooks": "Ganchos de Aventura",
+      "hookCount": "{count} {count, plural, one {gancho} other {ganchos}}"
+    },
+    "mission": {
+      "missionBrief": "Resumo da Missão",
+      "missionDetails": "Detalhes da missão",
+      "objectives": "Objetivos",
+      "objectiveCount": "{count} {count, plural, one {objetivo} other {objetivos}}",
+      "alternativePaths": "Alguns objetivos são caminhos alternativos - escolha uma abordagem",
+      "powerfulItems": "Itens Poderosos",
+      "itemCount": "{count} {count, plural, one {item} other {itens}}",
+      "possibleOutcomes": "Possíveis Resultados",
+      "outcomeCount": "{count} {count, plural, one {resultado} other {resultados}}",
+      "baseRewards": "Recompensas Base",
+      "missionCompletionRewards": "Recompensas de conclusão da missão",
+      "choiceBasedRewards": "Recompensas Baseadas em Escolhas",
+      "pathCount": "{count} {count, plural, one {caminho} other {caminhos}}",
+      "relatedNPCs": "NPCs Relacionados",
+      "relatedLocations": "Localizações Relacionadas",
+      "locationCount": "{count} {count, plural, one {localização} other {localizações}}",
+      "itemList": "Lista de Itens:"
+    }
+  },
+  "navigation": {
+    "menu": "Menu",
+    "generator": "Gerador",
+    "library": "Biblioteca",
+    "profile": "Perfil",
+    "home": "Início",
+    "signOut": "Sair"
   },
   "errors": {
     "generic": "Ocorreu um erro",

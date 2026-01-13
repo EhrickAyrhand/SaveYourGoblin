@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from 'next-intl'
 import { ChevronDown, Menu } from "lucide-react"
-import Link from "next/link"
+import { Link } from '@/i18n/routing'
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -11,13 +12,14 @@ interface NavigationDropdownProps {
 }
 
 export function NavigationDropdown({ onSignOut }: NavigationDropdownProps) {
+  const t = useTranslations()
   const [isOpen, setIsOpen] = useState(false)
 
   const navItems = [
-    { href: "/generator", label: "Generator", icon: "⚡" },
-    { href: "/library", label: "Library", icon: "📚" },
-    { href: "/profile", label: "Profile", icon: "👤" },
-    { href: "/", label: "Home", icon: "🏠" },
+    { href: "/generator", label: t('navigation.generator'), icon: "⚡" },
+    { href: "/library", label: t('navigation.library'), icon: "📚" },
+    { href: "/profile", label: t('navigation.profile'), icon: "👤" },
+    { href: "/", label: t('navigation.home'), icon: "🏠" },
   ]
 
   return (
@@ -28,7 +30,7 @@ export function NavigationDropdown({ onSignOut }: NavigationDropdownProps) {
         className="font-body"
       >
         <Menu className="mr-2 h-4 w-4" />
-        Menu
+        {t('navigation.menu')}
         <ChevronDown className={cn("ml-2 h-4 w-4 transition-transform", isOpen && "rotate-180")} />
       </Button>
 
@@ -63,7 +65,7 @@ export function NavigationDropdown({ onSignOut }: NavigationDropdownProps) {
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-body hover:bg-destructive/10 transition-colors text-left"
                   >
                     <span className="text-lg">🚪</span>
-                    <span>Sign Out</span>
+                    <span>{t('navigation.signOut')}</span>
                   </button>
                 )}
               </div>

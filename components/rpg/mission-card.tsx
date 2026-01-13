@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from 'next-intl'
 import {
   Card,
   CardContent,
@@ -18,6 +19,8 @@ interface MissionCardProps {
 }
 
 export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
+  const t = useTranslations()
+  
   if (isLoading) {
     return (
       <Card className="parchment ornate-border animate-pulse">
@@ -85,10 +88,10 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
               </div>
               <div className="text-left">
                 <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                  Mission Brief
+                  {t('rpg.mission.missionBrief')}
                 </h3>
                 <p className="text-xs text-muted-foreground font-body mt-0.5">
-                  Mission details
+                  {t('rpg.mission.missionDetails')}
                 </p>
               </div>
             </div>
@@ -111,10 +114,10 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Objectives
+                      {t('rpg.mission.objectives')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      {mission.objectives.length} {mission.objectives.length === 1 ? 'objective' : 'objectives'}
+                      {t('rpg.mission.objectiveCount', { count: mission.objectives.length })}
                     </p>
                   </div>
                 </div>
@@ -126,7 +129,7 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
                 <div className="mb-4 p-3 rounded-lg bg-orange-500/20 border-2 border-orange-500/40">
                   <p className="font-body text-xs text-foreground flex items-center gap-2">
                     <span className="text-base">⚠️</span>
-                    Some objectives are alternative paths - choose one approach
+                    {t('rpg.mission.alternativePaths')}
                   </p>
                 </div>
               )}
@@ -150,10 +153,10 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Powerful Items
+                      {t('rpg.mission.powerfulItems')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      {mission.powerfulItems.length} {mission.powerfulItems.length === 1 ? 'item' : 'items'}
+                      {t('rpg.mission.itemCount', { count: mission.powerfulItems.length })}
                     </p>
                   </div>
                 </div>
@@ -194,10 +197,10 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Possible Outcomes
+                      {t('rpg.mission.possibleOutcomes')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      {mission.possibleOutcomes.length} {mission.possibleOutcomes.length === 1 ? 'outcome' : 'outcomes'}
+                      {t('rpg.mission.outcomeCount', { count: mission.possibleOutcomes.length })}
                     </p>
                   </div>
                 </div>
@@ -250,10 +253,10 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
               </div>
               <div className="text-left">
                 <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                  Base Rewards
+                  {t('rpg.mission.baseRewards')}
                 </h3>
                 <p className="text-xs text-muted-foreground font-body mt-0.5">
-                  Mission completion rewards
+                  {t('rpg.mission.missionCompletionRewards')}
                 </p>
               </div>
             </div>
@@ -270,7 +273,7 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
             </div>
             {mission.rewards.items && mission.rewards.items.length > 0 && (
               <div className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-green-500/20">
-                <p className="font-body text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wide">Item List:</p>
+                <p className="font-body text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wide">{t('rpg.mission.itemList')}</p>
                 <div className="flex flex-wrap gap-2">
                   {mission.rewards.items.map((item, idx) => (
                     <div
@@ -298,10 +301,10 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Choice-Based Rewards
+                      {t('rpg.mission.choiceBasedRewards')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      {mission.choiceBasedRewards.length} {mission.choiceBasedRewards.length === 1 ? 'path' : 'paths'}
+                      {t('rpg.mission.pathCount', { count: mission.choiceBasedRewards.length })}
                     </p>
                   </div>
                 </div>
@@ -362,10 +365,10 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Related NPCs
+                      {t('rpg.mission.relatedNPCs')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      {mission.relatedNPCs.length} {mission.relatedNPCs.length === 1 ? 'NPC' : 'NPCs'}
+                      {t('rpg.environment.npcCount', { count: mission.relatedNPCs.length })}
                     </p>
                   </div>
                 </div>
@@ -399,10 +402,10 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Related Locations
+                      {t('rpg.mission.relatedLocations')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      {mission.relatedLocations.length} {mission.relatedLocations.length === 1 ? 'location' : 'locations'}
+                      {t('rpg.mission.locationCount', { count: mission.relatedLocations.length })}
                     </p>
                   </div>
                 </div>
