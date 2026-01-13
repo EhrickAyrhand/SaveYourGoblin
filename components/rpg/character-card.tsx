@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from 'next-intl'
 import {
   Card,
   CardContent,
@@ -42,6 +43,7 @@ const DND_SKILLS = [
 ] as const
 
 export function CharacterCard({ character, isLoading = false }: CharacterCardProps) {
+  const t = useTranslations()
   const [expandedSections, setExpandedSections] = useState<{
     spells: boolean
     traits: boolean
@@ -180,10 +182,10 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Ability Scores
+                      {t('rpg.abilityScores')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      Core attributes
+                      {t('rpg.coreAttributes')}
                     </p>
                   </div>
                 </div>
@@ -232,7 +234,7 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
 
               {/* Proficiency Bonus */}
               <div className="mt-4 p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-rose-500/20">
-                <div className="text-xs font-body text-muted-foreground mb-2 font-semibold uppercase tracking-wide">Proficiency Bonus</div>
+                <div className="text-xs font-body text-muted-foreground mb-2 font-semibold uppercase tracking-wide">{t('rpg.proficiencyBonus')}</div>
                 <div className="text-4xl font-display font-bold text-center text-primary">
                   {formatModifier(proficiencyBonus)}
                 </div>
@@ -250,10 +252,10 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Skills
+                      {t('rpg.skills')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      {DND_SKILLS.length} skills
+                      {t('rpg.skillCount', { count: DND_SKILLS.length })}
                     </p>
                   </div>
                 </div>
@@ -296,10 +298,10 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                       </div>
                       <div className="text-left">
                         <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                          Expertise
+                          {t('rpg.expertise')}
                         </h3>
                         <p className="text-xs text-muted-foreground font-body mt-0.5">
-                          {character.expertise.length} {character.expertise.length === 1 ? 'skill' : 'skills'} with expertise
+                          {t('rpg.skillWithExpertise', { count: character.expertise.length })}
                         </p>
                       </div>
                     </div>
@@ -334,7 +336,7 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                           </div>
                           <div className="flex items-center gap-1 text-xs font-bold opacity-75">
                             <span>⭐</span>
-                            <span>Expertise</span>
+                            <span>{t('rpg.expertise')}</span>
                           </div>
                         </div>
                       )
@@ -357,10 +359,10 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                     </div>
                     <div className="text-left">
                       <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                        Racial Traits
+                        {t('rpg.racialTraits')}
                       </h3>
                       <p className="text-xs text-muted-foreground font-body mt-0.5">
-                        {character.racialTraits.length} {character.racialTraits.length === 1 ? 'trait' : 'traits'}
+                        {t('rpg.traitCount', { count: character.racialTraits.length })}
                       </p>
                     </div>
                   </div>
@@ -406,10 +408,10 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                     </div>
                     <div className="text-left">
                       <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                        Class Features
+                        {t('rpg.classFeatures')}
                       </h3>
                       <p className="text-xs text-muted-foreground font-body mt-0.5">
-                        {character.classFeatures.length} {character.classFeatures.length === 1 ? 'feature' : 'features'}
+                        {t('rpg.featureCount', { count: character.classFeatures.length })}
                       </p>
                     </div>
                   </div>
@@ -442,7 +444,7 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                               <div className="flex items-center gap-2 mb-2">
                                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
                                 <span className="px-3 py-1 bg-primary/20 text-primary border border-primary/30 rounded-full text-xs font-bold">
-                                  Level {level}
+                                  {t('rpg.level')} {level}
                                 </span>
                                 <div className="h-px flex-1 bg-gradient-to-r from-primary/30 via-transparent to-transparent"></div>
                               </div>
@@ -453,7 +455,7 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                                 >
                                   <div className="flex items-start gap-3 mb-3">
                                     <div className="px-3 py-1.5 bg-gradient-to-br from-primary/30 to-primary/20 text-primary border-2 border-primary/40 rounded-lg text-xs font-bold flex-shrink-0 shadow-sm">
-                                      Lv.{feature.level}
+                                      {t('rpg.level')} {feature.level}
                                     </div>
                                     <h4 className="font-display font-semibold text-base text-foreground group-hover:text-primary transition-colors flex-1">
                                       {feature.name}
@@ -487,10 +489,10 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                     </div>
                     <div className="text-left">
                       <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                        Traits
+                        {t('rpg.traits')}
                       </h3>
                       <p className="text-xs text-muted-foreground font-body mt-0.5">
-                        {character.traits.length} {character.traits.length === 1 ? 'trait' : 'traits'}
+                        {t('rpg.traitCount', { count: character.traits.length })}
                       </p>
                     </div>
                   </div>
@@ -538,10 +540,10 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                 </div>
                 <div className="text-left">
                   <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                    Spells
+                    {t('rpg.spells')}
                   </h3>
                   <p className="text-xs text-muted-foreground font-body mt-0.5">
-                    {character.spells.length} {character.spells.length === 1 ? 'spell' : 'spells'}
+                    {t('rpg.spellCount', { count: character.spells.length })}
                   </p>
                 </div>
               </div>
@@ -585,8 +587,8 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                         <div key={level} className="space-y-3">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent"></div>
-                            <span className={`px-3 py-1 bg-gradient-to-r ${spellLevelColors[level] || spellLevelColors[0]} border-2 rounded-full text-xs font-bold`}>
-                              Level {level === 0 ? 'Cantrip' : level}
+                                <span className={`px-3 py-1 bg-gradient-to-r ${spellLevelColors[level] || spellLevelColors[0]} border-2 rounded-full text-xs font-bold`}>
+                              {t('rpg.level')} {level === 0 ? t('rpg.cantrip') : level}
                             </span>
                             <div className="h-px flex-1 bg-gradient-to-r from-indigo-500/30 via-transparent to-transparent"></div>
                           </div>
@@ -605,7 +607,7 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                                       {spell.name}
                                     </h4>
                                     <div className={`px-2 py-1 rounded-lg border-2 ${border} bg-gradient-to-br ${bgFrom} ${bgTo} ${textColor} text-xs font-bold flex-shrink-0 shadow-sm`}>
-                                      Lv.{spell.level}
+                                      {t('rpg.level')} {spell.level}
                                     </div>
                                   </div>
                                   <p className="text-sm font-body text-muted-foreground leading-relaxed">
@@ -639,10 +641,10 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                 </div>
                 <div className="text-left">
                   <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                    History
+                    {t('rpg.history')}
                   </h3>
                   <p className="text-xs text-muted-foreground font-body mt-0.5">
-                    Character backstory
+                    {t('rpg.characterBackstory')}
                   </p>
                 </div>
               </div>
@@ -673,10 +675,10 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                 </div>
                 <div className="text-left">
                   <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                    Personality
+                    {t('rpg.personality')}
                   </h3>
                   <p className="text-xs text-muted-foreground font-body mt-0.5">
-                    Character demeanor
+                    {t('rpg.characterDemeanor')}
                   </p>
                 </div>
               </div>
@@ -705,10 +707,10 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                   </div>
                   <div className="text-left">
                     <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                      Voice
+                      {t('rpg.voice')}
                     </h3>
                     <p className="text-xs text-muted-foreground font-body mt-0.5">
-                      Voice characteristics
+                      {t('rpg.voiceCharacteristics')}
                     </p>
                   </div>
                 </div>
@@ -732,10 +734,10 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                 </div>
                 <div className="text-left">
                   <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                    Related Mission
+                    {t('rpg.relatedMission')}
                   </h3>
                   <p className="text-xs text-muted-foreground font-body mt-0.5">
-                    Associated quest
+                    {t('rpg.associatedQuest')}
                   </p>
                 </div>
               </div>

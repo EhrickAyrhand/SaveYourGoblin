@@ -88,6 +88,8 @@
     "saveError": "Failed to save content",
     "saveFailed": "Save failed:",
     "saving": "Saving...",
+    "craftingMessage": "The AI is crafting your {contentType} based on your scenario",
+    "notAuthenticatedSave": "Not authenticated. Please sign in again to save content.",
     "retry": "Retry",
     "tipsTitle": "Tips",
     "tips": {
@@ -228,21 +230,40 @@
   },
   "rpg": {
     "abilityScores": "Ability Scores",
+    "coreAttributes": "Core attributes",
     "proficiencyBonus": "Proficiency Bonus",
     "skills": "Skills",
     "expertise": "Expertise",
     "racialTraits": "Racial Traits",
     "classFeatures": "Class Features",
     "spells": "Spells",
+    "traits": "Traits",
     "history": "History",
     "personality": "Personality",
-    "voice": "Voice"
+    "voice": "Voice",
+    "relatedMission": "Related Mission",
+    "characterBackstory": "Character backstory",
+    "characterDemeanor": "Character demeanor",
+    "voiceCharacteristics": "Voice characteristics",
+    "associatedQuest": "Associated quest",
+    "skillWithExpertise": "{count} {count, plural, one {skill} other {skills}} with expertise",
+    "traitCount": "{count} {count, plural, one {trait} other {traits}}",
+    "featureCount": "{count} {count, plural, one {feature} other {features}}",
+    "spellCount": "{count} {count, plural, one {spell} other {spells}}",
+    "skillCount": "{count} {count, plural, one {skill} other {skills}}",
+    "level": "Level",
+    "cantrip": "Cantrip"
   },
   "errors": {
     "generic": "An error occurred",
     "network": "Network error. Please try again.",
     "unauthorized": "Unauthorized. Please sign in.",
-    "notFound": "Not found"
+    "notFound": "Not found",
+    "missingFields": "Missing required fields: type, scenario, or contentData",
+    "invalidContentType": "Invalid content type",
+    "invalidCharacterData": "Invalid character data structure",
+    "invalidEnvironmentData": "Invalid environment data structure",
+    "invalidMissionData": "Invalid mission data structure"
   },
   "success": {
     "saved": "Saved successfully",

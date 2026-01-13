@@ -88,6 +88,8 @@
     "saveError": "Falha ao salvar conteúdo",
     "saveFailed": "Falha ao salvar:",
     "saving": "Salvando...",
+    "craftingMessage": "A IA está criando seu {contentType} com base no seu cenário",
+    "notAuthenticatedSave": "Não autenticado. Por favor, faça login novamente para salvar conteúdo.",
     "retry": "Tentar novamente",
     "tipsTitle": "Dicas",
     "tips": {
@@ -228,21 +230,40 @@
   },
   "rpg": {
     "abilityScores": "Atributos",
+    "coreAttributes": "Atributos principais",
     "proficiencyBonus": "Bônus de Proficiência",
     "skills": "Perícias",
     "expertise": "Especialização",
     "racialTraits": "Traços Raciais",
     "classFeatures": "Características de Classe",
     "spells": "Magias",
+    "traits": "Traços",
     "history": "História",
     "personality": "Personalidade",
-    "voice": "Voz"
+    "voice": "Voz",
+    "relatedMission": "Missão Relacionada",
+    "characterBackstory": "Histórico do personagem",
+    "characterDemeanor": "Comportamento do personagem",
+    "voiceCharacteristics": "Características da voz",
+    "associatedQuest": "Missão associada",
+    "skillWithExpertise": "{count} {count, plural, one {perícia} other {perícias}} com especialização",
+    "traitCount": "{count} {count, plural, one {traço} other {traços}}",
+    "featureCount": "{count} {count, plural, one {característica} other {características}}",
+    "spellCount": "{count} {count, plural, one {magia} other {magias}}",
+    "skillCount": "{count} {count, plural, one {perícia} other {perícias}}",
+    "level": "Nível",
+    "cantrip": "Truque"
   },
   "errors": {
     "generic": "Ocorreu um erro",
     "network": "Erro de rede. Tente novamente.",
     "unauthorized": "Não autorizado. Por favor, faça login.",
-    "notFound": "Não encontrado"
+    "notFound": "Não encontrado",
+    "missingFields": "Campos obrigatórios ausentes: tipo, cenário ou dados de conteúdo",
+    "invalidContentType": "Tipo de conteúdo inválido",
+    "invalidCharacterData": "Estrutura de dados de personagem inválida",
+    "invalidEnvironmentData": "Estrutura de dados de ambiente inválida",
+    "invalidMissionData": "Estrutura de dados de missão inválida"
   },
   "success": {
     "saved": "Salvo com sucesso",

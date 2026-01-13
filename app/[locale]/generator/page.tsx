@@ -41,6 +41,7 @@ export default function GeneratorPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null)
+  const [scenarioUsedForGeneration, setScenarioUsedForGeneration] = useState<string>("") // Store scenario used for generation
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -121,7 +122,7 @@ export default function GeneratorPage() {
     previousUserRef.current = user
   }, [user])
 
-  // Clear generated content and scenario when content type changes (only after initial restore)
+    // Clear generated content and scenario when content type changes (only after initial restore)
   useEffect(() => {
     if (!hasRestoredState.current) return
 
@@ -132,6 +133,7 @@ export default function GeneratorPage() {
     setShowGenerationBanner(false)
     setShowSaveBanner(false)
     setScenario("")
+    setScenarioUsedForGeneration("") // Clear stored scenario too
   }, [contentType])
 
   async function handleGenerate() {
@@ -140,10 +142,15 @@ export default function GeneratorPage() {
       return
     }
 
+    // Store the scenario that will be used for generation
+    const scenarioToUse = scenario.trim()
+    setScenarioUsedForGeneration(scenarioToUse)
+
     setIsGenerating(true)
     setError(null)
     setGeneratedContent(null)
     setSaveSuccess(false)
+    setSaveError(null)
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -232,6 +239,20 @@ export default function GeneratorPage() {
   async function handleSaveContent() {
     if (!generatedContent || !user) return
 
+    // Use the stored scenario from generation, or fallback to current scenario
+    const scenarioToSave = scenarioUsedForGeneration || scenario.trim()
+    
+    // Validate that we have all required data
+    if (!scenarioToSave) {
+      setSaveError(t('errors.missingFields'))
+      return
+    }
+
+    if (!contentType || !generatedContent) {
+      setSaveError(t('errors.missingFields'))
+      return
+    }
+
     setIsSaving(true)
     setSaveSuccess(false)
     setSaveError(null)
@@ -241,7 +262,7 @@ export default function GeneratorPage() {
       const accessToken = session?.access_token
 
       if (!accessToken) {
-        setSaveError("Not authenticated. Please sign in again to save content.")
+        setSaveError(t('generator.notAuthenticatedSave'))
         return
       }
 
@@ -253,7 +274,7 @@ export default function GeneratorPage() {
         },
         body: JSON.stringify({
           type: contentType,
-          scenario: scenario.trim(),
+          scenario: scenarioToSave,
           contentData: generatedContent,
         }),
       })
@@ -621,7 +642,7 @@ export default function GeneratorPage() {
                 <div>
                   <p className="font-display text-2xl font-semibold mb-2">{t('generator.generating')}</p>
                   <p className="font-body text-base text-muted-foreground">
-                    The AI is crafting your {t(`generator.contentType.${contentType}`)} based on your scenario
+                    {t('generator.craftingMessage', { contentType: t(`generator.contentType.${contentType}`) })}
                   </p>
                 </div>
                 <div className="flex justify-center gap-2 pt-4">
@@ -649,7 +670,7 @@ export default function GeneratorPage() {
                 {isSaving ? (
                   <>
                     <span className="mr-2">💾</span>
-                    Saving...
+                    {t('generator.saving')}
                   </>
                 ) : (
                   <>

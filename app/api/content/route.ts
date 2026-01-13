@@ -119,14 +119,20 @@ export async function POST(request: NextRequest) {
     // Validation
     if (!type || !scenario || !contentData) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: type, scenario, or contentData' }),
+        JSON.stringify({ 
+          error: 'Missing required fields: type, scenario, or contentData',
+          message: 'Please ensure all required fields are provided before saving.'
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
     if (!['character', 'environment', 'mission'].includes(type)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid content type' }),
+        JSON.stringify({ 
+          error: 'Invalid content type',
+          message: 'Content type must be character, environment, or mission.'
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
@@ -134,21 +140,30 @@ export async function POST(request: NextRequest) {
     // Validate content structure based on type
     if (type === 'character' && !('name' in contentData && 'race' in contentData && 'class' in contentData)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid character data structure' }),
+        JSON.stringify({ 
+          error: 'Invalid character data structure',
+          message: 'Character data must include name, race, and class.'
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
     if (type === 'environment' && !('name' in contentData && 'description' in contentData)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid environment data structure' }),
+        JSON.stringify({ 
+          error: 'Invalid environment data structure',
+          message: 'Environment data must include name and description.'
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
     if (type === 'mission' && !('title' in contentData && 'description' in contentData)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid mission data structure' }),
+        JSON.stringify({ 
+          error: 'Invalid mission data structure',
+          message: 'Mission data must include title and description.'
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       )
     }

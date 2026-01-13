@@ -88,6 +88,8 @@
     "saveError": "Error al guardar contenido",
     "saveFailed": "Error al guardar:",
     "saving": "Guardando...",
+    "craftingMessage": "La IA está creando tu {contentType} basado en tu escenario",
+    "notAuthenticatedSave": "No autenticado. Por favor, inicia sesión nuevamente para guardar contenido.",
     "retry": "Reintentar",
     "tipsTitle": "Consejos",
     "tips": {
@@ -228,21 +230,40 @@
   },
   "rpg": {
     "abilityScores": "Atributos",
+    "coreAttributes": "Atributos principales",
     "proficiencyBonus": "Bonificador de Competencia",
     "skills": "Habilidades",
     "expertise": "Experticia",
     "racialTraits": "Rasgos Raciales",
     "classFeatures": "Características de Clase",
     "spells": "Hechizos",
+    "traits": "Rasgos",
     "history": "Historia",
     "personality": "Personalidad",
-    "voice": "Voz"
+    "voice": "Voz",
+    "relatedMission": "Misión Relacionada",
+    "characterBackstory": "Historia del personaje",
+    "characterDemeanor": "Comportamiento del personaje",
+    "voiceCharacteristics": "Características de la voz",
+    "associatedQuest": "Misión asociada",
+    "skillWithExpertise": "{count} {count, plural, one {habilidad} other {habilidades}} con experticia",
+    "traitCount": "{count} {count, plural, one {rasgo} other {rasgos}}",
+    "featureCount": "{count} {count, plural, one {característica} other {características}}",
+    "spellCount": "{count} {count, plural, one {hechizo} other {hechizos}}",
+    "skillCount": "{count} {count, plural, one {habilidad} other {habilidades}}",
+    "level": "Nivel",
+    "cantrip": "Truco"
   },
   "errors": {
     "generic": "Ocurrió un error",
     "network": "Error de red. Por favor, inténtalo de nuevo.",
     "unauthorized": "No autorizado. Por favor, inicia sesión.",
-    "notFound": "No encontrado"
+    "notFound": "No encontrado",
+    "missingFields": "Faltan campos requeridos: tipo, escenario o datos de contenido",
+    "invalidContentType": "Tipo de contenido inválido",
+    "invalidCharacterData": "Estructura de datos de personaje inválida",
+    "invalidEnvironmentData": "Estructura de datos de entorno inválida",
+    "invalidMissionData": "Estructura de datos de misión inválida"
   },
   "success": {
     "saved": "Guardado exitosamente",
