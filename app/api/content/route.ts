@@ -104,7 +104,13 @@ export async function GET(request: NextRequest) {
       // Note: favorite filter is skipped if columns don't exist
       
       const fallbackResult = await fallbackQuery
-      data = fallbackResult.data
+      // Map fallback data to include default values for missing columns
+      data = fallbackResult.data?.map((item: any) => ({
+        ...item,
+        is_favorite: false,
+        tags: [],
+        notes: '',
+      })) || null
       error = fallbackResult.error
       count = fallbackResult.count
     }
