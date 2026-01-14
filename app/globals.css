@@ -367,3 +367,72 @@
 .animate-divider-glow {
   animation: dividerGlow 2s ease-in-out infinite;
 }
+
+/* Print Styles */
+@media print {
+  /* Hide navigation and non-essential UI */
+  nav,
+  button:not(.print-visible),
+  .no-print,
+  [class*="Navigation"],
+  [class*="dropdown"] {
+    display: none !important;
+  }
+
+  /* Optimize page layout */
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  /* Cards should fill page width */
+  .parchment,
+  [class*="Card"] {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    background: white !important;
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+    margin-bottom: 1rem;
+  }
+
+  /* Remove decorative elements */
+  .ornate-border::before,
+  .ornate-border {
+    background: transparent !important;
+    border: 1px solid #000 !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure text is readable */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Optimize spacing for print */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    color: black !important;
+  }
+
+  /* Hide interactive elements */
+  button,
+  input,
+  textarea,
+  select {
+    display: none !important;
+  }
+
+  /* Show print button if needed */
+  .print-button {
+    display: block !important;
+  }
+}

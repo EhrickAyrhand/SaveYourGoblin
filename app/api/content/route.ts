@@ -45,25 +45,69 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Build query
+    // Get additional filters
+    const favorite = searchParams.get('favorite')
+    
+    // Try to select with new columns first, fallback to basic columns if migration hasn't run
     let query = supabase
       .from('generated_content')
-      .select('id, type, scenario_input, content_data, created_at', { count: 'exact' })
+      .select('id, type, scenario_input, content_data, created_at, is_favorite, tags, notes', { count: 'exact' })
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
+    
+    // Apply favorite filter (only works after migration)
+    if (favorite === 'true') {
+      query = query.eq('is_favorite', true)
+    }
 
     // Apply type filter
     if (type && ['character', 'environment', 'mission'].includes(type)) {
       query = query.eq('type', type)
     }
 
-    // Apply search filter (search in scenario_input and content_data)
+    // Apply search filter (search in scenario_input and notes only)
+    // Note: content_data is JSONB and tags is TEXT[] - can't use ::text cast in PostgREST OR queries
+    // content_data and tags will be searched client-side after fetching
     if (search.trim()) {
-      query = query.or(`scenario_input.ilike.%${search}%,content_data::text.ilike.%${search}%`)
+      const searchPattern = `%${search}%`
+      // Only search in text columns (scenario_input and notes)
+      // JSONB (content_data) and TEXT[] (tags) will be filtered client-side
+      const orQueryString = `scenario_input.ilike.${searchPattern},notes.ilike.${searchPattern}`
+      query = query.or(orQueryString)
     }
 
-    const { data, error, count } = await query
+    let { data, error, count } = await query
+    
+    // If error is due to missing columns (migration not run), retry with basic columns only
+    if (error && error.code === '42703') {
+      
+      // Retry with only basic columns (migration not run yet)
+      let fallbackQuery = supabase
+        .from('generated_content')
+        .select('id, type, scenario_input, content_data, created_at', { count: 'exact' })
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+      // Apply type filter
+      if (type && ['character', 'environment', 'mission'].includes(type)) {
+        fallbackQuery = fallbackQuery.eq('type', type)
+      }
+
+      // Apply search filter (basic search - only scenario_input since content_data is JSONB)
+      if (search.trim()) {
+        const searchPattern = `%${search}%`
+        fallbackQuery = fallbackQuery.ilike('scenario_input', searchPattern)
+      }
+
+      // Note: favorite filter is skipped if columns don't exist
+      
+      const fallbackResult = await fallbackQuery
+      data = fallbackResult.data
+      error = fallbackResult.error
+      count = fallbackResult.count
+    }
 
     if (error) {
       console.error('Supabase query error:', error)
@@ -76,9 +120,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Data is already filtered by SQL query (including tags/notes if columns exist)
+    const finalData = data || []
+
     return new Response(
       JSON.stringify({
-        data: data || [],
+        data: finalData,
         total: count || 0,
         limit,
         offset,
@@ -188,14 +235,37 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Get optional fields
+    const { tags, notes, is_favorite } = body as {
+      tags?: string[]
+      notes?: string
+      is_favorite?: boolean
+    }
+    
+    // Build insert object - include new fields (will work after migration is run)
+    const insertData: {
+      user_id: string
+      type: ContentType
+      scenario_input: string
+      content_data: GeneratedContent
+      tags?: string[]
+      notes?: string
+      is_favorite?: boolean
+    } = {
+      user_id: user.id,
+      type,
+      scenario_input: scenario,
+      content_data: contentData,
+    }
+    
+    // Add optional fields (will work after migration)
+    if (tags) insertData.tags = tags
+    if (notes !== undefined) insertData.notes = notes
+    if (is_favorite !== undefined) insertData.is_favorite = is_favorite
+    
     const { data, error } = await supabase
       .from('generated_content')
-      .insert({
-        user_id: user.id,
-        type,
-        scenario_input: scenario,
-        content_data: contentData,
-      })
+      .insert(insertData)
       .select()
       .single()
 
