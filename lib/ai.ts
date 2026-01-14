@@ -507,6 +507,243 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
   }
 }
 
+/**
+ * Regenerate a specific section of generated content
+ * Returns only the regenerated section data, not the full content
+ */
+export async function generateRPGContentSection(
+  scenario: string,
+  contentType: ContentType,
+  section: string,
+  currentContent: any
+): Promise<any> {
+  // Detect language from scenario
+  const detectedLanguage = await detectLanguage(scenario)
+  const validLanguages = ['English', 'Portuguese', 'Spanish']
+  const finalLanguage = validLanguages.includes(detectedLanguage) ? detectedLanguage : 'English'
+
+  // Build section-specific prompts
+  let systemPrompt: string
+  let userPrompt: string
+  let schema: z.ZodType<any>
+
+  // Define sections that can be regenerated for each content type
+  const characterSections: Record<string, { schema: z.ZodType<any>, description: string }> = {
+    spells: {
+      schema: z.array(z.object({
+        name: z.string(),
+        level: z.number(),
+        description: z.string(),
+      })),
+      description: 'spells appropriate for the character\'s class and level',
+    },
+    skills: {
+      schema: z.array(z.object({
+        name: z.string(),
+        proficiency: z.boolean(),
+        modifier: z.number(),
+      })),
+      description: 'skills with correct proficiency flags and modifiers based on class, background, and race',
+    },
+    traits: {
+      schema: z.array(z.string()),
+      description: 'personality traits and quirks',
+    },
+    racialTraits: {
+      schema: z.array(z.string()),
+      description: 'racial traits for the character\'s race (standard D&D 5e racial features)',
+    },
+    classFeatures: {
+      schema: z.array(z.object({
+        name: z.string(),
+        description: z.string(),
+        level: z.number(),
+      })),
+      description: 'class features for the character\'s class and level (ALL mandatory features)',
+    },
+    background: {
+      schema: z.string(),
+      description: 'backstory and background',
+    },
+    personality: {
+      schema: z.string(),
+      description: 'personality description',
+    },
+  }
+
+  const environmentSections: Record<string, { schema: z.ZodType<any>, description: string }> = {
+    npcs: {
+      schema: z.array(z.string()),
+      description: 'NPCs present, each with name and short role description',
+    },
+    features: {
+      schema: z.array(z.string()),
+      description: 'notable features, objects, or architectural elements',
+    },
+    adventureHooks: {
+      schema: z.array(z.string()),
+      description: '2-3 concrete adventure hooks that can immediately involve the players',
+    },
+    currentConflict: {
+      schema: z.string(),
+      description: 'what is currently wrong or unstable in this location',
+    },
+  }
+
+  const missionSections: Record<string, { schema: z.ZodType<any>, description: string }> = {
+    objectives: {
+      schema: z.array(z.object({
+        description: z.string(),
+        primary: z.boolean(),
+        isAlternative: z.boolean().optional(),
+        pathType: z.enum(['combat', 'social', 'stealth', 'mixed']).optional(),
+      })),
+      description: 'mission objectives (primary and optional)',
+    },
+    rewards: {
+      schema: z.object({
+        xp: z.number().int().min(0).optional(),
+        gold: z.number().int().min(0).optional(),
+        items: z.array(z.string()),
+      }),
+      description: 'rewards for completing the mission',
+    },
+    relatedNPCs: {
+      schema: z.array(z.string()),
+      description: 'NPCs involved in or related to this mission',
+    },
+    relatedLocations: {
+      schema: z.array(z.string()),
+      description: 'locations relevant to this mission',
+    },
+    powerfulItems: {
+      schema: z.array(z.object({
+        name: z.string(),
+        status: z.string(),
+      })).optional(),
+      description: 'powerful items or artifacts in the mission',
+    },
+    possibleOutcomes: {
+      schema: z.array(z.string()).optional(),
+      description: '3-4 possible outcomes based on player choices',
+    },
+  }
+
+  // Get section config
+  let sectionConfig: { schema: z.ZodType<any>, description: string } | null = null
+  switch (contentType) {
+    case 'character':
+      sectionConfig = characterSections[section]
+      break
+    case 'environment':
+      sectionConfig = environmentSections[section]
+      break
+    case 'mission':
+      sectionConfig = missionSections[section]
+      break
+  }
+
+  if (!sectionConfig) {
+    throw new Error(`Invalid section "${section}" for content type "${contentType}"`)
+  }
+
+  schema = sectionConfig.schema
+
+  // Build prompts based on content type and section
+  systemPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario is written in ${finalLanguage}. You MUST generate ALL content in ${finalLanguage}.
+
+You are regenerating only the "${section}" section of a ${contentType}. The rest of the content already exists and should not be changed. Generate ONLY the requested section data, maintaining consistency with the existing content.
+
+FINAL REMINDER: All output MUST be in ${finalLanguage}.`
+
+  // Create context about existing content
+  const contextSummary = contentType === 'character'
+    ? `Character: ${currentContent.name}, ${currentContent.race} ${currentContent.class} (Level ${currentContent.level})`
+    : contentType === 'environment'
+    ? `Environment: ${currentContent.name}`
+    : `Mission: ${currentContent.title}`
+
+  userPrompt = `CRITICAL LANGUAGE REQUIREMENT: Respond entirely in ${finalLanguage}.
+
+Regenerate the "${section}" section for this ${contentType}:
+
+Context: ${contextSummary}
+Original Scenario: "${scenario}"
+
+Current Content (for reference only - do NOT regenerate these):
+${JSON.stringify(currentContent, null, 2)}
+
+Generate NEW ${sectionConfig.description} (ALL in ${finalLanguage}).
+
+Return ONLY the ${section} data in the required format. Do not include any other fields or explanations.`
+
+  // Check if OpenAI API key is available
+  const openaiApiKey = process.env.OPENAI_API_KEY
+  if (!openaiApiKey) {
+    console.warn('OpenAI API key not found, using mock data for section regeneration')
+    // Return mock section data
+    return generateMockSection(contentType, section, currentContent)
+  }
+
+  try {
+    const result = await (generateObject as any)({
+      model: openai('gpt-4o-mini'),
+      schema,
+      system: systemPrompt,
+      prompt: userPrompt,
+      temperature: 0.8,
+    })
+
+    return result.object
+  } catch (error) {
+    console.error('Section regeneration error:', error)
+    // Fallback to mock
+    return generateMockSection(contentType, section, currentContent)
+  }
+}
+
+function generateMockSection(contentType: ContentType, section: string, currentContent: any): any {
+  // Return mock section data based on section type
+  switch (`${contentType}:${section}`) {
+    case 'character:spells':
+      return []
+    case 'character:skills':
+      return []
+    case 'character:traits':
+      return ['Mock trait 1', 'Mock trait 2']
+    case 'character:racialTraits':
+      return ['Mock racial trait']
+    case 'character:classFeatures':
+      return []
+    case 'character:background':
+      return 'Mock background'
+    case 'character:personality':
+      return 'Mock personality'
+    case 'environment:npcs':
+      return ['Mock NPC']
+    case 'environment:features':
+      return ['Mock feature']
+    case 'environment:adventureHooks':
+      return ['Mock hook']
+    case 'environment:currentConflict':
+      return 'Mock conflict'
+    case 'mission:objectives':
+      return []
+    case 'mission:rewards':
+      return { items: [] }
+    case 'mission:relatedNPCs':
+      return []
+    case 'mission:relatedLocations':
+      return []
+    case 'mission:powerfulItems':
+      return []
+    case 'mission:possibleOutcomes':
+      return []
+    default:
+      throw new Error(`Unknown section: ${contentType}:${section}`)
+  }
+}
+
 // Fallback mock functions (kept for development/testing)
 function generateMockContent(scenario: string, contentType: ContentType): GeneratedContent {
   switch (contentType) {

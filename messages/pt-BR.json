@@ -5,6 +5,8 @@
     "library": "Biblioteca",
     "profile": "Perfil",
     "save": "Salvar",
+    "saving": "Salvando...",
+    "loading": "Carregando...",
     "cancel": "Cancelar",
     "delete": "Excluir",
     "edit": "Editar",
@@ -99,6 +101,23 @@
       "tip4": "Quanto mais contexto você fornecer, melhores serão os resultados"
     },
     "examplesTitle": "Exemplos",
+    "templates": "Modelos",
+    "saveTemplate": "Salvar Modelo",
+    "loadTemplate": "Carregar Modelo",
+    "saveCurrentAsTemplate": "Salvar Cenário Atual como Modelo",
+    "noTemplates": "Nenhum modelo salvo ainda",
+    "templateName": "Nome do Modelo",
+    "templateNamePlaceholder": "ex: Bardo Misterioso",
+    "templateDescription": "Descrição (opcional)",
+    "templateDescriptionPlaceholder": "Breve descrição de quando usar este modelo...",
+    "regenerateSpells": "Regenerar Magias",
+    "regenerateTraits": "Regenerar Traços",
+    "regenerateClassFeatures": "Regenerar Características da Classe",
+    "regenerateNPCs": "Regenerar NPCs",
+    "regenerateFeatures": "Regenerar Características",
+    "regenerateHooks": "Regenerar Ganchos de Aventura",
+    "regenerateObjectives": "Regenerar Objetivos",
+    "regenerateRewards": "Regenerar Recompensas",
     "examples": {
       "character": {
         "example1": {

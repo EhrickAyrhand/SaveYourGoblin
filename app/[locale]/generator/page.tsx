@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AnimatedBanner } from "@/components/ui/animated-banner"
 import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
@@ -48,6 +49,13 @@ export default function GeneratorPage() {
   const [generationSuccess, setGenerationSuccess] = useState(false)
   const [showGenerationBanner, setShowGenerationBanner] = useState(false)
   const [showSaveBanner, setShowSaveBanner] = useState(false)
+  const [templates, setTemplates] = useState<any[]>([])
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false)
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [templateName, setTemplateName] = useState("")
+  const [templateDescription, setTemplateDescription] = useState("")
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false)
+  const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null)
   const generatedContentRef = useRef<HTMLDivElement>(null)
   const hasRestoredState = useRef(false)
   const previousUserRef = useRef<User | null>(null)
@@ -135,6 +143,213 @@ export default function GeneratorPage() {
     setScenario("")
     setScenarioUsedForGeneration("") // Clear stored scenario too
   }, [contentType])
+
+  // Load templates when user or contentType changes
+  useEffect(() => {
+    if (!user) return
+    loadTemplates()
+  }, [user, contentType])
+
+  async function loadTemplates() {
+    if (!user) return
+    
+    setIsLoadingTemplates(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        return
+      }
+
+      const response = await fetch(`/api/templates?type=${contentType}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setTemplates(result.data || [])
+      }
+    } catch (err) {
+      console.error("Failed to load templates:", err)
+    } finally {
+      setIsLoadingTemplates(false)
+    }
+  }
+
+  async function handleSaveTemplate() {
+    if (!user || !scenario.trim() || !templateName.trim()) return
+
+    setIsSavingTemplate(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        setError("Not authenticated")
+        return
+      }
+
+      const response = await fetch("/api/templates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          name: templateName.trim(),
+          description: templateDescription.trim() || '',
+          type: contentType,
+          scenario: scenario.trim(),
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to save template")
+      }
+
+      setShowTemplateModal(false)
+      setTemplateName("")
+      setTemplateDescription("")
+      await loadTemplates()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save template")
+    } finally {
+      setIsSavingTemplate(false)
+    }
+  }
+
+  async function handleLoadTemplate(template: any) {
+    setScenario(template.scenario)
+    setShowTemplateModal(false)
+  }
+
+  async function handleDeleteTemplate(templateId: string) {
+    if (!user) return
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        return
+      }
+
+      const response = await fetch(`/api/templates/${templateId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (response.ok) {
+        await loadTemplates()
+      }
+    } catch (err) {
+      console.error("Failed to delete template:", err)
+    }
+  }
+
+  async function handleRegenerateSection(section: string) {
+    if (!generatedContent || !scenarioUsedForGeneration) {
+      setError("No content to regenerate")
+      return
+    }
+
+    setRegeneratingSection(section)
+    setError(null)
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        throw new Error("Not authenticated")
+      }
+
+      const response = await fetch("/api/generate/regenerate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          scenario: scenarioUsedForGeneration,
+          contentType,
+          section,
+          currentContent: generatedContent,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to regenerate section")
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("No response body")
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ""
+      let regeneratedData: any = null
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+          if (line.trim()) {
+            try {
+              const parsed = JSON.parse(line)
+              if (parsed.section === section && parsed.data) {
+                regeneratedData = parsed.data
+              }
+            } catch {
+              // JSON is incomplete, continue reading
+            }
+          }
+        }
+      }
+
+      if (buffer.trim()) {
+        try {
+          const parsed = JSON.parse(buffer)
+          if (parsed.section === section && parsed.data) {
+            regeneratedData = parsed.data
+          }
+        } catch (err) {
+          console.error("Failed to parse final regeneration data:", err)
+        }
+      }
+
+      if (!regeneratedData) {
+        throw new Error("No regenerated data received")
+      }
+
+      // Update only the specific section in the generated content
+      setGeneratedContent({
+        ...generatedContent,
+        [section]: regeneratedData,
+      })
+
+      setGenerationSuccess(true)
+      setShowGenerationBanner(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to regenerate section")
+      console.error("Regeneration error:", err)
+    } finally {
+      setRegeneratingSection(null)
+    }
+  }
 
   async function handleGenerate() {
     if (!scenario.trim()) {
@@ -450,9 +665,35 @@ export default function GeneratorPage() {
                 <Label htmlFor="scenario" className="font-body text-lg font-semibold">
                   {t('generator.scenarioLabel')}
                 </Label>
-                <span className="text-xs text-muted-foreground font-body">
-                  {scenario.length} characters
-                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowTemplateModal(true)}
+                    className="font-body"
+                  >
+                    📋 {t('generator.templates')}
+                  </Button>
+                  {scenario.trim() && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setTemplateName("")
+                        setTemplateDescription("")
+                        setShowTemplateModal(true)
+                      }}
+                      className="font-body"
+                    >
+                      💾 {t('generator.saveTemplate')}
+                    </Button>
+                  )}
+                  <span className="text-xs text-muted-foreground font-body">
+                    {scenario.length} characters
+                  </span>
+                </div>
               </div>
               <div className="relative">
                 <textarea
@@ -689,17 +930,230 @@ export default function GeneratorPage() {
             </div>
 
             {contentType === "character" && "name" in generatedContent && "race" in generatedContent && (
-              <CharacterCard character={generatedContent as Character} />
+              <>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRegenerateSection("spells")}
+                    disabled={!!regeneratingSection}
+                    className="font-body"
+                  >
+                    {regeneratingSection === "spells" ? "⏳" : "🔄"} {t('generator.regenerateSpells')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRegenerateSection("traits")}
+                    disabled={!!regeneratingSection}
+                    className="font-body"
+                  >
+                    {regeneratingSection === "traits" ? "⏳" : "🔄"} {t('generator.regenerateTraits')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRegenerateSection("classFeatures")}
+                    disabled={!!regeneratingSection}
+                    className="font-body"
+                  >
+                    {regeneratingSection === "classFeatures" ? "⏳" : "🔄"} {t('generator.regenerateClassFeatures')}
+                  </Button>
+                </div>
+                <CharacterCard character={generatedContent as Character} isLoading={regeneratingSection !== null} />
+              </>
             )}
             {contentType === "environment" && "name" in generatedContent && "description" in generatedContent && !("race" in generatedContent) && !("title" in generatedContent) && (
-              <EnvironmentCard environment={generatedContent as Environment} />
+              <>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRegenerateSection("npcs")}
+                    disabled={!!regeneratingSection}
+                    className="font-body"
+                  >
+                    {regeneratingSection === "npcs" ? "⏳" : "🔄"} {t('generator.regenerateNPCs')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRegenerateSection("features")}
+                    disabled={!!regeneratingSection}
+                    className="font-body"
+                  >
+                    {regeneratingSection === "features" ? "⏳" : "🔄"} {t('generator.regenerateFeatures')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRegenerateSection("adventureHooks")}
+                    disabled={!!regeneratingSection}
+                    className="font-body"
+                  >
+                    {regeneratingSection === "adventureHooks" ? "⏳" : "🔄"} {t('generator.regenerateHooks')}
+                  </Button>
+                </div>
+                <EnvironmentCard environment={generatedContent as Environment} isLoading={regeneratingSection !== null} />
+              </>
             )}
             {contentType === "mission" && "title" in generatedContent && "description" in generatedContent && (
-              <MissionCard mission={generatedContent as Mission} />
+              <>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRegenerateSection("objectives")}
+                    disabled={!!regeneratingSection}
+                    className="font-body"
+                  >
+                    {regeneratingSection === "objectives" ? "⏳" : "🔄"} {t('generator.regenerateObjectives')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRegenerateSection("rewards")}
+                    disabled={!!regeneratingSection}
+                    className="font-body"
+                  >
+                    {regeneratingSection === "rewards" ? "⏳" : "🔄"} {t('generator.regenerateRewards')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRegenerateSection("relatedNPCs")}
+                    disabled={!!regeneratingSection}
+                    className="font-body"
+                  >
+                    {regeneratingSection === "relatedNPCs" ? "⏳" : "🔄"} {t('generator.regenerateNPCs')}
+                  </Button>
+                </div>
+                <MissionCard mission={generatedContent as Mission} isLoading={regeneratingSection !== null} />
+              </>
             )}
           </div>
         )}
       </div>
+
+      {/* Template Modal */}
+      {showTemplateModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowTemplateModal(false)
+            }
+          }}
+        >
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in slide-in-from-bottom-4 duration-300 parchment ornate-border">
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-4 flex items-center justify-between">
+              <h2 className="font-display text-2xl font-bold">{t('generator.templates')}</h2>
+              <Button variant="outline" size="sm" onClick={() => setShowTemplateModal(false)} className="font-body">
+                ✕ {t('common.close')}
+              </Button>
+            </div>
+            <div className="p-6 space-y-4">
+              {!templateName && (
+                <div className="space-y-3">
+                  <h3 className="font-body text-lg font-semibold">{t('generator.loadTemplate')}</h3>
+                  {isLoadingTemplates ? (
+                    <p className="text-muted-foreground font-body">{t('common.loading')}</p>
+                  ) : templates.length === 0 ? (
+                    <p className="text-muted-foreground font-body">{t('generator.noTemplates')}</p>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {templates.map((template) => (
+                        <div
+                          key={template.id}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex-1 cursor-pointer" onClick={() => handleLoadTemplate(template)}>
+                            <div className="font-body font-semibold">{template.name}</div>
+                            {template.description && (
+                              <div className="text-sm text-muted-foreground font-body">{template.description}</div>
+                            )}
+                            <div className="text-xs text-muted-foreground font-body mt-1 truncate">{template.scenario}</div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteTemplate(template.id)}
+                            className="font-body ml-2"
+                          >
+                            🗑️
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {scenario.trim() && (
+                    <div className="pt-4 border-t">
+                      <Button
+                        variant="default"
+                        onClick={() => {
+                          setTemplateName(scenario.substring(0, 50))
+                          setTemplateDescription("")
+                        }}
+                        className="font-body w-full"
+                      >
+                        💾 {t('generator.saveCurrentAsTemplate')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {templateName && (
+                <div className="space-y-4">
+                  <h3 className="font-body text-lg font-semibold">{t('generator.saveTemplate')}</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="template-name" className="font-body">{t('generator.templateName')}</Label>
+                      <Input
+                        id="template-name"
+                        type="text"
+                        value={templateName}
+                        onChange={(e) => setTemplateName(e.target.value)}
+                        placeholder={t('generator.templateNamePlaceholder')}
+                        className="font-body mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="template-description" className="font-body">{t('generator.templateDescription')}</Label>
+                      <textarea
+                        id="template-description"
+                        value={templateDescription}
+                        onChange={(e) => setTemplateDescription(e.target.value)}
+                        placeholder={t('generator.templateDescriptionPlaceholder')}
+                        rows={3}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-body mt-1 resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setTemplateName("")
+                        setTemplateDescription("")
+                      }}
+                      className="font-body"
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                    <Button
+                      onClick={handleSaveTemplate}
+                      disabled={!templateName.trim() || isSavingTemplate}
+                      className="font-body"
+                    >
+                      {isSavingTemplate ? t('common.saving') : t('common.save')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

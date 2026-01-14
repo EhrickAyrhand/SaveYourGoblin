@@ -5,6 +5,8 @@
     "library": "Biblioteca",
     "profile": "Perfil",
     "save": "Guardar",
+    "saving": "Guardando...",
+    "loading": "Cargando...",
     "cancel": "Cancelar",
     "delete": "Eliminar",
     "edit": "Editar",
@@ -99,6 +101,23 @@
       "tip4": "Cuanto más contexto proporciones, mejores serán los resultados"
     },
     "examplesTitle": "Ejemplos",
+    "templates": "Plantillas",
+    "saveTemplate": "Guardar Plantilla",
+    "loadTemplate": "Cargar Plantilla",
+    "saveCurrentAsTemplate": "Guardar Escenario Actual como Plantilla",
+    "noTemplates": "No hay plantillas guardadas todavía",
+    "templateName": "Nombre de la Plantilla",
+    "templateNamePlaceholder": "ej: Bardo Misterioso",
+    "templateDescription": "Descripción (opcional)",
+    "templateDescriptionPlaceholder": "Breve descripción de cuándo usar esta plantilla...",
+    "regenerateSpells": "Regenerar Hechizos",
+    "regenerateTraits": "Regenerar Rasgos",
+    "regenerateClassFeatures": "Regenerar Características de Clase",
+    "regenerateNPCs": "Regenerar NPCs",
+    "regenerateFeatures": "Regenerar Características",
+    "regenerateHooks": "Regenerar Ganchos de Aventura",
+    "regenerateObjectives": "Regenerar Objetivos",
+    "regenerateRewards": "Regenerar Recompensas",
     "examples": {
       "character": {
         "example1": {

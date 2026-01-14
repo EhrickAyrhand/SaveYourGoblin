@@ -5,6 +5,8 @@
     "library": "Library",
     "profile": "Profile",
     "save": "Save",
+    "saving": "Saving...",
+    "loading": "Loading...",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
@@ -99,6 +101,23 @@
       "tip4": "The more context you provide, the better the results"
     },
     "examplesTitle": "Examples",
+    "templates": "Templates",
+    "saveTemplate": "Save Template",
+    "loadTemplate": "Load Template",
+    "saveCurrentAsTemplate": "Save Current Scenario as Template",
+    "noTemplates": "No templates saved yet",
+    "templateName": "Template Name",
+    "templateNamePlaceholder": "e.g., Mysterious Bard",
+    "templateDescription": "Description (optional)",
+    "templateDescriptionPlaceholder": "Brief description of when to use this template...",
+    "regenerateSpells": "Regenerate Spells",
+    "regenerateTraits": "Regenerate Traits",
+    "regenerateClassFeatures": "Regenerate Class Features",
+    "regenerateNPCs": "Regenerate NPCs",
+    "regenerateFeatures": "Regenerate Features",
+    "regenerateHooks": "Regenerate Adventure Hooks",
+    "regenerateObjectives": "Regenerate Objectives",
+    "regenerateRewards": "Regenerate Rewards",
     "examples": {
       "character": {
         "example1": {
