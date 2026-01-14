@@ -7,8 +7,22 @@ import jsPDF from 'jspdf'
 import type { LibraryContentItem } from '@/components/rpg/library-card'
 import type { Character, Environment, Mission } from '@/types/rpg'
 
+// Color tuple type
+type RGBColor = [number, number, number]
+
 // Color constants (RGB values)
-const COLORS = {
+const COLORS: {
+  primaryHeader: RGBColor
+  secondary: RGBColor
+  sectionBg: RGBColor
+  border: RGBColor
+  textPrimary: RGBColor
+  textSecondary: RGBColor
+  success: RGBColor
+  warning: RGBColor
+  white: RGBColor
+  black: RGBColor
+} = {
   primaryHeader: [26, 54, 93],      // #1a365d - dark blue
   secondary: [217, 119, 6],          // #d97706 - amber/gold
   sectionBg: [254, 243, 199],        // #fef3c7 - light beige
@@ -30,8 +44,8 @@ function drawSectionBox(
   y: number,
   width: number,
   height: number,
-  bgColor: [number, number, number] = COLORS.sectionBg,
-  borderColor: [number, number, number] = COLORS.border,
+  bgColor: RGBColor = COLORS.sectionBg,
+  borderColor: RGBColor = COLORS.border,
   borderWidth: number = 1
 ): void {
   // Draw background
@@ -94,7 +108,7 @@ function drawSeparator(
   y: number,
   pageWidth: number,
   margin: number,
-  color: [number, number, number] = COLORS.border,
+  color: RGBColor = COLORS.border,
   width: number = 0.5
 ): void {
   doc.setDrawColor(color[0], color[1], color[2])
@@ -111,7 +125,7 @@ function addStyledText(
   x: number,
   y: number,
   fontSize: number,
-  color: [number, number, number] = COLORS.textPrimary,
+  color: RGBColor = COLORS.textPrimary,
   isBold: boolean = false
 ): void {
   doc.setFontSize(fontSize)
@@ -253,7 +267,7 @@ function addTextWithWrap(
   y: number,
   maxWidth: number,
   fontSize: number,
-  color: [number, number, number] = COLORS.textPrimary,
+  color: RGBColor = COLORS.textPrimary,
   isBold: boolean = false,
   lineHeight: number = 1.3
 ): number {
