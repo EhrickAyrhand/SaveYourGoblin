@@ -74,15 +74,6 @@ export function VerifyEmailForm() {
     }
   }, [searchParams])
 
-  useEffect(() => {
-    if (token) {
-      handleVerification(token)
-    } else {
-      setError("Invalid or missing verification token.")
-      setIsVerifying(false)
-    }
-  }, [token])
-
   async function handleVerification(token: string) {
     setIsLoading(true)
     setError(null)
