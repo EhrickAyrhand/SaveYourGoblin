@@ -51,6 +51,13 @@ export default function LibraryPage() {
           router.push("/login")
           return
         }
+        
+        // Check email verification - redirect unverified users to verify-email
+        if (!currentUser.emailVerified) {
+          router.push(`/verify-email?email=${encodeURIComponent(currentUser.email)}`)
+          return
+        }
+        
         setUser(currentUser)
       } catch (err) {
         setError("Failed to load user data")

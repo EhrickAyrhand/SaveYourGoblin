@@ -342,30 +342,80 @@
       }
     },
     "register": {
-      "title": "Registrarse",
+      "title": "Crear Cuenta",
+      "description": "Ingresa tu información para crear una nueva cuenta",
       "email": "Correo",
       "password": "Contraseña",
       "confirmPassword": "Confirmar Contraseña",
-      "submit": "Registrarse",
+      "emailPlaceholder": "tu@ejemplo.com",
+      "submit": "Crear Cuenta",
+      "creating": "Creando cuenta...",
+      "successMessage": "¡Cuenta creada exitosamente! Por favor, verifica tu correo para verificar tu cuenta.",
       "hasAccount": "¿Ya tienes una cuenta?",
-      "signIn": "Iniciar sesión"
+      "signIn": "Iniciar sesión",
+      "backToHome": "← Volver al Inicio",
+      "validation": {
+        "emailInvalid": "Por favor, ingresa una dirección de correo válida",
+        "passwordMin": "La contraseña debe tener al menos 6 caracteres",
+        "passwordStrength": "La contraseña debe contener al menos una letra mayúscula, una letra minúscula y un número",
+        "passwordsDontMatch": "Las contraseñas no coinciden"
+      }
     },
     "forgotPassword": {
-      "title": "Olvidé mi Contraseña",
+      "title": "Restablecer Contraseña",
+      "description": "Ingresa tu dirección de correo y te enviaremos un enlace para restablecer tu contraseña",
       "email": "Correo",
+      "emailPlaceholder": "tu@ejemplo.com",
       "submit": "Enviar Enlace de Restablecimiento",
-      "backToLogin": "Volver al inicio de sesión"
+      "sending": "Enviando...",
+      "emailSent": "Correo Enviado",
+      "success": "Si existe una cuenta con este correo, recibirás un enlace de restablecimiento de contraseña en breve.",
+      "rememberPassword": "¿Recuerdas tu contraseña?",
+      "signIn": "Iniciar sesión",
+      "validation": {
+        "emailInvalid": "Por favor, ingresa una dirección de correo válida"
+      }
     },
     "resetPassword": {
       "title": "Restablecer Contraseña",
+      "description": "Ingresa tu nueva contraseña a continuación",
       "newPassword": "Nueva Contraseña",
-      "confirmPassword": "Confirmar Contraseña",
-      "submit": "Restablecer Contraseña"
+      "confirmPassword": "Confirmar Nueva Contraseña",
+      "submit": "Restablecer Contraseña",
+      "resetting": "Restableciendo...",
+      "reset": "Contraseña Restablecida",
+      "success": "¡Tu contraseña ha sido restablecida exitosamente! Ahora puedes iniciar sesión con tu nueva contraseña.",
+      "noToken": "Token de restablecimiento inválido o faltante. Por favor, solicita un nuevo restablecimiento de contraseña.",
+      "tokenExpired": "El token de restablecimiento ha expirado. Por favor, solicita un nuevo restablecimiento de contraseña.",
+      "rememberPassword": "¿Recuerdas tu contraseña?",
+      "signIn": "Iniciar sesión",
+      "validation": {
+        "passwordMin": "La contraseña debe tener al menos 6 caracteres",
+        "passwordStrength": "La contraseña debe contener al menos una letra mayúscula, una letra minúscula y un número",
+        "passwordsDontMatch": "Las contraseñas no coinciden"
+      }
     },
     "verifyEmail": {
       "title": "Verificar Correo",
-      "token": "Token de Verificación",
-      "submit": "Verificar Correo"
+      "status": "Estado de verificación de correo",
+      "verifying": "Verificando tu dirección de correo...",
+      "pleaseWait": "Por favor, espera mientras verificamos tu correo...",
+      "noToken": "No se encontró token de verificación. Por favor, revisa tu correo para el enlace de verificación.",
+      "success": "¡Tu correo ha sido verificado exitosamente! Ahora puedes iniciar sesión en tu cuenta.",
+      "resend": "Reenviar Correo de Verificación",
+      "sending": "Enviando...",
+      "resendSuccess": "¡Correo de verificación enviado! Por favor, revisa tu bandeja de entrada.",
+      "emailRequired": "Dirección de correo necesaria para reenviar correo de verificación.",
+      "tokenExpired": "El token de verificación ha expirado. Por favor, solicita un nuevo correo de verificación.",
+      "emailLabel": "Correo",
+      "goToSignIn": "Ir a Iniciar Sesión",
+      "backToSignIn": "Volver a Iniciar Sesión"
+    },
+    "verificationBanner": {
+      "title": "Verificación de Correo Necesaria",
+      "description": "Por favor, verifica tu dirección de correo para acceder a todas las funciones. Revisa tu bandeja de entrada para el enlace de verificación.",
+      "resendEmail": "Reenviar Correo de Verificación",
+      "goToVerification": "Ir a Página de Verificación"
     }
   },
   "rpg": {

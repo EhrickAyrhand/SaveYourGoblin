@@ -115,6 +115,13 @@ export default function ProfilePage() {
           router.push("/login")
           return
         }
+        
+        // Check email verification - redirect unverified users to verify-email
+        if (!currentUser.emailVerified) {
+          router.push(`/verify-email?email=${encodeURIComponent(currentUser.email)}`)
+          return
+        }
+        
         setUser(currentUser)
         
         // Load saved profile data - RESPECT USER PREFERENCE

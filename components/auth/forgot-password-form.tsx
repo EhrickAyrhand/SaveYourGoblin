@@ -4,7 +4,8 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import Link from "next/link"
+import { useTranslations } from 'next-intl'
+import { Link as I18nLink } from '@/i18n/routing'
 import { resetPassword } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,16 +27,19 @@ import {
 } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-const forgotPasswordSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-})
-
-type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>
+type ForgotPasswordFormValues = {
+  email: string
+}
 
 export function ForgotPasswordForm() {
+  const t = useTranslations()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  const forgotPasswordSchema = z.object({
+    email: z.string().email(t('auth.forgotPassword.validation.emailInvalid')),
+  })
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -59,7 +63,7 @@ export function ForgotPasswordForm() {
         form.reset()
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.")
+      setError(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -68,9 +72,9 @@ export function ForgotPasswordForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>Reset Password</CardTitle>
+        <CardTitle>{t('auth.forgotPassword.title')}</CardTitle>
         <CardDescription>
-          Enter your email address and we'll send you a link to reset your password
+          {t('auth.forgotPassword.description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -85,7 +89,7 @@ export function ForgotPasswordForm() {
             {success && (
               <Alert>
                 <AlertDescription>
-                  If an account exists with this email, you will receive a password reset link shortly.
+                  {t('auth.forgotPassword.success')}
                 </AlertDescription>
               </Alert>
             )}
@@ -95,11 +99,11 @@ export function ForgotPasswordForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>{t('auth.forgotPassword.email')}</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder={t('auth.forgotPassword.emailPlaceholder')}
                       disabled={isLoading || success}
                       {...field}
                     />
@@ -110,17 +114,21 @@ export function ForgotPasswordForm() {
             />
             
             <Button type="submit" className="w-full" disabled={isLoading || success}>
-              {isLoading ? "Sending..." : success ? "Email Sent" : "Send Reset Link"}
+              {isLoading 
+                ? t('auth.forgotPassword.sending') 
+                : success 
+                ? t('auth.forgotPassword.emailSent') 
+                : t('auth.forgotPassword.submit')}
             </Button>
           </form>
         </Form>
       </CardContent>
       <CardFooter>
         <div className="text-sm text-center text-muted-foreground w-full">
-          Remember your password?{" "}
-          <Link href="/login" className="text-primary hover:underline">
-            Sign in
-          </Link>
+          {t('auth.forgotPassword.rememberPassword')}{" "}
+          <I18nLink href="/login" className="text-primary hover:underline">
+            {t('auth.forgotPassword.signIn')}
+          </I18nLink>
         </div>
       </CardFooter>
     </Card>

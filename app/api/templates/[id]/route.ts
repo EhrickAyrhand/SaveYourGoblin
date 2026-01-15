@@ -6,21 +6,15 @@
  */
 
 import { NextRequest } from 'next/server'
-import { getServerUser, createServerClient } from '@/lib/supabase-server'
+import { requireVerifiedEmail, createServerClient } from '@/lib/supabase-server'
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Authenticate user
-    const user = await getServerUser(request)
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
+    // Authenticate user and require email verification
+    const user = await requireVerifiedEmail(request)
 
     const { id } = await params
     const body = await request.json()
@@ -69,8 +63,19 @@ export async function PATCH(
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update template error:', error)
+    
+    // Handle authentication and verification errors
+    if (error.status === 401 || error.status === 403) {
+      return new Response(
+        JSON.stringify({
+          error: error.message || 'Unauthorized',
+        }),
+        { status: error.status, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    
     return new Response(
       JSON.stringify({
         error: 'Failed to update template',
@@ -86,14 +91,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Authenticate user
-    const user = await getServerUser(request)
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
+    // Authenticate user and require email verification
+    const user = await requireVerifiedEmail(request)
 
     const { id } = await params
 
@@ -139,8 +138,19 @@ export async function DELETE(
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete template error:', error)
+    
+    // Handle authentication and verification errors
+    if (error.status === 401 || error.status === 403) {
+      return new Response(
+        JSON.stringify({
+          error: error.message || 'Unauthorized',
+        }),
+        { status: error.status, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    
     return new Response(
       JSON.stringify({
         error: 'Failed to delete template',

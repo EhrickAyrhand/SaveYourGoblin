@@ -6,19 +6,13 @@
  */
 
 import { NextRequest } from 'next/server'
-import { getServerUser, createServerClient } from '@/lib/supabase-server'
+import { requireVerifiedEmail, createServerClient } from '@/lib/supabase-server'
 import type { ContentType } from '@/types/rpg'
 
 export async function GET(request: NextRequest) {
   try {
-    // Authenticate user
-    const user = await getServerUser(request)
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
+    // Authenticate user and require email verification
+    const user = await requireVerifiedEmail(request)
 
     // Get query parameters
     const { searchParams } = new URL(request.url)
@@ -73,8 +67,19 @@ export async function GET(request: NextRequest) {
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('Fetch templates error:', error)
+    
+    // Handle authentication and verification errors
+    if (error.status === 401 || error.status === 403) {
+      return new Response(
+        JSON.stringify({
+          error: error.message || 'Unauthorized',
+        }),
+        { status: error.status, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    
     return new Response(
       JSON.stringify({
         error: 'Failed to fetch templates',
@@ -87,14 +92,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Authenticate user
-    const user = await getServerUser(request)
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
+    // Authenticate user and require email verification
+    const user = await requireVerifiedEmail(request)
 
     // Parse request body
     const body = await request.json()
@@ -172,8 +171,19 @@ export async function POST(request: NextRequest) {
       }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create template error:', error)
+    
+    // Handle authentication and verification errors
+    if (error.status === 401 || error.status === 403) {
+      return new Response(
+        JSON.stringify({
+          error: error.message || 'Unauthorized',
+        }),
+        { status: error.status, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    
     return new Response(
       JSON.stringify({
         error: 'Failed to create template',

@@ -77,6 +77,13 @@ export default function GeneratorPage() {
           router.push("/login")
           return
         }
+        
+        // Check email verification - redirect unverified users to verify-email
+        if (!currentUser.emailVerified) {
+          router.push(`/verify-email?email=${encodeURIComponent(currentUser.email)}`)
+          return
+        }
+        
         setUser(currentUser)
         previousUserRef.current = currentUser
       } catch (err) {

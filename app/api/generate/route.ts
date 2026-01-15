@@ -5,20 +5,14 @@
  */
 
 import { NextRequest } from 'next/server'
-import { getServerUser } from '@/lib/supabase-server'
+import { requireVerifiedEmail } from '@/lib/supabase-server'
 import { generateRPGContent } from '@/lib/ai'
 import type { ContentType, AdvancedInput, AdvancedGenerationParams } from '@/types/rpg'
 
 export async function POST(request: NextRequest) {
   try {
-    // Authenticate user
-    const user = await getServerUser(request)
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
+    // Authenticate user and require email verification
+    const user = await requireVerifiedEmail(request)
 
     // Parse request body
     const body = await request.json()
@@ -79,8 +73,19 @@ export async function POST(request: NextRequest) {
         'Connection': 'keep-alive',
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Generation error:', error)
+    
+    // Handle authentication and verification errors
+    if (error.status === 401 || error.status === 403) {
+      return new Response(
+        JSON.stringify({
+          error: error.message || 'Unauthorized',
+        }),
+        { status: error.status, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+    
     return new Response(
       JSON.stringify({
         error: 'Failed to generate content',

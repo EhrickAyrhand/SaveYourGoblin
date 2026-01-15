@@ -342,30 +342,80 @@
       }
     },
     "register": {
-      "title": "Cadastrar",
+      "title": "Criar Conta",
+      "description": "Digite suas informações para criar uma nova conta",
       "email": "E-mail",
       "password": "Senha",
       "confirmPassword": "Confirmar Senha",
-      "submit": "Cadastrar",
+      "emailPlaceholder": "voce@exemplo.com",
+      "submit": "Criar Conta",
+      "creating": "Criando conta...",
+      "successMessage": "Conta criada com sucesso! Por favor, verifique seu e-mail para verificar sua conta.",
       "hasAccount": "Já tem uma conta?",
-      "signIn": "Entrar"
+      "signIn": "Entrar",
+      "backToHome": "← Voltar para Início",
+      "validation": {
+        "emailInvalid": "Por favor, digite um endereço de e-mail válido",
+        "passwordMin": "A senha deve ter pelo menos 6 caracteres",
+        "passwordStrength": "A senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número",
+        "passwordsDontMatch": "As senhas não coincidem"
+      }
     },
     "forgotPassword": {
-      "title": "Esqueceu a Senha",
+      "title": "Redefinir Senha",
+      "description": "Digite seu endereço de e-mail e enviaremos um link para redefinir sua senha",
       "email": "E-mail",
+      "emailPlaceholder": "voce@exemplo.com",
       "submit": "Enviar Link de Redefinição",
-      "backToLogin": "Voltar para login"
+      "sending": "Enviando...",
+      "emailSent": "E-mail Enviado",
+      "success": "Se existir uma conta com este e-mail, você receberá um link de redefinição de senha em breve.",
+      "rememberPassword": "Lembra sua senha?",
+      "signIn": "Entrar",
+      "validation": {
+        "emailInvalid": "Por favor, digite um endereço de e-mail válido"
+      }
     },
     "resetPassword": {
       "title": "Redefinir Senha",
+      "description": "Digite sua nova senha abaixo",
       "newPassword": "Nova Senha",
-      "confirmPassword": "Confirmar Senha",
-      "submit": "Redefinir Senha"
+      "confirmPassword": "Confirmar Nova Senha",
+      "submit": "Redefinir Senha",
+      "resetting": "Redefinindo...",
+      "reset": "Senha Redefinida",
+      "success": "Sua senha foi redefinida com sucesso! Agora você pode entrar com sua nova senha.",
+      "noToken": "Token de redefinição inválido ou ausente. Por favor, solicite uma nova redefinição de senha.",
+      "tokenExpired": "Token de redefinição expirou. Por favor, solicite uma nova redefinição de senha.",
+      "rememberPassword": "Lembra sua senha?",
+      "signIn": "Entrar",
+      "validation": {
+        "passwordMin": "A senha deve ter pelo menos 6 caracteres",
+        "passwordStrength": "A senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número",
+        "passwordsDontMatch": "As senhas não coincidem"
+      }
     },
     "verifyEmail": {
       "title": "Verificar E-mail",
-      "token": "Token de Verificação",
-      "submit": "Verificar E-mail"
+      "status": "Status de verificação de e-mail",
+      "verifying": "Verificando seu endereço de e-mail...",
+      "pleaseWait": "Por favor, aguarde enquanto verificamos seu e-mail...",
+      "noToken": "Nenhum token de verificação encontrado. Por favor, verifique seu e-mail para o link de verificação.",
+      "success": "Seu e-mail foi verificado com sucesso! Agora você pode entrar na sua conta.",
+      "resend": "Reenviar E-mail de Verificação",
+      "sending": "Enviando...",
+      "resendSuccess": "E-mail de verificação enviado! Por favor, verifique sua caixa de entrada.",
+      "emailRequired": "Endereço de e-mail necessário para reenviar e-mail de verificação.",
+      "tokenExpired": "Token de verificação expirou. Por favor, solicite um novo e-mail de verificação.",
+      "emailLabel": "E-mail",
+      "goToSignIn": "Ir para Entrar",
+      "backToSignIn": "Voltar para Entrar"
+    },
+    "verificationBanner": {
+      "title": "Verificação de E-mail Necessária",
+      "description": "Por favor, verifique seu endereço de e-mail para acessar todos os recursos. Verifique sua caixa de entrada para o link de verificação.",
+      "resendEmail": "Reenviar E-mail de Verificação",
+      "goToVerification": "Ir para Página de Verificação"
     }
   },
   "rpg": {

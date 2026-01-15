@@ -255,3 +255,69 @@ export async function getCurrentUser(): Promise<User | null> {
   }
 }
 
+/**
+ * Resend verification email to the current user
+ */
+export async function resendVerificationEmail(email?: string): Promise<{ error: AuthResponse['error'] }> {
+  try {
+    // Get email from parameter or current user
+    let emailToUse = email
+    
+    if (!emailToUse) {
+      const user = await getCurrentUser()
+      if (!user) {
+        return {
+          error: {
+            message: 'No user logged in. Please provide an email address.',
+          },
+        }
+      }
+      emailToUse = user.email
+    }
+
+    // Get the current origin for the redirect URL
+    const redirectTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/verify-email`
+        : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-email`;
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: emailToUse,
+      options: {
+        emailRedirectTo: redirectTo,
+      },
+    });
+
+    if (error) {
+      return {
+        error: {
+          message: error.message,
+          status: error.status,
+        },
+      };
+    }
+
+    return { error: null };
+  } catch (err) {
+    return {
+      error: {
+        message: err instanceof Error ? err.message : 'An unexpected error occurred',
+      },
+    };
+  }
+}
+
+/**
+ * Check if the current user's email is verified
+ */
+export async function checkEmailVerification(): Promise<boolean> {
+  try {
+    const user = await getCurrentUser()
+    return user?.emailVerified === true
+  } catch (err) {
+    console.error('Error checking email verification:', err)
+    return false
+  }
+}
+

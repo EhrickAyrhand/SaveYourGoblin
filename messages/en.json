@@ -342,30 +342,80 @@
       }
     },
     "register": {
-      "title": "Sign Up",
+      "title": "Create Account",
+      "description": "Enter your information to create a new account",
       "email": "Email",
       "password": "Password",
       "confirmPassword": "Confirm Password",
-      "submit": "Sign Up",
+      "emailPlaceholder": "you@example.com",
+      "submit": "Create Account",
+      "creating": "Creating account...",
+      "successMessage": "Account created successfully! Please check your email to verify your account.",
       "hasAccount": "Already have an account?",
-      "signIn": "Sign in"
+      "signIn": "Sign in",
+      "backToHome": "← Back to Home",
+      "validation": {
+        "emailInvalid": "Please enter a valid email address",
+        "passwordMin": "Password must be at least 6 characters",
+        "passwordStrength": "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+        "passwordsDontMatch": "Passwords don't match"
+      }
     },
     "forgotPassword": {
-      "title": "Forgot Password",
+      "title": "Reset Password",
+      "description": "Enter your email address and we'll send you a link to reset your password",
       "email": "Email",
+      "emailPlaceholder": "you@example.com",
       "submit": "Send Reset Link",
-      "backToLogin": "Back to login"
+      "sending": "Sending...",
+      "emailSent": "Email Sent",
+      "success": "If an account exists with this email, you will receive a password reset link shortly.",
+      "rememberPassword": "Remember your password?",
+      "signIn": "Sign in",
+      "validation": {
+        "emailInvalid": "Please enter a valid email address"
+      }
     },
     "resetPassword": {
       "title": "Reset Password",
+      "description": "Enter your new password below",
       "newPassword": "New Password",
-      "confirmPassword": "Confirm Password",
-      "submit": "Reset Password"
+      "confirmPassword": "Confirm New Password",
+      "submit": "Reset Password",
+      "resetting": "Resetting...",
+      "reset": "Password Reset",
+      "success": "Your password has been reset successfully! You can now sign in with your new password.",
+      "noToken": "Invalid or missing reset token. Please request a new password reset.",
+      "tokenExpired": "Reset token has expired. Please request a new password reset.",
+      "rememberPassword": "Remember your password?",
+      "signIn": "Sign in",
+      "validation": {
+        "passwordMin": "Password must be at least 6 characters",
+        "passwordStrength": "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+        "passwordsDontMatch": "Passwords don't match"
+      }
     },
     "verifyEmail": {
       "title": "Verify Email",
-      "token": "Verification Token",
-      "submit": "Verify Email"
+      "status": "Email verification status",
+      "verifying": "Verifying your email address...",
+      "pleaseWait": "Please wait while we verify your email...",
+      "noToken": "No verification token found. Please check your email for the verification link.",
+      "success": "Your email has been verified successfully! You can now sign in to your account.",
+      "resend": "Resend Verification Email",
+      "sending": "Sending...",
+      "resendSuccess": "Verification email sent! Please check your inbox.",
+      "emailRequired": "Email address required to resend verification email.",
+      "tokenExpired": "Verification token has expired. Please request a new verification email.",
+      "emailLabel": "Email",
+      "goToSignIn": "Go to Sign In",
+      "backToSignIn": "Back to Sign In"
+    },
+    "verificationBanner": {
+      "title": "Email Verification Required",
+      "description": "Please verify your email address to access all features. Check your inbox for the verification link.",
+      "resendEmail": "Resend Verification Email",
+      "goToVerification": "Go to Verification Page"
     }
   },
   "rpg": {

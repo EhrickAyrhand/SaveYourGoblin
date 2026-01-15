@@ -47,6 +47,7 @@ export async function createServerClient() {
 /**
  * Get the current user from the request
  * Extracts user from Authorization header or session cookies
+ * Returns user with email_confirmed_at field
  */
 export async function getServerUser(request?: NextRequest) {
   // First try: Get from Authorization header if provided
@@ -97,5 +98,28 @@ export async function getServerUser(request?: NextRequest) {
   }
 
   return null
+}
+
+/**
+ * Require a verified email for protected routes
+ * Returns user if verified, throws error if not verified or not authenticated
+ */
+export async function requireVerifiedEmail(request?: NextRequest) {
+  const user = await getServerUser(request)
+  
+  if (!user) {
+    const error = new Error('Authentication required') as any
+    error.status = 401
+    throw error
+  }
+
+  if (!user.email_confirmed_at) {
+    const error = new Error('Email verification required') as any
+    error.status = 403
+    error.message = 'Please verify your email address before accessing this resource.'
+    throw error
+  }
+
+  return user
 }
 

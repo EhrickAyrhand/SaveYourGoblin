@@ -62,9 +62,15 @@ export function LoginForm() {
       
       if (result.error) {
         setError(result.error.message)
-      } else {
-        // Redirect to profile after successful login
-        router.push("/profile")
+      } else if (result.user) {
+        // Check if email is verified
+        if (!result.user.emailVerified) {
+          // Redirect unverified users to verify-email page
+          router.push(`/verify-email?email=${encodeURIComponent(data.email)}`)
+        } else {
+          // Redirect verified users to profile
+          router.push("/profile")
+        }
       }
     } catch (err) {
       setError(t('errors.generic'))

@@ -4,7 +4,9 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import Link from "next/link"
+import { useRouter } from '@/i18n/routing'
+import { useTranslations } from 'next-intl'
+import { Link as I18nLink } from '@/i18n/routing'
 import { signUp } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,29 +28,36 @@ import {
 } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-const registerSchema = z
-  .object({
-    email: z.string().email("Please enter a valid email address"),
-    password: z
-      .string()
-      .min(6, "Password must be at least 6 characters")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
-      ),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  })
-
-type RegisterFormValues = z.infer<typeof registerSchema>
+type RegisterFormValues = {
+  email: string
+  password: string
+  confirmPassword: string
+}
 
 export function RegisterForm() {
+  const t = useTranslations()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null)
+
+  const registerSchema = z
+    .object({
+      email: z.string().email(t('auth.register.validation.emailInvalid')),
+      password: z
+        .string()
+        .min(6, t('auth.register.validation.passwordMin'))
+        .regex(
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+          t('auth.register.validation.passwordStrength')
+        ),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t('auth.register.validation.passwordsDontMatch'),
+      path: ["confirmPassword"],
+    })
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -74,12 +83,15 @@ export function RegisterForm() {
         setError(result.error.message)
       } else {
         setSuccess(true)
+        setRegisteredEmail(data.email)
         form.reset()
-        // TODO: Redirect to email verification page or show success message
-        // router.push("/verify-email")
+        // Redirect to verify-email page after a short delay to show success message
+        setTimeout(() => {
+          router.push(`/verify-email?email=${encodeURIComponent(data.email)}`)
+        }, 2000)
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.")
+      setError(t('errors.generic'))
     } finally {
       setIsLoading(false)
     }
@@ -88,9 +100,9 @@ export function RegisterForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>Create Account</CardTitle>
+        <CardTitle>{t('auth.register.title')}</CardTitle>
         <CardDescription>
-          Enter your information to create a new account
+          {t('auth.register.description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -105,7 +117,7 @@ export function RegisterForm() {
             {success && (
               <Alert>
                 <AlertDescription>
-                  Account created successfully! Please check your email to verify your account.
+                  {t('auth.register.successMessage')}
                 </AlertDescription>
               </Alert>
             )}
@@ -115,11 +127,11 @@ export function RegisterForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>{t('auth.register.email')}</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder={t('auth.register.emailPlaceholder')}
                       disabled={isLoading}
                       {...field}
                     />
@@ -134,7 +146,7 @@ export function RegisterForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>{t('auth.register.password')}</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
@@ -153,7 +165,7 @@ export function RegisterForm() {
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
+                  <FormLabel>{t('auth.register.confirmPassword')}</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
@@ -168,25 +180,24 @@ export function RegisterForm() {
             />
             
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Create Account"}
+              {isLoading ? t('auth.register.creating') : t('auth.register.submit')}
             </Button>
           </form>
         </Form>
       </CardContent>
       <CardFooter className="flex flex-col space-y-4">
         <Button asChild variant="outline" className="w-full font-body">
-          <Link href="/">
-            ← Back to Home
-          </Link>
+          <I18nLink href="/">
+            {t('auth.register.backToHome')}
+          </I18nLink>
         </Button>
         <div className="text-sm text-center text-muted-foreground w-full">
-          Already have an account?{" "}
-          <Link href="/login" className="text-primary hover:underline">
-            Sign in
-          </Link>
+          {t('auth.register.hasAccount')}{" "}
+          <I18nLink href="/login" className="text-primary hover:underline">
+            {t('auth.register.signIn')}
+          </I18nLink>
         </div>
       </CardFooter>
     </Card>
   )
 }
-
