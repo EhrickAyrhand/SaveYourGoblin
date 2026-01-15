@@ -95,13 +95,13 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
     return (
       <div className="flex flex-col items-center gap-2 w-full">
         {/* Badges on one line */}
-        <div className="flex items-center justify-center gap-1.5 flex-nowrap max-w-full overflow-hidden">
+        <div className="flex items-center justify-center gap-1.5 flex-nowrap max-w-full overflow-hidden h-6 mb-2">
           <RaceBadge race={character.race} size="sm" />
           <ClassBadge className={character.class} level={character.level} size="sm" />
         </div>
         {/* Description below */}
         {shortDesc && (
-          <p className="text-xs text-muted-foreground/80 text-center leading-relaxed line-clamp-2 max-w-full">
+          <p className="text-xs text-muted-foreground/80 text-center leading-relaxed line-clamp-2 max-w-full min-h-[40px]">
             {shortDesc}
           </p>
         )}
@@ -150,7 +150,7 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
     return (
       <div className="flex flex-col items-center gap-2 w-full">
         {/* Badges on one line - compact */}
-        <div className="flex items-center justify-center gap-1.5 flex-wrap max-w-full">
+        <div className="flex items-center justify-center gap-1.5 flex-wrap max-w-full h-6 mb-2">
           {environment.lighting && lightingTheme && (
             <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border ${lightingTheme.border} ${lightingTheme.bg} ${lightingTheme.text} font-semibold whitespace-nowrap`}>
               <span className="text-xs">{lightingTheme.icon}</span>
@@ -170,7 +170,7 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
         </div>
         {/* Description below */}
         {shortDesc && (
-          <p className="text-xs text-muted-foreground/80 text-center leading-relaxed line-clamp-2 max-w-full">
+          <p className="text-xs text-muted-foreground/80 text-center leading-relaxed line-clamp-2 max-w-full min-h-[40px]">
             {shortDesc}
           </p>
         )}
@@ -189,7 +189,7 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
     return (
       <div className="flex flex-col items-center gap-2 w-full">
         {/* Badges on one line - compact */}
-        <div className="flex items-center justify-center gap-1.5 flex-wrap max-w-full">
+        <div className="flex items-center justify-center gap-1.5 flex-wrap max-w-full h-6 mb-2">
           {mission.difficulty && difficultyTheme && (
             <div className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-lg border ${difficultyTheme.border} ${difficultyTheme.bg} ${difficultyTheme.text} font-semibold whitespace-nowrap`}>
               <span className="text-xs">{difficultyTheme.icon}</span>
@@ -204,7 +204,7 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
         </div>
         {/* Description below */}
         {shortDesc && (
-          <p className="text-xs text-muted-foreground/80 text-center leading-relaxed line-clamp-2 max-w-full">
+          <p className="text-xs text-muted-foreground/80 text-center leading-relaxed line-clamp-2 max-w-full min-h-[40px]">
             {shortDesc}
           </p>
         )}
@@ -268,9 +268,9 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
 
       {/* Main Content */}
       <div className="flex-1 p-5 flex flex-col">
-        <div className="flex flex-col items-center text-center mb-4 flex-1">
-          {/* Icon */}
-          <div className="flex-shrink-0 relative mb-4">
+        {/* Icon */}
+        <div className="flex-shrink-0 relative mb-4 text-center">
+          <div className="inline-block relative">
             <div className="absolute inset-0 bg-primary/30 rounded-xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-125"></div>
             <div className="relative bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl p-3 border-2 border-primary/30 group-hover:border-primary/50 transition-all duration-300">
               <span className="text-4xl md:text-5xl transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 block">
@@ -278,18 +278,21 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
               </span>
             </div>
           </div>
+        </div>
 
-          {/* Name */}
-          <CardTitle className="font-display text-xl md:text-2xl font-bold mb-3 group-hover:text-primary transition-colors duration-300 break-words">
-            {getContentName()}
-          </CardTitle>
+        {/* Name */}
+        <CardTitle className="font-display text-xl md:text-2xl font-bold mb-4 text-center group-hover:text-primary transition-colors duration-300 break-words">
+          {getContentName()}
+        </CardTitle>
 
-          {/* Short Description - Badges on one line, description below */}
-          <div className="w-full px-2 mt-1">
-            {item.type === "character" && renderCharacterDescription()}
-            {item.type === "environment" && renderEnvironmentDescription()}
-            {item.type === "mission" && renderMissionDescription()}
-          </div>
+        {/* Spacer to push descriptions down */}
+        <div className="flex-1 min-h-[40px]"></div>
+
+        {/* Short Description - Badges on one line, description below */}
+        <div className="w-full px-2 mt-auto">
+          {item.type === "character" && renderCharacterDescription()}
+          {item.type === "environment" && renderEnvironmentDescription()}
+          {item.type === "mission" && renderMissionDescription()}
         </div>
 
         {/* Action Buttons - visible on hover */}
