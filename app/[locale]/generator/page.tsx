@@ -22,7 +22,7 @@ import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
 import { CharacterCard } from "@/components/rpg/character-card"
 import { EnvironmentCard } from "@/components/rpg/environment-card"
 import { MissionCard } from "@/components/rpg/mission-card"
-import type { ContentType, GeneratedContent, Character, Environment, Mission } from "@/types/rpg"
+import type { ContentType, GeneratedContent, Character, Environment, Mission, AdvancedCharacterInput, AdvancedEnvironmentInput, AdvancedMissionInput, AdvancedGenerationParams } from "@/types/rpg"
 
 interface GeneratorState {
   generatedContent: GeneratedContent | null
@@ -56,6 +56,15 @@ export default function GeneratorPage() {
   const [templateDescription, setTemplateDescription] = useState("")
   const [isSavingTemplate, setIsSavingTemplate] = useState(false)
   const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null)
+  const [advancedMode, setAdvancedMode] = useState(false)
+  const [advancedCharacterInput, setAdvancedCharacterInput] = useState<AdvancedCharacterInput>({})
+  const [advancedEnvironmentInput, setAdvancedEnvironmentInput] = useState<AdvancedEnvironmentInput>({})
+  const [advancedMissionInput, setAdvancedMissionInput] = useState<AdvancedMissionInput>({})
+  const [generationParams, setGenerationParams] = useState<AdvancedGenerationParams>({
+    temperature: 0.8,
+    tone: 'balanced',
+    complexity: 'standard',
+  })
   const generatedContentRef = useRef<HTMLDivElement>(null)
   const hasRestoredState = useRef(false)
   const previousUserRef = useRef<User | null>(null)
@@ -384,6 +393,14 @@ export default function GeneratorPage() {
         body: JSON.stringify({
           scenario: scenario.trim(),
           contentType,
+          ...(advancedMode && {
+            advancedInput: contentType === 'character' 
+              ? advancedCharacterInput 
+              : contentType === 'environment' 
+              ? advancedEnvironmentInput 
+              : advancedMissionInput,
+            generationParams: generationParams,
+          }),
         }),
       })
 
@@ -670,6 +687,20 @@ export default function GeneratorPage() {
                     type="button"
                     variant="outline"
                     size="sm"
+                    onClick={() => setAdvancedMode(!advancedMode)}
+                    className={`font-body transition-all ${
+                      advancedMode 
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90' 
+                        : 'hover:bg-accent hover:text-accent-foreground'
+                    }`}
+                  >
+                    ⚙️ {t('generator.advancedMode')}
+                    {advancedMode && ' ✓'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShowTemplateModal(true)}
                     className="font-body"
                   >
@@ -724,6 +755,333 @@ export default function GeneratorPage() {
                 {t('generator.scenarioHelper')}
               </p>
             </div>
+
+            {/* Advanced Mode Fields */}
+            {advancedMode && (
+              <div className="space-y-6 pt-4 border-t border-primary/20">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xl">⚙️</span>
+                    <h3 className="font-display text-xl font-semibold">{t('generator.advancedModeDescription')}</h3>
+                  </div>
+
+                  {/* Character Advanced Fields */}
+                  {contentType === 'character' && (
+                    <div className="space-y-4 p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl border-2 border-purple-500/30">
+                      <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.character.title')}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="char-level" className="font-body text-sm font-semibold">
+                            {t('generator.advancedFields.character.level')}
+                          </Label>
+                          <Input
+                            id="char-level"
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={advancedCharacterInput.level || ''}
+                            onChange={(e) => setAdvancedCharacterInput({
+                              ...advancedCharacterInput,
+                              level: e.target.value ? parseInt(e.target.value) : undefined
+                            })}
+                            placeholder="1-20"
+                            className="font-body"
+                          />
+                          <p className="text-xs text-muted-foreground font-body">
+                            {t('generator.advancedFields.character.levelHelp')}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="char-class" className="font-body text-sm font-semibold">
+                            {t('generator.advancedFields.character.class')}
+                          </Label>
+                          <Input
+                            id="char-class"
+                            type="text"
+                            value={advancedCharacterInput.class || ''}
+                            onChange={(e) => setAdvancedCharacterInput({
+                              ...advancedCharacterInput,
+                              class: e.target.value || undefined
+                            })}
+                            placeholder={t('generator.advancedFields.character.classPlaceholder')}
+                            className="font-body"
+                          />
+                          <p className="text-xs text-muted-foreground font-body">
+                            {t('generator.advancedFields.character.classHelp')}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="char-race" className="font-body text-sm font-semibold">
+                            {t('generator.advancedFields.character.race')}
+                          </Label>
+                          <Input
+                            id="char-race"
+                            type="text"
+                            value={advancedCharacterInput.race || ''}
+                            onChange={(e) => setAdvancedCharacterInput({
+                              ...advancedCharacterInput,
+                              race: e.target.value || undefined
+                            })}
+                            placeholder={t('generator.advancedFields.character.racePlaceholder')}
+                            className="font-body"
+                          />
+                          <p className="text-xs text-muted-foreground font-body">
+                            {t('generator.advancedFields.character.raceHelp')}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="char-background" className="font-body text-sm font-semibold">
+                            {t('generator.advancedFields.character.background')}
+                          </Label>
+                          <Input
+                            id="char-background"
+                            type="text"
+                            value={advancedCharacterInput.background || ''}
+                            onChange={(e) => setAdvancedCharacterInput({
+                              ...advancedCharacterInput,
+                              background: e.target.value || undefined
+                            })}
+                            placeholder={t('generator.advancedFields.character.backgroundPlaceholder')}
+                            className="font-body"
+                          />
+                          <p className="text-xs text-muted-foreground font-body">
+                            {t('generator.advancedFields.character.backgroundHelp')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Environment Advanced Fields */}
+                  {contentType === 'environment' && (
+                    <div className="space-y-4 p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl border-2 border-green-500/30">
+                      <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.environment.title')}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="env-mood" className="font-body text-sm font-semibold">
+                            {t('generator.advancedFields.environment.mood')}
+                          </Label>
+                          <Input
+                            id="env-mood"
+                            type="text"
+                            value={advancedEnvironmentInput.mood || ''}
+                            onChange={(e) => setAdvancedEnvironmentInput({
+                              ...advancedEnvironmentInput,
+                              mood: e.target.value || undefined
+                            })}
+                            placeholder={t('generator.advancedFields.environment.moodPlaceholder')}
+                            className="font-body"
+                          />
+                          <p className="text-xs text-muted-foreground font-body">
+                            {t('generator.advancedFields.environment.moodHelp')}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="env-lighting" className="font-body text-sm font-semibold">
+                            {t('generator.advancedFields.environment.lighting')}
+                          </Label>
+                          <Input
+                            id="env-lighting"
+                            type="text"
+                            value={advancedEnvironmentInput.lighting || ''}
+                            onChange={(e) => setAdvancedEnvironmentInput({
+                              ...advancedEnvironmentInput,
+                              lighting: e.target.value || undefined
+                            })}
+                            placeholder={t('generator.advancedFields.environment.lightingPlaceholder')}
+                            className="font-body"
+                          />
+                          <p className="text-xs text-muted-foreground font-body">
+                            {t('generator.advancedFields.environment.lightingHelp')}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="env-npc-count" className="font-body text-sm font-semibold">
+                            {t('generator.advancedFields.environment.npcCount')}
+                          </Label>
+                          <Input
+                            id="env-npc-count"
+                            type="number"
+                            min="0"
+                            max="10"
+                            value={advancedEnvironmentInput.npcCount ?? ''}
+                            onChange={(e) => setAdvancedEnvironmentInput({
+                              ...advancedEnvironmentInput,
+                              npcCount: e.target.value ? parseInt(e.target.value) : undefined
+                            })}
+                            placeholder={t('generator.advancedFields.environment.npcCountPlaceholder')}
+                            className="font-body"
+                          />
+                          <p className="text-xs text-muted-foreground font-body">
+                            {t('generator.advancedFields.environment.npcCountHelp')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mission Advanced Fields */}
+                  {contentType === 'mission' && (
+                    <div className="space-y-4 p-4 bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-xl border-2 border-red-500/30">
+                      <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.mission.title')}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="mission-difficulty" className="font-body text-sm font-semibold">
+                            {t('generator.advancedFields.mission.difficulty')}
+                          </Label>
+                          <select
+                            id="mission-difficulty"
+                            value={advancedMissionInput.difficulty || ''}
+                            onChange={(e) => setAdvancedMissionInput({
+                              ...advancedMissionInput,
+                              difficulty: e.target.value ? e.target.value as 'easy' | 'medium' | 'hard' | 'deadly' : undefined
+                            })}
+                            className="w-full px-3 py-2 rounded-lg border-2 border-primary/20 bg-background font-body"
+                          >
+                            <option value="">{t('generator.advancedFields.mission.difficultyHelp')}</option>
+                            <option value="easy">{t('generator.advancedFields.mission.difficultyEasy')}</option>
+                            <option value="medium">{t('generator.advancedFields.mission.difficultyMedium')}</option>
+                            <option value="hard">{t('generator.advancedFields.mission.difficultyHard')}</option>
+                            <option value="deadly">{t('generator.advancedFields.mission.difficultyDeadly')}</option>
+                          </select>
+                          <p className="text-xs text-muted-foreground font-body">
+                            {t('generator.advancedFields.mission.difficultyHelp')}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="mission-objectives" className="font-body text-sm font-semibold">
+                            {t('generator.advancedFields.mission.objectiveCount')}
+                          </Label>
+                          <Input
+                            id="mission-objectives"
+                            type="number"
+                            min="2"
+                            max="5"
+                            value={advancedMissionInput.objectiveCount || ''}
+                            onChange={(e) => setAdvancedMissionInput({
+                              ...advancedMissionInput,
+                              objectiveCount: e.target.value ? parseInt(e.target.value) : undefined
+                            })}
+                            placeholder="2-5"
+                            className="font-body"
+                          />
+                          <p className="text-xs text-muted-foreground font-body">
+                            {t('generator.advancedFields.mission.objectiveCountHelp')}
+                          </p>
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label className="font-body text-sm font-semibold">
+                            {t('generator.advancedFields.mission.rewardTypes')}
+                          </Label>
+                          <div className="flex flex-wrap gap-3">
+                            {(['xp', 'gold', 'items'] as const).map((type) => (
+                              <label key={type} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={advancedMissionInput.rewardTypes?.includes(type) || false}
+                                  onChange={(e) => {
+                                    const current = advancedMissionInput.rewardTypes || []
+                                    setAdvancedMissionInput({
+                                      ...advancedMissionInput,
+                                      rewardTypes: e.target.checked
+                                        ? [...current, type]
+                                        : current.filter(t => t !== type)
+                                    })
+                                  }}
+                                  className="rounded"
+                                />
+                                <span className="text-sm font-body">
+                                  {type === 'xp' && t('generator.advancedFields.mission.rewardXP')}
+                                  {type === 'gold' && t('generator.advancedFields.mission.rewardGold')}
+                                  {type === 'items' && t('generator.advancedFields.mission.rewardItems')}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                          <p className="text-xs text-muted-foreground font-body">
+                            {t('generator.advancedFields.mission.rewardTypesHelp')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Generation Parameters (All Content Types) */}
+                  <div className="space-y-4 p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl border-2 border-primary/30">
+                    <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.generation.title')}</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="temperature" className="font-body text-sm font-semibold">
+                          {t('generator.advancedFields.generation.temperature')} ({generationParams.temperature?.toFixed(1) || '0.8'})
+                        </Label>
+                        <input
+                          id="temperature"
+                          type="range"
+                          min="0.1"
+                          max="1.5"
+                          step="0.1"
+                          value={generationParams.temperature || 0.8}
+                          onChange={(e) => setGenerationParams({
+                            ...generationParams,
+                            temperature: parseFloat(e.target.value)
+                          })}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground font-body">
+                          <span>{t('generator.advancedFields.generation.temperatureLow')}</span>
+                          <span>{t('generator.advancedFields.generation.temperatureHigh')}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-body">
+                          {t('generator.advancedFields.generation.temperatureHelp')}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tone" className="font-body text-sm font-semibold">
+                          {t('generator.advancedFields.generation.tone')}
+                        </Label>
+                        <select
+                          id="tone"
+                          value={generationParams.tone || 'balanced'}
+                          onChange={(e) => setGenerationParams({
+                            ...generationParams,
+                            tone: e.target.value as 'serious' | 'balanced' | 'playful'
+                          })}
+                          className="w-full px-3 py-2 rounded-lg border-2 border-primary/20 bg-background font-body"
+                        >
+                          <option value="serious">{t('generator.advancedFields.generation.toneSerious')}</option>
+                          <option value="balanced">{t('generator.advancedFields.generation.toneBalanced')}</option>
+                          <option value="playful">{t('generator.advancedFields.generation.tonePlayful')}</option>
+                        </select>
+                        <p className="text-xs text-muted-foreground font-body">
+                          {t('generator.advancedFields.generation.toneHelp')}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="complexity" className="font-body text-sm font-semibold">
+                          {t('generator.advancedFields.generation.complexity')}
+                        </Label>
+                        <select
+                          id="complexity"
+                          value={generationParams.complexity || 'standard'}
+                          onChange={(e) => setGenerationParams({
+                            ...generationParams,
+                            complexity: e.target.value as 'simple' | 'standard' | 'detailed'
+                          })}
+                          className="w-full px-3 py-2 rounded-lg border-2 border-primary/20 bg-background font-body"
+                        >
+                          <option value="simple">{t('generator.advancedFields.generation.complexitySimple')}</option>
+                          <option value="standard">{t('generator.advancedFields.generation.complexityStandard')}</option>
+                          <option value="detailed">{t('generator.advancedFields.generation.complexityDetailed')}</option>
+                        </select>
+                        <p className="text-xs text-muted-foreground font-body">
+                          {t('generator.advancedFields.generation.complexityHelp')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end gap-4 pt-2">
               <Button

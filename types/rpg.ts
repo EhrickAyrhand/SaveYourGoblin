@@ -113,6 +113,48 @@ export interface GenerationResponse {
   scenario: string
 }
 
+/**
+ * Advanced structured input for character generation
+ */
+export interface AdvancedCharacterInput {
+  level?: number // Character level (1-20)
+  class?: string // D&D 5e class (e.g., "Bard", "Wizard", "Fighter")
+  race?: string // D&D 5e race (e.g., "Human", "Elf", "Tiefling")
+  background?: string // Character background (e.g., "Entertainer", "Sage", "Noble")
+}
+
+/**
+ * Advanced structured input for environment generation
+ */
+export interface AdvancedEnvironmentInput {
+  mood?: string // Desired mood (e.g., "dark", "mysterious", "cheerful", "tense")
+  lighting?: string // Desired lighting (e.g., "bright", "dim", "dark", "candlelight")
+  npcCount?: number // Number of NPCs to include
+}
+
+/**
+ * Advanced structured input for mission generation
+ */
+export interface AdvancedMissionInput {
+  difficulty?: 'easy' | 'medium' | 'hard' | 'deadly' // Mission difficulty level
+  objectiveCount?: number // Number of objectives to generate
+  rewardTypes?: ('xp' | 'gold' | 'items')[] // Types of rewards to include
+}
+
+/**
+ * Union type for all advanced inputs
+ */
+export type AdvancedInput = AdvancedCharacterInput | AdvancedEnvironmentInput | AdvancedMissionInput
+
+/**
+ * Custom generation parameters
+ */
+export interface AdvancedGenerationParams {
+  temperature?: number // AI temperature (0.1-1.5), default 0.8
+  tone?: 'serious' | 'balanced' | 'playful' // Narrative tone
+  complexity?: 'simple' | 'standard' | 'detailed' // Level of detail in generation
+}
+
 
 
 

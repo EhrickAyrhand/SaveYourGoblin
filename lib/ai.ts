@@ -13,6 +13,11 @@ import type {
   Mission,
   GeneratedContent,
   ContentType,
+  AdvancedInput,
+  AdvancedGenerationParams,
+  AdvancedCharacterInput,
+  AdvancedEnvironmentInput,
+  AdvancedMissionInput,
 } from '@/types/rpg'
 
 // Dynamic import for franc to handle cases where it might not be installed
@@ -341,7 +346,9 @@ function validateCharacterSkills(character: Character): Character {
  */
 export async function generateRPGContent(
   scenario: string,
-  contentType: ContentType
+  contentType: ContentType,
+  advancedInput?: AdvancedInput,
+  generationParams?: AdvancedGenerationParams
 ): Promise<GeneratedContent> {
   // Check if OpenAI API key is configured
   if (!process.env.OPENAI_API_KEY) {
@@ -368,25 +375,93 @@ export async function generateRPGContent(
     let systemPrompt: string
     let userPrompt: string
 
+    // Helper function to build constraints from advanced inputs
+    const buildAdvancedConstraints = (contentType: ContentType, input?: AdvancedInput): string => {
+      if (!input) return ''
+      
+      const constraints: string[] = []
+      
+      if (contentType === 'character' && 'level' in input) {
+        const charInput = input as AdvancedCharacterInput
+        if (charInput.level) constraints.push(`The character MUST be level ${charInput.level}`)
+        if (charInput.class) constraints.push(`The character MUST be a ${charInput.class}`)
+        if (charInput.race) constraints.push(`The character MUST be a ${charInput.race}`)
+        if (charInput.background) constraints.push(`The character MUST have the ${charInput.background} background`)
+      } else if (contentType === 'environment' && 'mood' in input) {
+        const envInput = input as AdvancedEnvironmentInput
+        if (envInput.mood) constraints.push(`The environment MUST have a ${envInput.mood} mood`)
+        if (envInput.lighting) constraints.push(`The environment MUST have ${envInput.lighting} lighting`)
+        if (envInput.npcCount !== undefined) constraints.push(`The environment MUST include exactly ${envInput.npcCount} NPC${envInput.npcCount !== 1 ? 's' : ''}`)
+      } else if (contentType === 'mission' && 'difficulty' in input) {
+        const missionInput = input as AdvancedMissionInput
+        if (missionInput.difficulty) constraints.push(`The mission MUST be ${missionInput.difficulty} difficulty`)
+        if (missionInput.objectiveCount) constraints.push(`The mission MUST have exactly ${missionInput.objectiveCount} objective${missionInput.objectiveCount !== 1 ? 's' : ''}`)
+        if (missionInput.rewardTypes && missionInput.rewardTypes.length > 0) {
+          constraints.push(`The mission rewards MUST include: ${missionInput.rewardTypes.join(', ')}`)
+        }
+      }
+      
+      if (constraints.length === 0) return ''
+      return `\n\nSPECIFIC REQUIREMENTS:\n${constraints.map(c => `- ${c}`).join('\n')}\n\nThese requirements are MANDATORY and must be strictly followed.`
+    }
+
+    // Helper function to adjust tone in prompts
+    const getToneInstruction = (tone?: string): string => {
+      if (!tone) return ''
+      switch (tone) {
+        case 'serious':
+          return ' Maintain a serious, dramatic tone throughout. Focus on realism and consequences.'
+        case 'playful':
+          return ' Maintain a light, playful tone throughout. Include humor and whimsical elements where appropriate.'
+        case 'balanced':
+        default:
+          return ' Maintain a balanced tone that can include both serious and light moments as appropriate.'
+      }
+    }
+
+    // Helper function to adjust complexity in prompts
+    const getComplexityInstruction = (complexity?: string): string => {
+      if (!complexity) return ''
+      switch (complexity) {
+        case 'simple':
+          return ' Keep descriptions concise and straightforward. Focus on essential details only.'
+        case 'detailed':
+          return ' Provide extensive, rich details. Include sensory descriptions, deeper motivations, and elaborate world-building elements.'
+        case 'standard':
+        default:
+          return ''
+      }
+    }
+
+    // Get generation parameters with defaults
+    const temperature = generationParams?.temperature ?? 0.8
+    const toneInstruction = getToneInstruction(generationParams?.tone)
+    const complexityInstruction = getComplexityInstruction(generationParams?.complexity)
+    const advancedConstraints = buildAdvancedConstraints(contentType, advancedInput)
+
     switch (contentType) {
       case 'character':
         schema = characterSchema
+        const charInput = advancedInput as AdvancedCharacterInput | undefined
+        const charLevel = charInput?.level ? ` Level ${charInput.level}` : ''
+        const charClass = charInput?.class ? ` ${charInput.class}` : ''
+        const charRace = charInput?.race ? ` ${charInput.race}` : ''
+        
         systemPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario is written in ${detectedLanguage}. You MUST generate ALL content in ${detectedLanguage}. This includes ALL text, descriptions, names, titles, dialogue, and every single word of output. Every field must be in ${detectedLanguage}. 
 
 Example: If the user writes in Portuguese like "um bardo na taverna", you MUST respond with Portuguese names like "João" or "Maria", Portuguese descriptions, and all text in Portuguese. If the user writes in Spanish like "un bardo en la taberna", respond with Spanish names like "Juan" or "María" and all text in Spanish.
 
-You are an expert D&D 5e game master and character creator. Create detailed, immersive characters that feel authentic to the D&D 5e universe. Characters should have rich backstories, distinct personalities, and appropriate abilities for their level and class. Include spells appropriate to the character's class and level. IMPORTANT: Ensure all skill proficiency flags are correctly set based on class, background, and race. Include all standard racial traits for the character's race. CRITICAL: Every character MUST include ALL mandatory class features for their class and level - this is non-negotiable. Non-spellcasting classes (Barbarian, Rogue, Fighter, Monk) must have their complete feature list.
+You are an expert D&D 5e game master and character creator. Create detailed, immersive characters that feel authentic to the D&D 5e universe. Characters should have rich backstories, distinct personalities, and appropriate abilities for their level and class.${toneInstruction}${complexityInstruction} Include spells appropriate to the character's class and level. IMPORTANT: Ensure all skill proficiency flags are correctly set based on class, background, and race. Include all standard racial traits for the character's race. CRITICAL: Every character MUST include ALL mandatory class features for their class and level - this is non-negotiable. Non-spellcasting classes (Barbarian, Rogue, Fighter, Monk) must have their complete feature list.
 
 FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every name, description, trait, and text field must be in ${detectedLanguage}.`
         userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${detectedLanguage}. You MUST respond entirely in ${detectedLanguage}. Every word, name, description, and text must be in ${detectedLanguage}.
 
-Create a D&D 5e character based on this scenario: "${scenario}"
+Create a D&D 5e character based on this scenario: "${scenario}"${charLevel}${charClass}${charRace}${advancedConstraints}
 
 IMPORTANT: The scenario above is written in ${detectedLanguage}. You MUST match this language exactly. All character names, descriptions, backstories, personality traits, and every single text field must be in ${detectedLanguage}. Use names appropriate for ${detectedLanguage} culture (e.g., ${detectedLanguage === 'Portuguese' ? 'João, Maria, Carlos' : detectedLanguage === 'Spanish' ? 'Juan, María, Carlos' : 'John, Mary, Charles'}).
 
 Generate a complete character with:
-- A fitting name, race, class, and background (ALL in ${detectedLanguage} - names should be appropriate for ${detectedLanguage} culture)
-- Level between 1-10 (choose appropriately based on the scenario)
+- A fitting name, race, class, and background (ALL in ${detectedLanguage} - names should be appropriate for ${detectedLanguage} culture)${charInput?.level ? `\n- MUST be level ${charInput.level}` : '\n- Level between 1-10 (choose appropriately based on the scenario)'}${charInput?.class ? `\n- MUST be a ${charInput.class}` : ''}${charInput?.race ? `\n- MUST be a ${charInput.race}` : ''}${charInput?.background ? `\n- MUST have the ${charInput.background} background` : ''}
 - D&D 5e ability scores (STR, DEX, CON, INT, WIS, CHA) - values typically 8-15 for starting characters, with one or two higher stats (15-17) based on class
 - A compelling backstory that connects to the scenario (written entirely in ${detectedLanguage})
 - Distinct personality traits (described in ${detectedLanguage})
@@ -413,28 +488,32 @@ CRITICAL:
 
       case 'environment':
         schema = environmentSchema
+        const envInput = advancedInput as AdvancedEnvironmentInput | undefined
+        const envMood = envInput?.mood ? ` with a ${envInput.mood} mood` : ''
+        const envLighting = envInput?.lighting ? ` with ${envInput.lighting} lighting` : ''
+        const envNPCs = envInput?.npcCount !== undefined ? ` with exactly ${envInput.npcCount} NPC${envInput.npcCount !== 1 ? 's' : ''}` : ''
+        
         systemPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario is written in ${detectedLanguage}. You MUST generate ALL content in ${detectedLanguage}. This includes ALL text, descriptions, names, titles, dialogue, and every single word of output. Every field must be in ${detectedLanguage}.
 
 Example: If the user writes in Portuguese like "uma torre de mago", you MUST respond with Portuguese location names like "Torre do Mago" and all descriptions in Portuguese. If the user writes in Spanish like "una torre del mago", respond with Spanish names like "Torre del Mago" and all text in Spanish.
 
-You are an expert D&D 5e game master and world builder. Create immersive, atmospheric locations that bring the game world to life. Environments should have rich sensory details, mood, and interactive elements that engage players.
+You are an expert D&D 5e game master and world builder. Create immersive, atmospheric locations that bring the game world to life.${toneInstruction}${complexityInstruction} Environments should have rich sensory details, mood, and interactive elements that engage players.
 
 FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every name, description, feature, and text field must be in ${detectedLanguage}.`
         userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${detectedLanguage}. You MUST respond entirely in ${detectedLanguage}. Every word, name, description, and text must be in ${detectedLanguage}.
 
-Create a D&D 5e environment/location based on this scenario: "${scenario}"
+Create a D&D 5e environment/location based on this scenario: "${scenario}"${envMood}${envLighting}${envNPCs}${advancedConstraints}
 
 IMPORTANT: The scenario above is written in ${detectedLanguage}. You MUST match this language exactly. All location names, descriptions, features, NPC names, and every single text field must be in ${detectedLanguage}. Use names appropriate for ${detectedLanguage} culture.
 
 Generate a complete location with the following clearly separated sections (ALL in ${detectedLanguage}):
-
+${envInput?.mood ? `- Mood: MUST be ${envInput.mood}` : '- Mood: The emotional tone players should feel upon entering, described in ${detectedLanguage} (keep this distinct from the description)'}
+${envInput?.lighting ? `- Lighting: MUST be ${envInput.lighting}` : '- Lighting: Lighting conditions and visibility described in ${detectedLanguage} (do NOT repeat description text)'}
 - Name: A memorable and unique location name (in ${detectedLanguage}, appropriate for ${detectedLanguage} culture)
 - Description: A vivid visual description of the place in ${detectedLanguage} (do NOT describe mood or lighting here)
 - Atmosphere: Ambient sounds, smells, and environmental details (described in ${detectedLanguage})
-- Mood: The emotional tone players should feel upon entering, described in ${detectedLanguage} (keep this distinct from the description)
-- Lighting: Lighting conditions and visibility described in ${detectedLanguage} (do NOT repeat description text)
 - Notable Features: Interactive elements players can investigate or use (described in ${detectedLanguage})
-- NPCs: Key NPCs present, each with a short role description in ${detectedLanguage} (NPC names should be in ${detectedLanguage})
+- NPCs: ${envInput?.npcCount !== undefined ? `Exactly ${envInput.npcCount} NPC${envInput.npcCount !== 1 ? 's' : ''}, each with a short role description in ${detectedLanguage}` : 'Key NPCs present, each with a short role description in ${detectedLanguage} (NPC names should be in ${detectedLanguage})'}${envInput?.npcCount === 0 ? ' (no NPCs should be included)' : ''}
 - Current Conflict: What is currently wrong or unstable in this location (described in ${detectedLanguage})
 - Adventure Hooks: 2-3 concrete hooks that can immediately involve the players (written in ${detectedLanguage})
 
@@ -446,31 +525,37 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Location
 
       case 'mission':
         schema = missionSchema
+        const missionInput = advancedInput as AdvancedMissionInput | undefined
+        const missionDifficulty = missionInput?.difficulty ? ` with ${missionInput.difficulty} difficulty` : ''
+        const missionObjectives = missionInput?.objectiveCount ? ` with exactly ${missionInput.objectiveCount} objective${missionInput.objectiveCount !== 1 ? 's' : ''}` : ''
+        const missionRewards = missionInput?.rewardTypes && missionInput.rewardTypes.length > 0 
+          ? ` with rewards including: ${missionInput.rewardTypes.join(', ')}` 
+          : ''
+        
         systemPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario is written in ${detectedLanguage}. You MUST generate ALL content in ${detectedLanguage}. This includes ALL text, descriptions, names, titles, dialogue, and every single word of output. Every field must be in ${detectedLanguage}.
 
 Example: If the user writes in Portuguese like "recuperar um artefato", you MUST respond with Portuguese mission titles like "A Recuperação do Artefato" and all descriptions in Portuguese. If the user writes in Spanish like "recuperar un artefacto", respond with Spanish titles like "La Recuperación del Artefacto" and all text in Spanish.
 
-You are an expert D&D 5e game master and quest designer. Create engaging missions and quests that provide clear objectives, appropriate challenges, and meaningful rewards. Missions should fit naturally into a campaign and offer both primary and optional objectives. CRITICAL: Ensure difficulty matches stakes (world-altering content requires higher tier levels). Clarify artifact power and control mechanisms. Mark alternative objective paths clearly. Define concrete consequences for player choices.
+You are an expert D&D 5e game master and quest designer. Create engaging missions and quests that provide clear objectives, appropriate challenges, and meaningful rewards.${toneInstruction}${complexityInstruction} Missions should fit naturally into a campaign and offer both primary and optional objectives. CRITICAL: Ensure difficulty matches stakes (world-altering content requires higher tier levels). Clarify artifact power and control mechanisms. Mark alternative objective paths clearly. Define concrete consequences for player choices.
 
 FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every title, description, objective, reward, and text field must be in ${detectedLanguage}.`
         userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${detectedLanguage}. You MUST respond entirely in ${detectedLanguage}. Every word, name, description, and text must be in ${detectedLanguage}.
 
-Create a D&D 5e mission/quest based on this scenario: "${scenario}"
+Create a D&D 5e mission/quest based on this scenario: "${scenario}"${missionDifficulty}${missionObjectives}${missionRewards}${advancedConstraints}
 
 IMPORTANT: The scenario above is written in ${detectedLanguage}. You MUST match this language exactly. All mission titles, descriptions, objectives, rewards, NPC names, location names, and every single text field must be in ${detectedLanguage}. Use names appropriate for ${detectedLanguage} culture.
 
 Generate a complete mission with the following (ALL in ${detectedLanguage}):
-
+${missionInput?.difficulty ? `- Difficulty: MUST be ${missionInput.difficulty}` : '- Difficulty: Level (easy, medium, hard, or deadly) - must align with stakes and recommended level'}
 - Title: An engaging mission title (in ${detectedLanguage})
 - Description: Detailed mission description (written entirely in ${detectedLanguage})
 - Context: Background context and setup (written in ${detectedLanguage})
 - Recommended Level: Party level range based on difficulty and stakes (Easy: 1-3, Medium: 4-6, Hard: 7-10, Deadly: 11+). World-altering stakes (artifacts, prophecies, world balance) should match higher tier levels. Format the level text in ${detectedLanguage}.
-- Objectives: 2-4 objectives (mix of primary required and optional), all described in ${detectedLanguage}. When objectives represent different approaches (e.g., negotiate vs. combat), mark them as alternative paths (isAlternative: true) and specify pathType (combat, social, stealth, or mixed).
+- Objectives: ${missionInput?.objectiveCount ? `Exactly ${missionInput.objectiveCount} objective${missionInput.objectiveCount !== 1 ? 's' : ''}` : '2-4 objectives (mix of primary required and optional)'}, all described in ${detectedLanguage}. When objectives represent different approaches (e.g., negotiate vs. combat), mark them as alternative paths (isAlternative: true) and specify pathType (combat, social, stealth, or mixed).
 - Powerful Items: If the mission involves artifacts or powerful items, include them with clear status descriptions in ${detectedLanguage} (e.g., "Dormant Artifact (awakens later)", "DM-controlled Artifact (unstable)", "Narrative Artifact (limited mechanical use)") to help DMs manage game balance. Item names should be in ${detectedLanguage}.
 - Possible Outcomes: 3-4 possible outcomes showing concrete consequences of different player choices, all written in ${detectedLanguage} (e.g., "If negotiated → alliance formed, sorceress becomes ally", "If combat → reputation gained, but faction becomes hostile", "If artifact kept → future consequences arise").
-- Rewards: Base rewards (XP, gold, items) appropriate for difficulty level. Item names and descriptions must be in ${detectedLanguage}.
+- Rewards: Base rewards (${missionInput?.rewardTypes && missionInput.rewardTypes.length > 0 ? missionInput.rewardTypes.join(', ') : 'XP, gold, items'}) appropriate for difficulty level. Item names and descriptions must be in ${detectedLanguage}.
 - Choice-Based Rewards: Optional rewards tied to specific paths/choices, all described in ${detectedLanguage} (e.g., "If negotiated: alliance + favor + knowledge", "If combat: reputation + fear + loot", "If artifact sealed: future quest hook").
-- Difficulty: Level (easy, medium, hard, or deadly) - must align with stakes and recommended level
 - Related NPCs: NPCs involved in the mission (NPC names and descriptions in ${detectedLanguage})
 - Related Locations: Locations relevant to the mission (location names in ${detectedLanguage})
 
@@ -488,7 +573,7 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
       schema,
       system: systemPrompt,
       prompt: userPrompt,
-      temperature: 0.8, // Creative but consistent
+      temperature: Math.max(0.1, Math.min(1.5, temperature)), // Clamp between 0.1 and 1.5
     })
     
     let object = result.object

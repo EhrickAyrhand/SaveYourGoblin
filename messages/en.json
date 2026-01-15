@@ -118,6 +118,70 @@
     "regenerateHooks": "Regenerate Adventure Hooks",
     "regenerateObjectives": "Regenerate Objectives",
     "regenerateRewards": "Regenerate Rewards",
+    "simpleMode": "Simple Mode",
+    "advancedMode": "Advanced Mode",
+    "advancedModeDescription": "Use structured inputs and custom parameters for more precise generation",
+    "advancedFields": {
+      "character": {
+        "title": "Character Parameters",
+        "level": "Level",
+        "levelHelp": "Character level (1-20). Leave empty to let AI decide.",
+        "class": "Class",
+        "classHelp": "D&D 5e class (e.g., Bard, Wizard, Fighter). Leave empty to let AI decide.",
+        "classPlaceholder": "Select or type a class...",
+        "race": "Race",
+        "raceHelp": "D&D 5e race (e.g., Human, Elf, Tiefling). Leave empty to let AI decide.",
+        "racePlaceholder": "Select or type a race...",
+        "background": "Background",
+        "backgroundHelp": "Character background (e.g., Entertainer, Sage, Noble). Leave empty to let AI decide.",
+        "backgroundPlaceholder": "e.g., Entertainer, Sage, Noble"
+      },
+      "environment": {
+        "title": "Environment Parameters",
+        "mood": "Mood",
+        "moodHelp": "Desired mood of the location. Leave empty to let AI decide.",
+        "moodPlaceholder": "e.g., dark, mysterious, cheerful, tense",
+        "lighting": "Lighting",
+        "lightingHelp": "Lighting conditions. Leave empty to let AI decide.",
+        "lightingPlaceholder": "e.g., bright, dim, dark, candlelight",
+        "npcCount": "NPC Count",
+        "npcCountHelp": "Number of NPCs to include. Leave empty to let AI decide.",
+        "npcCountPlaceholder": "0-10"
+      },
+      "mission": {
+        "title": "Mission Parameters",
+        "difficulty": "Difficulty",
+        "difficultyHelp": "Mission difficulty level. Leave empty to let AI decide.",
+        "difficultyEasy": "Easy",
+        "difficultyMedium": "Medium",
+        "difficultyHard": "Hard",
+        "difficultyDeadly": "Deadly",
+        "objectiveCount": "Number of Objectives",
+        "objectiveCountHelp": "Number of objectives to generate (2-5). Leave empty to let AI decide.",
+        "rewardTypes": "Reward Types",
+        "rewardTypesHelp": "Types of rewards to include. Leave empty to include all types.",
+        "rewardXP": "Experience Points",
+        "rewardGold": "Gold",
+        "rewardItems": "Items"
+      },
+      "generation": {
+        "title": "Generation Parameters",
+        "temperature": "Temperature",
+        "temperatureHelp": "Controls creativity (0.1 = more focused, 1.5 = more creative). Default: 0.8",
+        "temperatureLow": "Focused",
+        "temperatureHigh": "Creative",
+        "tone": "Tone",
+        "toneHelp": "Narrative tone of the generated content.",
+        "toneSerious": "Serious",
+        "toneBalanced": "Balanced",
+        "tonePlayful": "Playful",
+        "complexity": "Complexity",
+        "complexityHelp": "Level of detail in the generated content.",
+        "complexitySimple": "Simple",
+        "complexityStandard": "Standard",
+        "complexityDetailed": "Detailed"
+      }
+    },
     "examples": {
       "character": {
         "example1": {

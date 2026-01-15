@@ -118,6 +118,70 @@
     "regenerateHooks": "Regenerar Ganchos de Aventura",
     "regenerateObjectives": "Regenerar Objetivos",
     "regenerateRewards": "Regenerar Recompensas",
+    "simpleMode": "Modo Simples",
+    "advancedMode": "Modo Avançado",
+    "advancedModeDescription": "Use entradas estruturadas e parâmetros personalizados para uma geração mais precisa",
+    "advancedFields": {
+      "character": {
+        "title": "Parâmetros do Personagem",
+        "level": "Nível",
+        "levelHelp": "Nível do personagem (1-20). Deixe vazio para a IA decidir.",
+        "class": "Classe",
+        "classHelp": "Classe D&D 5e (ex: Bardo, Mago, Guerreiro). Deixe vazio para a IA decidir.",
+        "classPlaceholder": "Selecione ou digite uma classe...",
+        "race": "Raça",
+        "raceHelp": "Raça D&D 5e (ex: Humano, Elfo, Tiefling). Deixe vazio para a IA decidir.",
+        "racePlaceholder": "Selecione ou digite uma raça...",
+        "background": "Antecedente",
+        "backgroundHelp": "Antecedente do personagem (ex: Artista, Sábio, Nobre). Deixe vazio para a IA decidir.",
+        "backgroundPlaceholder": "ex: Artista, Sábio, Nobre"
+      },
+      "environment": {
+        "title": "Parâmetros do Ambiente",
+        "mood": "Humor",
+        "moodHelp": "Humor desejado do local. Deixe vazio para a IA decidir.",
+        "moodPlaceholder": "ex: sombrio, misterioso, alegre, tenso",
+        "lighting": "Iluminação",
+        "lightingHelp": "Condições de iluminação. Deixe vazio para a IA decidir.",
+        "lightingPlaceholder": "ex: brilhante, escura, escuro, luz de vela",
+        "npcCount": "Quantidade de NPCs",
+        "npcCountHelp": "Número de NPCs para incluir. Deixe vazio para a IA decidir.",
+        "npcCountPlaceholder": "0-10"
+      },
+      "mission": {
+        "title": "Parâmetros da Missão",
+        "difficulty": "Dificuldade",
+        "difficultyHelp": "Nível de dificuldade da missão. Deixe vazio para a IA decidir.",
+        "difficultyEasy": "Fácil",
+        "difficultyMedium": "Médio",
+        "difficultyHard": "Difícil",
+        "difficultyDeadly": "Mortal",
+        "objectiveCount": "Número de Objetivos",
+        "objectiveCountHelp": "Número de objetivos para gerar (2-5). Deixe vazio para a IA decidir.",
+        "rewardTypes": "Tipos de Recompensas",
+        "rewardTypesHelp": "Tipos de recompensas para incluir. Deixe vazio para incluir todos os tipos.",
+        "rewardXP": "Pontos de Experiência",
+        "rewardGold": "Ouro",
+        "rewardItems": "Itens"
+      },
+      "generation": {
+        "title": "Parâmetros de Geração",
+        "temperature": "Temperatura",
+        "temperatureHelp": "Controla a criatividade (0.1 = mais focado, 1.5 = mais criativo). Padrão: 0.8",
+        "temperatureLow": "Focado",
+        "temperatureHigh": "Criativo",
+        "tone": "Tom",
+        "toneHelp": "Tom narrativo do conteúdo gerado.",
+        "toneSerious": "Sério",
+        "toneBalanced": "Equilibrado",
+        "tonePlayful": "Descontraído",
+        "complexity": "Complexidade",
+        "complexityHelp": "Nível de detalhe no conteúdo gerado.",
+        "complexitySimple": "Simples",
+        "complexityStandard": "Padrão",
+        "complexityDetailed": "Detalhado"
+      }
+    },
     "examples": {
       "character": {
         "example1": {

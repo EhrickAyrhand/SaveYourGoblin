@@ -7,7 +7,7 @@
 import { NextRequest } from 'next/server'
 import { getServerUser } from '@/lib/supabase-server'
 import { generateRPGContent } from '@/lib/ai'
-import type { ContentType } from '@/types/rpg'
+import type { ContentType, AdvancedInput, AdvancedGenerationParams } from '@/types/rpg'
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,9 +22,11 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const { scenario, contentType } = body as {
+    const { scenario, contentType, advancedInput, generationParams } = body as {
       scenario: string
       contentType: ContentType
+      advancedInput?: AdvancedInput
+      generationParams?: AdvancedGenerationParams
     }
 
     if (!scenario || !contentType) {
@@ -42,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate content using OpenAI (or fallback to mock if no API key)
-    const content = await generateRPGContent(scenario, contentType)
+    const content = await generateRPGContent(scenario, contentType, advancedInput, generationParams)
     
     // Stream the response back
     const stream = new ReadableStream({
