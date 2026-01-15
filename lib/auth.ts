@@ -124,11 +124,25 @@ export async function resetPassword(
   data: ResetPasswordData
 ): Promise<{ error: AuthResponse['error'] }> {
   try {
-    // Get the current origin for the redirect URL
+    // Get the current origin and extract locale from pathname
+    // i18n routing uses localePrefix: 'as-needed', but the route structure is [locale]/(auth)/reset-password
+    // So we need to always include the locale in the redirect URL to match the route
+    const supportedLocales = ['en', 'pt-BR', 'es']
+    const defaultLocale = 'en'
+    
+    let locale = defaultLocale
+    if (typeof window !== 'undefined') {
+      const pathSegments = window.location.pathname.split('/').filter(Boolean)
+      if (pathSegments.length > 0 && supportedLocales.includes(pathSegments[0])) {
+        locale = pathSegments[0]
+      }
+    }
+    
+    // Always include locale prefix in redirect URL to match [locale]/(auth)/reset-password route structure
     const redirectTo =
       typeof window !== 'undefined'
-        ? `${window.location.origin}/reset-password`
-        : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password`;
+        ? `${window.location.origin}/${locale}/reset-password`
+        : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/${locale}/reset-password`;
 
     const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
       redirectTo,
