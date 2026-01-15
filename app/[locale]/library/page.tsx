@@ -486,18 +486,26 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="mx-auto max-w-7xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-5xl font-bold mb-3">{t('library.title')}</h1>
-            <p className="mt-2 text-base text-muted-foreground font-body">
-              {t('library.subtitle')}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <NavigationDropdown onSignOut={handleSignOut} />
+    <div className="min-h-screen bg-background p-6 md:p-8">
+      <div className="mx-auto max-w-7xl space-y-8">
+        {/* Header with decorative border */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-lg border-2 border-primary/20"></div>
+          <div className="relative flex items-center justify-between p-6 md:p-8">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-5xl md:text-6xl">📚</span>
+                <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-primary via-primary/90 to-primary bg-clip-text text-transparent">
+                  {t('library.title')}
+                </h1>
+              </div>
+              <p className="mt-3 text-base md:text-lg text-muted-foreground font-body pl-1">
+                {t('library.subtitle')}
+              </p>
+            </div>
+            <div className="flex gap-2 ml-4">
+              <NavigationDropdown onSignOut={handleSignOut} />
+            </div>
           </div>
         </div>
 
@@ -519,79 +527,102 @@ export default function LibraryPage() {
         )}
 
         {/* Filters and Search */}
-        <Card className="parchment ornate-border">
-          <CardContent className="p-6">
-            <div className="space-y-6">
+        <Card className="parchment ornate-border border-2 border-primary/20 shadow-lg">
+          <CardHeader className="pb-4 border-b border-primary/10">
+            <CardTitle className="font-display text-2xl font-bold text-primary flex items-center gap-2">
+              <span className="text-2xl">🔍</span>
+              {t('library.filtersAndSearch')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 md:p-8">
+            <div className="space-y-8">
               {/* Type Filters */}
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { value: "all" as const, label: t('library.all'), icon: "📚", count: counts.total },
-                  { value: "character" as const, label: t('generator.contentType.character'), icon: "🎭", count: counts.characters },
-                  { value: "environment" as const, label: t('generator.contentType.environment'), icon: "🗺️", count: counts.environments },
-                  { value: "mission" as const, label: t('generator.contentType.mission'), icon: "⚔️", count: counts.missions },
-                ].map((filter) => (
+              <div>
+                <h3 className="font-body text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">
+                  {t('library.filterByType')}
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { value: "all" as const, label: t('library.all'), icon: "📚", count: counts.total, color: "from-blue-500/20 to-purple-500/20 border-blue-500/50" },
+                    { value: "character" as const, label: t('generator.contentType.character'), icon: "🎭", count: counts.characters, color: "from-purple-500/20 to-pink-500/20 border-purple-500/50" },
+                    { value: "environment" as const, label: t('generator.contentType.environment'), icon: "🗺️", count: counts.environments, color: "from-green-500/20 to-emerald-500/20 border-green-500/50" },
+                    { value: "mission" as const, label: t('generator.contentType.mission'), icon: "⚔️", count: counts.missions, color: "from-red-500/20 to-orange-500/20 border-red-500/50" },
+                  ].map((filter) => (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      onClick={() => setSelectedType(filter.value)}
+                      disabled={isFetching}
+                      className={`relative rounded-xl border-2 px-6 py-3 text-base font-body transition-all font-semibold shadow-md hover:shadow-lg transform hover:scale-105 ${
+                        selectedType === filter.value
+                          ? `bg-gradient-to-br ${filter.color} border-primary text-primary shadow-lg scale-105`
+                          : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+                      } ${isFetching ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                    >
+                      <span className="mr-2 text-xl">{filter.icon}</span>
+                      {filter.label} <span className="ml-2 text-sm font-bold">({filter.count})</span>
+                      {selectedType === filter.value && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse" />
+                      )}
+                    </button>
+                  ))}
+                  {/* Favorites Filter */}
                   <button
-                    key={filter.value}
                     type="button"
-                    onClick={() => setSelectedType(filter.value)}
+                    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                     disabled={isFetching}
-                    className={`rounded-lg border-2 px-5 py-2.5 text-base font-body transition-all font-medium ${
-                      selectedType === filter.value
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border hover:border-primary/50"
+                    className={`relative rounded-xl border-2 px-6 py-3 text-base font-body transition-all font-semibold shadow-md hover:shadow-lg transform hover:scale-105 ${
+                      showFavoritesOnly
+                        ? "bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border-yellow-500/50 text-primary shadow-lg scale-105"
+                        : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
                     } ${isFetching ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                   >
-                    <span className="mr-2 text-lg">{filter.icon}</span>
-                    {filter.label} ({filter.count})
+                    <span className="mr-2 text-xl">{showFavoritesOnly ? "⭐" : "☆"}</span>
+                    {t('library.favorites')} <span className="ml-2 text-sm font-bold">({counts.favorites})</span>
+                    {showFavoritesOnly && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full animate-pulse" />
+                    )}
                   </button>
-                ))}
-                {/* Favorites Filter */}
-                <button
-                  type="button"
-                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                  disabled={isFetching}
-                  className={`rounded-lg border-2 px-5 py-2.5 text-base font-body transition-all font-medium ${
-                    showFavoritesOnly
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border hover:border-primary/50"
-                  } ${isFetching ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                >
-                  <span className="mr-2 text-lg">{showFavoritesOnly ? "⭐" : "☆"}</span>
-                  {t('library.favorites')} ({counts.favorites})
-                </button>
+                </div>
               </div>
 
               {/* Search and Sort */}
-              <div className="space-y-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder={t('library.searchPlaceholder')}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    disabled={isFetching}
-                    className="w-full rounded-md border border-input bg-background px-4 py-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-body"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-lg"
-                    >
-                      ✕
-                    </button>
-                  )}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-body text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">
+                    {t('library.searchAndSort')}
+                  </h3>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl">🔎</div>
+                    <input
+                      type="text"
+                      placeholder={t('library.searchPlaceholder')}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      disabled={isFetching}
+                      className="w-full rounded-xl border-2 border-primary/20 bg-background pl-14 pr-12 py-4 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:border-primary disabled:opacity-50 disabled:cursor-not-allowed font-body shadow-sm hover:shadow-md transition-all"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xl font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Sort and Tag Filters */}
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-4">
                   {/* Sort Options */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground font-body">{t('library.sortBy')}:</span>
+                  <div className="flex items-center gap-3 bg-primary/5 rounded-lg px-4 py-2 border border-primary/10">
+                    <span className="text-sm font-semibold text-muted-foreground font-body">{t('library.sortBy')}:</span>
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "alphabetical")}
-                      className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="rounded-lg border-2 border-primary/20 bg-background px-4 py-2 text-sm font-body font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary shadow-sm"
                     >
                       <option value="newest">{t('library.sortNewest')}</option>
                       <option value="oldest">{t('library.sortOldest')}</option>
@@ -601,12 +632,12 @@ export default function LibraryPage() {
 
                   {/* Tag Filter */}
                   {allTags.length > 0 && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-muted-foreground font-body">{t('library.filterByTag')}:</span>
+                    <div className="flex items-center gap-3 flex-wrap bg-primary/5 rounded-lg px-4 py-2 border border-primary/10">
+                      <span className="text-sm font-semibold text-muted-foreground font-body">{t('library.filterByTag')}:</span>
                       <select
                         value={selectedTag || ""}
                         onChange={(e) => setSelectedTag(e.target.value || null)}
-                        className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="rounded-lg border-2 border-primary/20 bg-background px-4 py-2 text-sm font-body font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary shadow-sm"
                       >
                         <option value="">{t('library.allTags')}</option>
                         {allTags.map(tag => (
@@ -617,7 +648,7 @@ export default function LibraryPage() {
                         <button
                           type="button"
                           onClick={() => setSelectedTag(null)}
-                          className="text-sm text-muted-foreground hover:text-foreground font-body"
+                          className="text-sm text-muted-foreground hover:text-foreground font-body font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors"
                           title={t('library.clearTagFilter')}
                         >
                           ✕
@@ -630,37 +661,38 @@ export default function LibraryPage() {
 
               {/* Bulk Actions */}
               {selectedIds.size > 0 && (
-                <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border-2 border-primary">
-                  <div className="font-body text-sm">
+                <div className="flex items-center justify-between p-5 bg-gradient-to-r from-primary/10 via-primary/15 to-primary/10 rounded-xl border-2 border-primary/30 shadow-lg">
+                  <div className="font-body text-base font-semibold text-primary flex items-center gap-2">
+                    <span className="text-xl">✓</span>
                     {selectedIds.size} {t('library.selected')}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleBulkToggleFavorite.bind(null, true)}
                       disabled={isBulkDeleting}
-                      className="font-body"
+                      className="font-body border-primary/30 hover:bg-yellow-500/10 hover:border-yellow-500/50"
                     >
-                      {t('library.bulkFavorite')}
+                      ⭐ {t('library.bulkFavorite')}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleBulkToggleFavorite.bind(null, false)}
                       disabled={isBulkDeleting}
-                      className="font-body"
+                      className="font-body border-primary/30 hover:bg-muted"
                     >
-                      {t('library.bulkUnfavorite')}
+                      ☆ {t('library.bulkUnfavorite')}
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={handleBulkDelete}
                       disabled={isBulkDeleting}
-                      className="font-body"
+                      className="font-body shadow-md"
                     >
-                      {isBulkDeleting ? t('library.bulkDeleting') : t('library.bulkDelete')}
+                      {isBulkDeleting ? "⏳" : "🗑️"} {isBulkDeleting ? t('library.bulkDeleting') : t('library.bulkDelete')}
                     </Button>
                   </div>
                 </div>
@@ -668,10 +700,11 @@ export default function LibraryPage() {
 
               {/* Results Count and Select All */}
               {!isFetching && (
-                <div className="flex items-center justify-between">
-                  <p className="text-base text-muted-foreground font-body font-medium">
-                    {filteredContent.length} {filteredContent.length === 1 ? t('library.item') : t('library.items')} found
-                    {selectedType !== "all" && ` (${selectedType}s)`}
+                <div className="flex items-center justify-between pt-4 border-t border-primary/10">
+                  <p className="text-base text-foreground font-body font-semibold flex items-center gap-2">
+                    <span className="text-lg">📊</span>
+                    <span className="text-primary">{filteredContent.length}</span> {filteredContent.length === 1 ? t('library.item') : t('library.items')} {t('library.found')}
+                    {selectedType !== "all" && <span className="text-muted-foreground">({selectedType}s)</span>}
                   </p>
                   {filteredContent.length > 0 && (
                     <div className="flex gap-2">
@@ -679,17 +712,17 @@ export default function LibraryPage() {
                         variant="outline"
                         size="sm"
                         onClick={handleSelectAll}
-                        className="font-body"
+                        className="font-body border-primary/30 hover:bg-primary/10"
                       >
-                        {t('library.selectAll')}
+                        ✓ {t('library.selectAll')}
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleDeselectAll}
-                        className="font-body"
+                        className="font-body border-primary/30 hover:bg-primary/10"
                       >
-                        {t('library.deselectAll')}
+                        ✕ {t('library.deselectAll')}
                       </Button>
                     </div>
                   )}
@@ -701,35 +734,40 @@ export default function LibraryPage() {
 
         {/* Content Grid */}
         {isFetching ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="parchment ornate-border animate-pulse">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Card key={i} className="parchment ornate-border animate-pulse border-2 border-primary/10">
                 <CardHeader>
-                  <div className="h-6 w-32 bg-muted rounded mb-2" />
-                  <div className="h-4 w-24 bg-muted rounded" />
+                  <div className="h-7 w-40 bg-muted/50 rounded mb-3" />
+                  <div className="h-4 w-28 bg-muted/50 rounded" />
                 </CardHeader>
                 <CardContent>
-                  <div className="h-4 w-full bg-muted rounded mb-2" />
-                  <div className="h-4 w-3/4 bg-muted rounded" />
+                  <div className="h-4 w-full bg-muted/50 rounded mb-2" />
+                  <div className="h-4 w-3/4 bg-muted/50 rounded" />
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : filteredContent.length === 0 ? (
-          <Card className="parchment ornate-border">
-            <CardContent className="p-12 text-center">
-              <div className="space-y-6">
-                <div className="text-7xl">📚</div>
+          <Card className="parchment ornate-border border-2 border-primary/20 shadow-xl">
+            <CardContent className="p-12 md:p-16 text-center">
+              <div className="space-y-8">
+                <div className="text-8xl md:text-9xl animate-bounce">📚</div>
                 <div>
-                  <h3 className="font-display text-3xl font-semibold mb-3">{t('library.empty')}</h3>
-                  <p className="font-body text-base text-muted-foreground mb-6">
+                  <h3 className="font-display text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-primary via-primary/90 to-primary bg-clip-text text-transparent">
+                    {t('library.empty')}
+                  </h3>
+                  <p className="font-body text-lg text-muted-foreground mb-8 max-w-md mx-auto">
                     {content.length === 0
                       ? t('library.emptyDescription')
                       : t('library.tryAdjustingFilters')}
                   </p>
                   {content.length === 0 && (
-                    <Button asChild size="lg" className="font-body text-lg px-6 py-6">
-                      <Link href="/generator">{t('library.generateFirstContent')}</Link>
+                    <Button asChild size="lg" className="font-body text-lg px-8 py-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+                      <Link href="/generator">
+                        <span className="mr-2 text-xl">✨</span>
+                        {t('library.generateFirstContent')}
+                      </Link>
                     </Button>
                   )}
                 </div>
@@ -737,14 +775,14 @@ export default function LibraryPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-stretch">
             {filteredContent.map((item) => (
-              <div key={item.id} className="relative group/checkbox flex flex-col">
+              <div key={item.id} className="relative group flex flex-col">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(item.id)}
                   onChange={() => handleToggleSelect(item.id)}
-                  className="absolute top-3 left-3 z-10 w-5 h-5 cursor-pointer bg-background/90 backdrop-blur-sm border-2 border-primary/50 rounded checked:bg-primary checked:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-sm transition-all hover:border-primary hover:scale-110"
+                  className="absolute top-3 right-3 z-30 w-4 h-4 cursor-pointer bg-background/95 backdrop-blur-sm border-2 border-primary/60 rounded checked:bg-primary checked:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-md transition-all hover:border-primary hover:scale-110 opacity-0 group-hover:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                 />
                 <LibraryCard
