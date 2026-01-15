@@ -72,50 +72,54 @@ export function ResetPasswordForm() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:72',message:'useEffect entry',data:{fullUrl:window.location.href,pathname:window.location.pathname,hash:window.location.hash?.substring(0,100),search:window.location.search},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
+    console.log('[ResetPassword] Page loaded:', {
+      fullUrl: window.location.href,
+      pathname: window.location.pathname,
+      hash: window.location.hash?.substring(0, 100),
+      search: window.location.search,
+    })
 
     const hash = window.location.hash
     const hasRecoveryToken = hash && hash.includes('access_token') && hash.includes('type=recovery')
     
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:76',message:'hash check',data:{hashLength:hash?.length,hasAccessToken:hash?.includes('access_token'),hasTypeRecovery:hash?.includes('type=recovery'),hasRecoveryToken},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
+    console.log('[ResetPassword] Hash check:', {
+      hashLength: hash?.length,
+      hasAccessToken: hash?.includes('access_token'),
+      hasTypeRecovery: hash?.includes('type=recovery'),
+      hasRecoveryToken,
+    })
     
     // Check for token in query params (legacy support)
     const tokenInQuery = searchParams.get("token")
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:79',message:'token check',data:{hasRecoveryToken,tokenInQuery:!!tokenInQuery},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
+    console.log('[ResetPassword] Token check:', {
+      hasRecoveryToken,
+      tokenInQuery: !!tokenInQuery,
+    })
 
     if (hasRecoveryToken) {
+      console.log('[ResetPassword] Recovery token found in hash, setting up session detection...')
       let sessionDetected = false
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:86',message:'setting up auth state listener',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       
       // Set up auth state listener as primary mechanism
       // This will fire when Supabase processes the hash and establishes the session
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(async (event, session) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:89',message:'auth state change',data:{event,hasSession:!!session,sessionDetected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
+        console.log('[ResetPassword] Auth state change:', {
+          event,
+          hasSession: !!session,
+          sessionDetected,
+          sessionUser: session?.user?.email,
+        })
         
         // Listen for when session is established (either SIGNED_IN or PASSWORD_RECOVERY events)
         if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && session && !sessionDetected) {
+          console.log('[ResetPassword] Session detected via listener, event:', event)
           sessionDetected = true
           setHasValidToken(true)
           // Clear hash from URL for security
           window.history.replaceState(null, '', window.location.pathname)
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:93',message:'session detected via listener',data:{event},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
         }
       })
 
@@ -123,41 +127,37 @@ export function ResetPasswordForm() {
       const checkSession = async (retries = 0): Promise<void> => {
         if (sessionDetected) return // Stop checking if already detected via listener
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:99',message:'checkSession attempt',data:{retries,sessionDetected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
+        console.log('[ResetPassword] Checking session, attempt:', retries)
         
         try {
           const { data: { session }, error } = await supabase.auth.getSession()
           
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:103',message:'getSession result',data:{hasSession:!!session,hasError:!!error,errorMessage:error?.message,retries},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
+          console.log('[ResetPassword] getSession result:', {
+            hasSession: !!session,
+            hasError: !!error,
+            errorMessage: error?.message,
+            retries,
+          })
           
           if (session && !error && !sessionDetected) {
+            console.log('[ResetPassword] Session detected via retry mechanism')
             sessionDetected = true
             setHasValidToken(true)
             window.history.replaceState(null, '', window.location.pathname)
-            
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:107',message:'session detected via retry',data:{retries},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-            // #endregion
           } else if (!sessionDetected && retries < 10) {
             // Retry up to 10 times with increasing delays (total ~5.5 seconds)
             const delay = Math.min(100 * (retries + 1), 1000)
             setTimeout(() => checkSession(retries + 1), delay)
           } else if (!sessionDetected && retries >= 10) {
             // No session found after all retries
+            console.error('[ResetPassword] No session found after all retries')
             setError(t('auth.resetPassword.noToken'))
-            
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:114',message:'no session after retries',data:{retries},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-            // #endregion
           }
         } catch (err) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:117',message:'checkSession error',data:{retries,errorMessage:err instanceof Error?err.message:'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
+          console.error('[ResetPassword] checkSession error:', {
+            retries,
+            errorMessage: err instanceof Error ? err.message : 'unknown',
+          })
           
           if (!sessionDetected && retries >= 10) {
             setError(t('auth.resetPassword.noToken'))
@@ -176,14 +176,10 @@ export function ResetPasswordForm() {
         subscription.unsubscribe()
       }
     } else if (tokenInQuery) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:134',message:'using query token',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
+      console.log('[ResetPassword] Using query token')
       setHasValidToken(true)
     } else {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'reset-password-form.tsx:137',message:'no token found',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
+      console.error('[ResetPassword] No token found in hash or query params')
       setError(t('auth.resetPassword.noToken'))
     }
   }, [searchParams, t])
