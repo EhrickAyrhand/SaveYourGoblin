@@ -10,6 +10,7 @@ import { useSearchParams } from "next/navigation"
 import { Link as I18nLink } from '@/i18n/routing'
 import { updatePassword } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
+import { setRecoverySessionActive, clearRecoverySession } from "@/lib/recovery-session"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -89,6 +90,21 @@ export function ResetPasswordForm() {
     const type = hashParams.get('type')
     const hasRecoveryToken = hash && accessToken && type === 'recovery'
     
+    // Clear stale recovery session flag if no recovery token is present
+    // This handles cases where user navigates directly to reset-password without a recovery link
+    if (!hasRecoveryToken) {
+      const tokenInQuery = searchParams.get("token")
+      if (!tokenInQuery) {
+        // No recovery token at all - clear flag if it exists (might be stale)
+        // But only if we don't have a session yet (to avoid clearing active recovery sessions)
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session) {
+            clearRecoverySession()
+          }
+        })
+      }
+    }
+    
     console.log('[ResetPassword] Hash check:', {
       hash: hash || '(empty)',
       hashLength: hash?.length || 0,
@@ -124,6 +140,7 @@ export function ResetPasswordForm() {
         // Check if this is a recovery session - if hash had recovery token, mark it
         if (hash && hash.includes('type=recovery')) {
           setIsRecoverySession(true)
+          setRecoverySessionActive() // Store flag to prevent access to protected routes
           console.log('[ResetPassword] ⚠️ RECOVERY SESSION DETECTED - User must change password before accessing app')
         }
         // Don't return - continue to set up listeners for completeness
@@ -158,6 +175,7 @@ export function ResetPasswordForm() {
           // Mark as recovery session if event is PASSWORD_RECOVERY
           if (event === 'PASSWORD_RECOVERY') {
             setIsRecoverySession(true)
+            setRecoverySessionActive() // Store flag to prevent access to protected routes
             console.log('[ResetPassword] ⚠️ RECOVERY SESSION DETECTED - User must change password before accessing app')
           }
           // Clear hash from URL for security
@@ -189,6 +207,7 @@ export function ResetPasswordForm() {
             // Recovery sessions are temporary and should only allow password updates
             if (hash && hash.includes('type=recovery')) {
               setIsRecoverySession(true)
+              setRecoverySessionActive() // Store flag to prevent access to protected routes
               console.log('[ResetPassword] ⚠️ RECOVERY SESSION DETECTED - User must change password before accessing app')
             }
             window.history.replaceState(null, '', window.location.pathname)
@@ -227,9 +246,12 @@ export function ResetPasswordForm() {
       console.log('[ResetPassword] Using query token')
       setHasValidToken(true)
     } else {
-      // Hash is empty - might mean Supabase already processed it or redirect URL is wrong
-      console.error('[ResetPassword] No token found in hash or query params')
-      console.log('[ResetPassword] Checking if session exists despite empty hash...')
+      // Hash is empty - might mean Supabase already processed it
+      // Check if we have a recovery session flag (set by guard) or an existing session
+      console.log('[ResetPassword] No token found in hash or query params, checking for existing session...')
+      
+      // Check if recovery session flag exists (set by guard when recovery token was detected)
+      const hasRecoveryFlag = typeof window !== 'undefined' && localStorage.getItem('recovery_session_active') === 'true'
       
       // Give Supabase a moment to process, then check session
       setTimeout(async () => {
@@ -239,16 +261,19 @@ export function ResetPasswordForm() {
           hasError: !!error,
           errorMessage: error?.message,
           sessionUser: session?.user?.email,
+          hasRecoveryFlag,
         })
         if (session && !error) {
           console.log('[ResetPassword] ✓ Found session after delay, setting hasValidToken')
           setHasValidToken(true)
-          // If we're on reset-password page with a session but no hash, it might be a recovery session
-          // Check the session metadata or assume it's recovery if we got here
-          setIsRecoverySession(true)
-          console.log('[ResetPassword] ⚠️ Assuming recovery session - User must change password')
-        } else {
-          console.error('[ResetPassword] ✗ Still no session found, showing error')
+          // If we have a recovery flag or we're on reset-password with a session, it's likely a recovery session
+          if (hasRecoveryFlag) {
+            setIsRecoverySession(true)
+            console.log('[ResetPassword] ⚠️ Recovery session detected via flag - User must change password')
+          }
+        } else if (!hasRecoveryFlag) {
+          // Only show error if we don't have a recovery flag (user might have navigated here directly)
+          console.error('[ResetPassword] ✗ No session found and no recovery flag, showing error')
           setError(t('auth.resetPassword.noToken'))
         }
       }, 1000)
@@ -322,6 +347,7 @@ export function ResetPasswordForm() {
         // This prevents the user from accessing the app with the recovery session
         if (isRecoverySession) {
           console.log('[ResetPassword] ⚠️ Recovery session detected - signing out after password change')
+          clearRecoverySession() // Clear the recovery session flag
           await supabase.auth.signOut()
         }
         

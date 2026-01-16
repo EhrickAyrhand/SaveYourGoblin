@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { useTranslations, useLocale } from 'next-intl'
+import { useRouter } from '@/i18n/routing'
 import { Link } from '@/i18n/routing'
 import { Button } from "@/components/ui/button"
 import { getCurrentUser, signOut } from "@/lib/auth"
+import { isRecoverySessionActive } from "@/lib/recovery-session"
 import type { User } from "@/types/auth"
 import {
   Card,
@@ -17,11 +19,26 @@ import {
 export default function Home() {
   const t = useTranslations()
   const locale = useLocale()
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
     async function checkAuth() {
+      // SECURITY: If recovery session is active, don't show user as logged in
+      // This prevents users from accessing the app without changing their password
+      // Even though Supabase session exists, we treat it as not logged in
+      if (isRecoverySessionActive()) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/[locale]/page.tsx:26',message:'Recovery session active on home - hiding user',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        setUser(null) // Don't show user as logged in during recovery session
+        return
+      }
+
       const currentUser = await getCurrentUser()
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/[locale]/page.tsx:33',message:'Home page user check',data:{hasUser:!!currentUser,userEmail:currentUser?.email},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       setUser(currentUser)
     }
     checkAuth()

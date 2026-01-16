@@ -41,6 +41,9 @@ export async function GET(request: NextRequest) {
 
     // Get additional filters
     const favorite = searchParams.get('favorite')
+    const tagsParam = searchParams.get('tags') // Comma-separated tags
+    const dateFrom = searchParams.get('dateFrom') // ISO date string
+    const dateTo = searchParams.get('dateTo') // ISO date string
     
     // Try to select with new columns first, fallback to basic columns if migration hasn't run
     let query = supabase
@@ -58,6 +61,32 @@ export async function GET(request: NextRequest) {
     // Apply type filter
     if (type && ['character', 'environment', 'mission'].includes(type)) {
       query = query.eq('type', type)
+    }
+
+    // Apply date range filter
+    if (dateFrom) {
+      try {
+        const fromDate = new Date(dateFrom)
+        if (!isNaN(fromDate.getTime())) {
+          query = query.gte('created_at', fromDate.toISOString())
+        }
+      } catch (err) {
+        console.error('Invalid dateFrom parameter:', err)
+      }
+    }
+    if (dateTo) {
+      try {
+        const toDate = new Date(dateTo)
+        if (!isNaN(toDate.getTime())) {
+          // Add one day and subtract 1ms to include the entire end date
+          const endOfDay = new Date(toDate)
+          endOfDay.setDate(endOfDay.getDate() + 1)
+          endOfDay.setMilliseconds(endOfDay.getMilliseconds() - 1)
+          query = query.lte('created_at', endOfDay.toISOString())
+        }
+      } catch (err) {
+        console.error('Invalid dateTo parameter:', err)
+      }
     }
 
     // Apply search filter (search in scenario_input and notes only)
@@ -120,8 +149,19 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Data is already filtered by SQL query (including tags/notes if columns exist)
-    const finalData = data || []
+    // Apply tag filtering client-side (since Supabase doesn't support array overlap queries easily)
+    // Filter by tags if specified (tags can be comma-separated)
+    let finalData = data || []
+    if (tagsParam && tagsParam.trim()) {
+      const filterTags = tagsParam.split(',').map(t => t.trim().toLowerCase()).filter(t => t.length > 0)
+      if (filterTags.length > 0) {
+        finalData = finalData.filter((item: any) => {
+          const itemTags = (item.tags || []).map((t: string) => t.toLowerCase())
+          // Match if item has ALL specified tags (AND logic)
+          return filterTags.every(filterTag => itemTags.includes(filterTag))
+        })
+      }
+    }
 
     return new Response(
       JSON.stringify({

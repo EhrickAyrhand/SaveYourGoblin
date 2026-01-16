@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from '@/i18n/routing'
 import { getCurrentUser, signOut } from "@/lib/auth"
+import { isRecoverySessionActive, isResetPasswordRoute } from "@/lib/recovery-session"
 import type { User } from "@/types/auth"
 import { Button } from "@/components/ui/button"
 import {
@@ -108,6 +109,13 @@ export default function ProfilePage() {
   }, [profile.preferredTheme, user])
 
   useEffect(() => {
+    // SECURITY: Check recovery session SYNCHRONOUSLY before any async operations
+    // Only block if this is a protected route (not reset-password page)
+    if (isRecoverySessionActive() && !isResetPasswordRoute(window.location.pathname)) {
+      router.push("/reset-password")
+      return
+    }
+
     async function checkUser() {
       try {
         const currentUser = await getCurrentUser()

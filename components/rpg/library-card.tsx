@@ -33,13 +33,15 @@ interface LibraryCardProps {
   onDelete: (id: string) => void
   onDuplicate?: (item: LibraryContentItem) => void
   onToggleFavorite?: (id: string, isFavorite: boolean) => void
+  onGenerateVariation?: (item: LibraryContentItem) => void
 }
 
-export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavorite }: LibraryCardProps) {
+export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavorite, onGenerateVariation }: LibraryCardProps) {
   const t = useTranslations()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDuplicating, setIsDuplicating] = useState(false)
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false)
+  const [isGeneratingVariation, setIsGeneratingVariation] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const isFavorite = item.is_favorite || false
 
@@ -247,6 +249,14 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
     setIsTogglingFavorite(false)
   }
 
+  const handleGenerateVariationClick = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!onGenerateVariation) return
+    setIsGeneratingVariation(true)
+    await onGenerateVariation(item)
+    setIsGeneratingVariation(false)
+  }
+
   return (
     <Card
       className="parchment ornate-border border-2 border-primary/30 hover:border-primary/60 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 cursor-pointer group relative overflow-hidden h-full flex flex-col bg-gradient-to-br from-card via-card to-primary/10 backdrop-blur-sm"
@@ -303,7 +313,7 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
                 variant="ghost"
                 size="sm"
                 onClick={handleFavoriteClick}
-                disabled={isTogglingFavorite || isDeleting || isDuplicating}
+                disabled={isTogglingFavorite || isDeleting || isDuplicating || isGeneratingVariation}
                 title={isFavorite ? t('library.unfavorite') : t('library.favorite')}
                 className={`h-8 w-8 p-0 rounded-lg border border-primary/30 hover:border-primary/50 transition-all ${isFavorite ? 'opacity-100 border-yellow-500/50 bg-gradient-to-br from-yellow-500/20 to-amber-500/10' : 'hover:bg-primary/10'}`}
               >
@@ -317,7 +327,7 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
                 variant="ghost"
                 size="sm"
                 onClick={handleDuplicateClick}
-                disabled={isDuplicating || isDeleting || isTogglingFavorite}
+                disabled={isDuplicating || isDeleting || isTogglingFavorite || isGeneratingVariation}
                 title={t('library.duplicate')}
                 className="h-8 w-8 p-0 rounded-lg border border-primary/30 hover:border-primary/50 hover:bg-primary/10 transition-all"
               >
@@ -326,11 +336,25 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
                 </span>
               </Button>
             )}
+            {onGenerateVariation && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleGenerateVariationClick}
+                disabled={isGeneratingVariation || isDeleting || isDuplicating || isTogglingFavorite}
+                title={t('library.generateVariation')}
+                className="h-8 w-8 p-0 rounded-lg border border-primary/30 hover:border-primary/50 hover:bg-primary/10 transition-all"
+              >
+                <span className="text-base text-muted-foreground hover:text-primary">
+                  {isGeneratingVariation ? "⏳" : "🔄"}
+                </span>
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
               onClick={handleDeleteClick}
-              disabled={isDeleting || isDuplicating || isTogglingFavorite}
+              disabled={isDeleting || isDuplicating || isTogglingFavorite || isGeneratingVariation}
               title={t('common.delete')}
               className="h-8 w-8 p-0 rounded-lg border border-destructive/30 hover:border-destructive/50 hover:bg-destructive/10 transition-all"
             >

@@ -593,6 +593,46 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
 }
 
 /**
+ * Generate a variation of existing content
+ * Creates a similar but different version of the original content
+ */
+export async function generateContentVariation(
+  originalContent: GeneratedContent,
+  contentType: ContentType,
+  originalScenario: string,
+  variationPrompt?: string
+): Promise<GeneratedContent> {
+  // Build a summary of the original content for context
+  let originalSummary = ''
+  
+  if (contentType === 'character') {
+    const char = originalContent as Character
+    originalSummary = `${char.name}, a ${char.race} ${char.class} (Level ${char.level}). ${char.personality || char.history || ''}`
+  } else if (contentType === 'environment') {
+    const env = originalContent as Environment
+    originalSummary = `${env.name}: ${env.description.substring(0, 200)}...`
+  } else if (contentType === 'mission') {
+    const mission = originalContent as Mission
+    originalSummary = `${mission.title}: ${mission.description.substring(0, 200)}...`
+  }
+
+  // Build variation scenario prompt
+  const variationInstructions = variationPrompt 
+    ? ` Make the following specific changes: ${variationPrompt}`
+    : ' Create a similar but distinctly different version with unique characteristics, different details, and fresh elements while maintaining the same general theme and type.'
+
+  const variationScenario = `Based on this ${contentType}: "${originalSummary}"${variationInstructions} The original scenario was: "${originalScenario}". Generate a new variation that is similar in theme but different in specific details.`
+
+  // Use existing generation function with variation scenario
+  return await generateRPGContent(
+    variationScenario,
+    contentType,
+    undefined, // No advanced input for variations
+    { temperature: 0.9 } // Slightly higher temperature for more variation
+  )
+}
+
+/**
  * Regenerate a specific section of generated content
  * Returns only the regenerated section data, not the full content
  */

@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { useRouter, Link } from '@/i18n/routing'
 import { getCurrentUser, signOut } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
+import { isRecoverySessionActive, isResetPasswordRoute } from "@/lib/recovery-session"
 import type { User } from "@/types/auth"
 import type { ContentType, Character, Environment, Mission } from "@/types/rpg"
 import type { LibraryContentItem } from "@/components/rpg/library-card"
@@ -20,6 +21,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
 import { LibraryCard } from "@/components/rpg/library-card"
 import { ContentDetailModal } from "@/components/rpg/content-detail-modal"
+import { ContentComparisonModal } from "@/components/rpg/content-comparison-modal"
 
 export default function LibraryPage() {
   const t = useTranslations()
@@ -36,14 +38,26 @@ export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isFetching, setIsFetching] = useState(false)
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "alphabetical">("newest")
-  const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [dateFrom, setDateFrom] = useState<string>("")
+  const [dateTo, setDateTo] = useState<string>("")
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false)
   const [selectedItem, setSelectedItem] = useState<LibraryContentItem | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDuplicating, setIsDuplicating] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [itemsToCompare, setItemsToCompare] = useState<[LibraryContentItem, LibraryContentItem] | null>(null)
+  const [isComparisonOpen, setIsComparisonOpen] = useState(false)
 
   useEffect(() => {
+    // SECURITY: Check recovery session SYNCHRONOUSLY before any async operations
+    // Only block if this is a protected route (not reset-password page)
+    if (isRecoverySessionActive() && !isResetPasswordRoute(window.location.pathname)) {
+      router.push("/reset-password")
+      return
+    }
+
     async function checkUser() {
       try {
         const currentUser = await getCurrentUser()
@@ -136,12 +150,8 @@ export default function LibraryPage() {
       processed = [...processed, ...additionalMatches]
     }
 
-    // Apply tag filter
-    if (selectedTag) {
-      processed = processed.filter(item => 
-        item.tags && item.tags.includes(selectedTag)
-      )
-    }
+    // Tag filtering is now done in API, so this is just for display
+    // Client-side tag filter removed since API handles it
 
     // Apply sorting
     processed.sort((a, b) => {
@@ -158,11 +168,11 @@ export default function LibraryPage() {
     })
 
     setFilteredContent(processed)
-  }, [content, sortBy, selectedTag, debouncedSearch])
+  }, [content, sortBy, debouncedSearch, allContent])
 
   // Reset tag filter when type changes
   useEffect(() => {
-    setSelectedTag(null)
+    setSelectedTags([])
   }, [selectedType])
 
   async function fetchAllContent() {
@@ -216,6 +226,15 @@ export default function LibraryPage() {
       }
       if (showFavoritesOnly) {
         params.append("favorite", "true")
+      }
+      if (selectedTags.length > 0) {
+        params.append("tags", selectedTags.join(","))
+      }
+      if (dateFrom) {
+        params.append("dateFrom", dateFrom)
+      }
+      if (dateTo) {
+        params.append("dateTo", dateTo)
       }
 
       const response = await fetch(`/api/content?${params.toString()}`, {
@@ -276,6 +295,50 @@ export default function LibraryPage() {
     } catch (err) {
       console.error("Duplicate error:", err)
       setError(err instanceof Error ? err.message : "Failed to duplicate content")
+    }
+  }
+
+  async function handleGenerateVariation(item: LibraryContentItem) {
+    try {
+      setError(null)
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        throw new Error("Not authenticated")
+      }
+
+      const response = await fetch("/api/generate/variation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          originalContentId: item.id,
+          contentType: item.type,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to generate variation")
+      }
+
+      const result = await response.json()
+      
+      // Refresh content list and all content for counts
+      await fetchContent()
+      await fetchAllContent()
+      
+      // Optionally open the new variation in detail modal
+      if (result.data) {
+        setSelectedItem(result.data)
+        setIsModalOpen(true)
+      }
+    } catch (err) {
+      console.error("Variation generation error:", err)
+      setError(err instanceof Error ? err.message : "Failed to generate variation")
     }
   }
 
@@ -455,6 +518,20 @@ export default function LibraryPage() {
       console.error("Bulk favorite error:", err)
       setError(err instanceof Error ? err.message : "Failed to update favorites")
     }
+  }
+
+  function handleCompare() {
+    const selected = filteredContent.filter(item => selectedIds.has(item.id))
+    if (selected.length !== 2) {
+      setError(t('comparison.selectTwoItems'))
+      return
+    }
+    if (selected[0].type !== selected[1].type) {
+      setError(t('comparison.sameTypeRequired'))
+      return
+    }
+    setItemsToCompare([selected[0], selected[1]] as [LibraryContentItem, LibraryContentItem])
+    setIsComparisonOpen(true)
   }
 
   // Calculate counts for filter buttons from allContent (unfiltered)
@@ -637,33 +714,125 @@ export default function LibraryPage() {
                     </select>
                   </div>
 
-                  {/* Tag Filter */}
+                  {/* Tag Filter - Multi-select */}
                   {allTags.length > 0 && (
                     <div className="flex items-center gap-3 flex-wrap bg-primary/5 rounded-lg px-4 py-2 border border-primary/10">
                       <span className="text-sm font-semibold text-muted-foreground font-body">{t('library.filterByTag')}:</span>
-                      <select
-                        value={selectedTag || ""}
-                        onChange={(e) => setSelectedTag(e.target.value || null)}
-                        className="rounded-lg border-2 border-primary/20 bg-background px-4 py-2 text-sm font-body font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary shadow-sm"
-                      >
-                        <option value="">{t('library.allTags')}</option>
-                        {allTags.map(tag => (
-                          <option key={tag} value={tag}>{tag}</option>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        {selectedTags.map(tag => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20 border border-primary/50 rounded-lg text-sm font-body font-medium"
+                          >
+                            {tag}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
+                              className="text-muted-foreground hover:text-foreground font-bold text-xs w-4 h-4 flex items-center justify-center rounded-full hover:bg-primary/20 transition-colors"
+                              title={t('library.removeTag')}
+                            >
+                              ✕
+                            </button>
+                          </span>
                         ))}
-                      </select>
-                      {selectedTag && (
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            const newTag = e.target.value
+                            if (newTag && !selectedTags.includes(newTag)) {
+                              setSelectedTags(prev => [...prev, newTag])
+                            }
+                            e.target.value = "" // Reset select
+                          }}
+                          className="rounded-lg border-2 border-primary/20 bg-background px-3 py-1 text-sm font-body font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary shadow-sm"
+                        >
+                          <option value="">+ {t('library.addTagFilter')}</option>
+                          {allTags.filter(tag => !selectedTags.includes(tag)).map(tag => (
+                            <option key={tag} value={tag}>{tag}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {selectedTags.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => setSelectedTag(null)}
-                          className="text-sm text-muted-foreground hover:text-foreground font-body font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors"
-                          title={t('library.clearTagFilter')}
+                          onClick={() => setSelectedTags([])}
+                          className="text-sm text-muted-foreground hover:text-foreground font-body font-semibold px-2 py-1 rounded hover:bg-primary/10 transition-colors"
+                          title={t('library.clearAllTags')}
                         >
-                          ✕
+                          {t('library.clearAll')}
                         </button>
                       )}
                     </div>
                   )}
+
+                  {/* Advanced Search Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                    className="font-body"
+                  >
+                    {showAdvancedSearch ? "▼" : "▶"} {t('library.advancedSearch')}
+                  </Button>
                 </div>
+
+                {/* Advanced Search Panel */}
+                {showAdvancedSearch && (
+                  <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20 space-y-4">
+                    <h3 className="font-body text-sm font-semibold text-muted-foreground">{t('library.dateRange')}</h3>
+                    <div className="flex flex-wrap gap-4 items-center">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-body text-muted-foreground">{t('library.dateFrom')}:</label>
+                        <input
+                          type="date"
+                          value={dateFrom}
+                          onChange={(e) => setDateFrom(e.target.value)}
+                          className="rounded-lg border-2 border-primary/20 bg-background px-3 py-2 text-sm font-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary shadow-sm"
+                        />
+                        {dateFrom && (
+                          <button
+                            type="button"
+                            onClick={() => setDateFrom("")}
+                            className="text-muted-foreground hover:text-foreground font-bold text-xs w-6 h-6 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-body text-muted-foreground">{t('library.dateTo')}:</label>
+                        <input
+                          type="date"
+                          value={dateTo}
+                          onChange={(e) => setDateTo(e.target.value)}
+                          className="rounded-lg border-2 border-primary/20 bg-background px-3 py-2 text-sm font-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary shadow-sm"
+                        />
+                        {dateTo && (
+                          <button
+                            type="button"
+                            onClick={() => setDateTo("")}
+                            className="text-muted-foreground hover:text-foreground font-bold text-xs w-6 h-6 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      {(dateFrom || dateTo) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDateFrom("")
+                            setDateTo("")
+                          }}
+                          className="font-body text-xs"
+                        >
+                          {t('library.clearDates')}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Bulk Actions */}
@@ -674,6 +843,16 @@ export default function LibraryPage() {
                     {selectedIds.size} {t('library.selected')}
                   </div>
                   <div className="flex gap-3">
+                    {selectedIds.size === 2 && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleCompare}
+                        className="font-body shadow-md"
+                      >
+                        ⚖️ {t('library.compare')}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -798,6 +977,7 @@ export default function LibraryPage() {
                   onDelete={handleDelete}
                   onDuplicate={handleDuplicate}
                   onToggleFavorite={handleToggleFavorite}
+                  onGenerateVariation={handleGenerateVariation}
                 />
               </div>
             ))}
@@ -819,6 +999,19 @@ export default function LibraryPage() {
                 prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
               )
               setSelectedItem(updatedItem)
+            }}
+            onGenerateVariation={handleGenerateVariation}
+          />
+        )}
+
+        {/* Content Comparison Modal */}
+        {itemsToCompare && (
+          <ContentComparisonModal
+            items={itemsToCompare}
+            isOpen={isComparisonOpen}
+            onClose={() => {
+              setIsComparisonOpen(false)
+              setItemsToCompare(null)
             }}
           />
         )}

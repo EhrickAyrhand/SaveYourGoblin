@@ -101,6 +101,32 @@ export function ThemeSelector() {
     { value: "royal" as const, label: "👑 Royal", desc: "Elegant" },
   ]
 
+  const [isComparisonOpen, setIsComparisonOpen] = useState(false)
+
+  useEffect(() => {
+    // Check if comparison modal is open
+    const checkComparison = () => {
+      setIsComparisonOpen(document.body.hasAttribute('data-comparison-open'))
+    }
+    
+    // Check on mount
+    checkComparison()
+    
+    // Watch for changes
+    const observer = new MutationObserver(checkComparison)
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['data-comparison-open']
+    })
+    
+    return () => observer.disconnect()
+  }, [])
+
+  // Hide when comparison modal is open
+  if (isComparisonOpen) {
+    return null
+  }
+
   return (
     <div className="fixed top-6 right-6 z-50">
       <div className="relative">

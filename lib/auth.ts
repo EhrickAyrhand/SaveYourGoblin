@@ -70,6 +70,13 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
       };
     }
 
+    // Clear recovery session flag on successful normal login
+    // This ensures recovery sessions don't persist after normal authentication
+    if (authData.user && typeof window !== 'undefined') {
+      const { clearRecoverySession } = await import('@/lib/recovery-session')
+      clearRecoverySession()
+    }
+
     return {
       user: authData.user
         ? {
@@ -96,6 +103,12 @@ export async function signIn(data: SignInData): Promise<AuthResponse> {
  */
 export async function signOut(): Promise<{ error: AuthResponse['error'] }> {
   try {
+    // Clear recovery session flag on sign out
+    if (typeof window !== 'undefined') {
+      const { clearRecoverySession } = await import('@/lib/recovery-session')
+      clearRecoverySession()
+    }
+
     const { error } = await supabase.auth.signOut();
 
     if (error) {
@@ -139,14 +152,30 @@ export async function resetPassword(
     }
     
     // Always include locale prefix in redirect URL to match [locale]/(auth)/reset-password route structure
+    // Use window.location.origin when available (client-side) to ensure we use the current origin
+    // This prevents redirects to Vercel when testing locally
+    // IMPORTANT: The redirectTo URL MUST be added to Supabase Dashboard → Authentication → URL Configuration → Redirect URLs
+    // Otherwise Supabase will ignore it and use the Site URL instead
     const redirectTo =
       typeof window !== 'undefined'
         ? `${window.location.origin}/${locale}/reset-password`
         : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/${locale}/reset-password`;
 
+    // #region agent log
+    if (typeof window !== 'undefined') {
+      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/auth.ts:149',message:'Password reset redirect URL',data:{redirectTo,origin:window.location.origin,locale,envUrl:process.env.NEXT_PUBLIC_APP_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    }
+    // #endregion
+
     const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
       redirectTo,
     });
+    
+    // #region agent log
+    if (typeof window !== 'undefined') {
+      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/auth.ts:157',message:'Password reset email sent result',data:{error:error?.message,redirectTo},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    }
+    // #endregion
 
     if (error) {
       return {
