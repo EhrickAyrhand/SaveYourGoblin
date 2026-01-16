@@ -99,17 +99,6 @@ export async function GET(
     const outgoingContentMap = new Map((outgoingContent.data || []).map(item => [item.id, item]))
     const incomingContentMap = new Map((incomingContent.data || []).map(item => [item.id, item]))
 
-    if (outgoingLinks.error || incomingLinks.error) {
-      console.error('Supabase query error:', outgoingLinks.error || incomingLinks.error)
-      return new Response(
-        JSON.stringify({
-          error: 'Failed to fetch content links',
-          message: (outgoingLinks.error || incomingLinks.error)?.message,
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-
     // Format the response
     const outgoing = (outgoingLinks.data || []).map(link => ({
       id: link.id,
