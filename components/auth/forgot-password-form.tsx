@@ -5,9 +5,11 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useTranslations } from 'next-intl'
+import { useRouter } from '@/i18n/routing'
 import { Link as I18nLink } from '@/i18n/routing'
 import { resetPassword } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
+import { ArrowLeft } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   Form,
@@ -33,6 +35,7 @@ type ForgotPasswordFormValues = {
 
 export function ForgotPasswordForm() {
   const t = useTranslations()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -72,6 +75,17 @@ export function ForgotPasswordForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
+        <div className="flex items-center gap-2 mb-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+            className="h-8 w-8"
+            aria-label={t('common.back')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </div>
         <CardTitle>{t('auth.forgotPassword.title')}</CardTitle>
         <CardDescription>
           {t('auth.forgotPassword.description')}

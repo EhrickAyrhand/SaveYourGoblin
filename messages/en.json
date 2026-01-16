@@ -10,7 +10,8 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
-    "close": "Close"
+    "close": "Close",
+    "back": "Back"
   },
   "home": {
     "title": "SaveYourGoblin",

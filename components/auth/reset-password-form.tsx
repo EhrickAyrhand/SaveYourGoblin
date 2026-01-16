@@ -11,6 +11,7 @@ import { Link as I18nLink } from '@/i18n/routing'
 import { updatePassword } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
+import { ArrowLeft } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   Form,
@@ -42,6 +43,7 @@ export function ResetPasswordForm() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [hasValidToken, setHasValidToken] = useState(false)
+  const [isRecoverySession, setIsRecoverySession] = useState(false)
   const searchParams = useSearchParams()
 
   const resetPasswordSchema = z
@@ -119,6 +121,11 @@ export function ResetPasswordForm() {
       if (session && !error) {
         console.log('[ResetPassword] ✓ Session already exists from hash processing, setting hasValidToken')
         setHasValidToken(true)
+        // Check if this is a recovery session - if hash had recovery token, mark it
+        if (hash && hash.includes('type=recovery')) {
+          setIsRecoverySession(true)
+          console.log('[ResetPassword] ⚠️ RECOVERY SESSION DETECTED - User must change password before accessing app')
+        }
         // Don't return - continue to set up listeners for completeness
       } else {
         console.log('[ResetPassword] ✗ No session found yet, will wait for hash processing')
@@ -148,6 +155,11 @@ export function ResetPasswordForm() {
           console.log('[ResetPassword] Session detected via listener, event:', event)
           sessionDetected = true
           setHasValidToken(true)
+          // Mark as recovery session if event is PASSWORD_RECOVERY
+          if (event === 'PASSWORD_RECOVERY') {
+            setIsRecoverySession(true)
+            console.log('[ResetPassword] ⚠️ RECOVERY SESSION DETECTED - User must change password before accessing app')
+          }
           // Clear hash from URL for security
           window.history.replaceState(null, '', window.location.pathname)
         }
@@ -173,6 +185,12 @@ export function ResetPasswordForm() {
             console.log('[ResetPassword] Session detected via retry mechanism')
             sessionDetected = true
             setHasValidToken(true)
+            // Check if this is a recovery session by checking if we came from recovery flow
+            // Recovery sessions are temporary and should only allow password updates
+            if (hash && hash.includes('type=recovery')) {
+              setIsRecoverySession(true)
+              console.log('[ResetPassword] ⚠️ RECOVERY SESSION DETECTED - User must change password before accessing app')
+            }
             window.history.replaceState(null, '', window.location.pathname)
           } else if (!sessionDetected && retries < 10) {
             // Retry up to 10 times with increasing delays (total ~5.5 seconds)
@@ -225,6 +243,10 @@ export function ResetPasswordForm() {
         if (session && !error) {
           console.log('[ResetPassword] ✓ Found session after delay, setting hasValidToken')
           setHasValidToken(true)
+          // If we're on reset-password page with a session but no hash, it might be a recovery session
+          // Check the session metadata or assume it's recovery if we got here
+          setIsRecoverySession(true)
+          console.log('[ResetPassword] ⚠️ Assuming recovery session - User must change password')
         } else {
           console.error('[ResetPassword] ✗ Still no session found, showing error')
           setError(t('auth.resetPassword.noToken'))
@@ -232,6 +254,41 @@ export function ResetPasswordForm() {
       }, 1000)
     }
   }, [searchParams, t])
+
+  // SECURITY: Prevent navigation away from reset password page during recovery session
+  // This ensures users must change their password before accessing the app
+  useEffect(() => {
+    if (!isRecoverySession) return
+
+    console.log('[ResetPassword] ⚠️ Recovery session active - blocking navigation away from reset password page')
+
+    // Block browser back/forward navigation
+    const handlePopState = (e: PopStateEvent) => {
+      console.log('[ResetPassword] Navigation attempt blocked during recovery session')
+      e.preventDefault()
+      // Push current state back to prevent navigation
+      window.history.pushState(null, '', window.location.pathname)
+      // Show warning
+      setError('Please complete the password reset before navigating away.')
+    }
+
+    // Block beforeunload (page refresh/close)
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = 'You must complete the password reset. Are you sure you want to leave?'
+      return e.returnValue
+    }
+
+    // Push current state to prevent back navigation
+    window.history.pushState(null, '', window.location.pathname)
+    window.addEventListener('popstate', handlePopState)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [isRecoverySession])
 
   async function onSubmit(data: ResetPasswordFormValues) {
     if (!hasValidToken) {
@@ -260,7 +317,15 @@ export function ResetPasswordForm() {
       } else {
         setSuccess(true)
         form.reset()
-        // Redirect to login after a short delay
+        
+        // SECURITY: If this was a recovery session, sign out immediately after password change
+        // This prevents the user from accessing the app with the recovery session
+        if (isRecoverySession) {
+          console.log('[ResetPassword] ⚠️ Recovery session detected - signing out after password change')
+          await supabase.auth.signOut()
+        }
+        
+        // Redirect to login after a short delay (user must log in with new password)
         setTimeout(() => {
           router.push('/login')
         }, 2000)
@@ -275,6 +340,20 @@ export function ResetPasswordForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
+        {/* Show back button only when NOT in recovery session (security: prevent navigation during recovery) */}
+        {!isRecoverySession && (
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/login')}
+              className="h-8 w-8"
+              aria-label={t('common.back')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
         <CardTitle>{t('auth.resetPassword.title')}</CardTitle>
         <CardDescription>
           {t('auth.resetPassword.description')}
@@ -283,6 +362,15 @@ export function ResetPasswordForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {isRecoverySession && !success && (
+              <Alert variant="default" className="border-orange-500 bg-orange-500/10">
+                <AlertDescription>
+                  <strong>Security Notice:</strong> You must complete the password reset before accessing your account. 
+                  Please set a new password below.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
