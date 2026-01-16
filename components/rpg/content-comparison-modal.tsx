@@ -22,7 +22,6 @@ export function ContentComparisonModal({
   onClose,
 }: ContentComparisonModalProps) {
   const t = useTranslations()
-  const locale = useLocale()
   const [item1, item2] = items
 
   useEffect(() => {
