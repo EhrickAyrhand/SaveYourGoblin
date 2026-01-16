@@ -72,23 +72,32 @@ export function ResetPasswordForm() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
+    const hash = window.location.hash
     console.log('[ResetPassword] Page loaded:', {
       fullUrl: window.location.href,
       pathname: window.location.pathname,
-      hash: window.location.hash?.substring(0, 100),
+      hash: hash || '(empty)',
+      hashLength: hash?.length || 0,
       search: window.location.search,
     })
 
-    const hash = window.location.hash
-    const hasRecoveryToken = hash && hash.includes('access_token') && hash.includes('type=recovery')
+    // Parse hash to extract parameters
+    const hashParams = new URLSearchParams(hash.substring(1))
+    const accessToken = hashParams.get('access_token')
+    const type = hashParams.get('type')
+    const hasRecoveryToken = hash && accessToken && type === 'recovery'
     
     console.log('[ResetPassword] Hash check:', {
-      hashLength: hash?.length,
-      hasAccessToken: hash?.includes('access_token'),
-      hasTypeRecovery: hash?.includes('type=recovery'),
+      hash: hash || '(empty)',
+      hashLength: hash?.length || 0,
+      hasAccessToken: !!accessToken,
+      accessTokenLength: accessToken?.length || 0,
+      type,
+      hasTypeRecovery: type === 'recovery',
       hasRecoveryToken,
+      hashParamsKeys: Array.from(hashParams.keys()),
     })
-    
+
     // Check for token in query params (legacy support)
     const tokenInQuery = searchParams.get("token")
 
@@ -97,6 +106,27 @@ export function ResetPasswordForm() {
       tokenInQuery: !!tokenInQuery,
     })
 
+    // Immediately check if Supabase already processed the session (might happen before useEffect)
+    // This is critical - Supabase might process the hash synchronously on page load
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('[ResetPassword] Initial session check (immediate):', {
+        hasSession: !!session,
+        hasError: !!error,
+        errorMessage: error?.message,
+        sessionUser: session?.user?.email,
+        sessionAccessToken: session?.access_token ? `${session.access_token.substring(0, 20)}...` : '(none)',
+      })
+      if (session && !error) {
+        console.log('[ResetPassword] ✓ Session already exists from hash processing, setting hasValidToken')
+        setHasValidToken(true)
+        // Don't return - continue to set up listeners for completeness
+      } else {
+        console.log('[ResetPassword] ✗ No session found yet, will wait for hash processing')
+      }
+    })
+
+    // If hash exists with recovery token, wait for Supabase to process it
+    // If hash is empty but we're on reset-password page, check for session (might already be processed)
     if (hasRecoveryToken) {
       console.log('[ResetPassword] Recovery token found in hash, setting up session detection...')
       let sessionDetected = false
@@ -179,8 +209,27 @@ export function ResetPasswordForm() {
       console.log('[ResetPassword] Using query token')
       setHasValidToken(true)
     } else {
+      // Hash is empty - might mean Supabase already processed it or redirect URL is wrong
       console.error('[ResetPassword] No token found in hash or query params')
-      setError(t('auth.resetPassword.noToken'))
+      console.log('[ResetPassword] Checking if session exists despite empty hash...')
+      
+      // Give Supabase a moment to process, then check session
+      setTimeout(async () => {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        console.log('[ResetPassword] Delayed session check (after 1s):', {
+          hasSession: !!session,
+          hasError: !!error,
+          errorMessage: error?.message,
+          sessionUser: session?.user?.email,
+        })
+        if (session && !error) {
+          console.log('[ResetPassword] ✓ Found session after delay, setting hasValidToken')
+          setHasValidToken(true)
+        } else {
+          console.error('[ResetPassword] ✗ Still no session found, showing error')
+          setError(t('auth.resetPassword.noToken'))
+        }
+      }, 1000)
     }
   }, [searchParams, t])
 
