@@ -351,9 +351,18 @@ export async function generateRPGContent(
   generationParams?: AdvancedGenerationParams
 ): Promise<GeneratedContent> {
   // Check if OpenAI API key is configured
-  if (!process.env.OPENAI_API_KEY) {
+  const hasApiKey = !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim().length > 0
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:354',message:'Checking OpenAI API key',data:{hasApiKey,apiKeyLength:process.env.OPENAI_API_KEY?.length||0,apiKeyPrefix:process.env.OPENAI_API_KEY?.substring(0,7)||'missing',willUseMock:!hasApiKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'N'})}).catch(()=>{});
+  // #endregion
+  
+  if (!hasApiKey) {
     // Fallback to mock if no API key (for local development)
-    console.warn('OPENAI_API_KEY not found, using mock data')
+    console.warn('OPENAI_API_KEY not found or empty, using mock data')
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:358',message:'Using mock data (API key missing)',data:{scenario:scenario.substring(0,100),contentType,hasAdvancedInput:!!advancedInput},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'O'})}).catch(()=>{});
+    // #endregion
     return generateMockContent(scenario, contentType, advancedInput)
   }
 
@@ -544,19 +553,31 @@ Example: If the user writes in Portuguese like "um bardo na taverna", you MUST r
 You are an expert D&D 5e game master and character creator. Create detailed, immersive characters that feel authentic to the D&D 5e universe. Characters should have rich backstories, distinct personalities, and appropriate abilities for their level and class.${toneInstruction}${complexityInstruction} Include spells appropriate to the character's class and level. IMPORTANT: Ensure all skill proficiency flags are correctly set based on class, background, and race. Include all standard racial traits for the character's race. CRITICAL: Every character MUST include ALL mandatory class features for their class and level - this is non-negotiable. Non-spellcasting classes (Barbarian, Rogue, Fighter, Monk) must have their complete feature list.
 
 FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every name, description, trait, and text field must be in ${detectedLanguage}.`
+        // Build name instruction with emphasis on unique names
+        const nameInstruction = `CRITICAL: Generate a UNIQUE, CREATIVE character name appropriate for ${detectedLanguage} culture. DO NOT use generic names like "${race || 'Race'} ${normalizedClass || 'Class'}" or literal translations. Create an authentic, memorable name that fits the character's background and culture (e.g., ${detectedLanguage === 'Portuguese' ? 'João, Maria, Carlos, Elena, Rafael' : detectedLanguage === 'Spanish' ? 'Juan, María, Carlos, Elena, Rafael' : 'John, Mary, Charles, Elena, Robert'}). The name field must contain ONLY the character's name, not their race and class.`
+
+        // Build spell instruction based on class
+        const spellInstruction = normalizedClass === 'Wizard' 
+          ? `- Spells: For Wizards, include ALL spells appropriate for level ${charInput?.level || 'the character'}. A ${charInput?.level || 'low-level'} Wizard should have 6-10 spells in their spellbook (mix of cantrips and leveled spells). Include essential spells like Magic Missile, Detect Magic, Mage Armor, and other spells fitting their level and specialization. The spells array must contain multiple spells, not just 3.`
+          : normalizedClass && ['Sorcerer', 'Bard', 'Cleric', 'Paladin', 'Ranger', 'Warlock', 'Druid'].includes(normalizedClass)
+          ? `- Spells: Include appropriate spells for a ${normalizedClass} of this level (typically 4-8 spells for lower levels, more for higher levels).`
+          : `- Spells: Non-spellcasting classes must have an empty spells array [].`
+
         userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${detectedLanguage}. You MUST respond entirely in ${detectedLanguage}. Every word, name, description, and text must be in ${detectedLanguage}.
 
 Create a D&D 5e character based on this scenario: "${scenario}"${charLevel}${charClass}${charRace}${advancedConstraints}
 
 IMPORTANT: The scenario above is written in ${detectedLanguage}. You MUST match this language exactly. All character names, descriptions, backstories, personality traits, and every single text field must be in ${detectedLanguage}. Use names appropriate for ${detectedLanguage} culture (e.g., ${detectedLanguage === 'Portuguese' ? 'João, Maria, Carlos' : detectedLanguage === 'Spanish' ? 'Juan, María, Carlos' : 'John, Mary, Charles'}).
 
+${nameInstruction}
+
 Generate a complete character with:
-- A fitting name, race, class, and background (ALL in ${detectedLanguage} - names should be appropriate for ${detectedLanguage} culture)${charInput?.level ? `\n- CRITICAL: MUST be exactly level ${charInput.level} (the "level" field in JSON must be ${charInput.level})` : '\n- Level between 1-10 (choose appropriately based on the scenario)'}${normalizedClass ? `\n- CRITICAL: MUST be a ${normalizedClass} (the "class" field in JSON must be exactly "${normalizedClass}")` : ''}${charInput?.race ? `\n- CRITICAL: MUST be a ${charInput.race} (the "race" field in JSON must be exactly "${charInput.race}")` : ''}${normalizedBackground ? `\n- CRITICAL: MUST have the ${normalizedBackground} background (the "background" field in JSON must be exactly "${normalizedBackground}")` : ''}
+- Name: ${nameInstruction}${charInput?.level ? `\n- CRITICAL: MUST be exactly level ${charInput.level} (the "level" field in JSON must be ${charInput.level})` : '\n- Level between 1-10 (choose appropriately based on the scenario)'}${normalizedClass ? `\n- CRITICAL: MUST be a ${normalizedClass} (the "class" field in JSON must be exactly "${normalizedClass}")` : ''}${charInput?.race ? `\n- CRITICAL: MUST be a ${charInput.race} (the "race" field in JSON must be exactly "${charInput.race}")` : ''}${normalizedBackground ? `\n- CRITICAL: MUST have the ${normalizedBackground} background (the "background" field in JSON must be exactly "${normalizedBackground}")` : ''}
 - D&D 5e ability scores (STR, DEX, CON, INT, WIS, CHA) - values typically 8-15 for starting characters, with one or two higher stats (15-17) based on class
-- A compelling backstory that connects to the scenario (written entirely in ${detectedLanguage})
-- Distinct personality traits (described in ${detectedLanguage})
+- A compelling backstory that connects to the scenario${complexityInstruction.includes('extensive') ? '. This backstory MUST be detailed, extensive, and rich with sensory descriptions, deeper motivations, and elaborate world-building elements. Write at least 3-5 paragraphs of backstory that fully explores the character\'s past, relationships, motivations, and how they came to be who they are today.' : complexityInstruction.includes('detailed') ? '. This backstory MUST be detailed and rich with descriptions. Write at least 2-3 paragraphs exploring the character\'s past, motivations, and connections.' : ' (written entirely in ' + detectedLanguage + ')'}${toneInstruction.includes('serious') ? ' Maintain a serious, dramatic tone. Focus on realism, consequences, and meaningful experiences that shaped the character.' : ''} (ALL text in ${detectedLanguage})
+- Distinct personality traits (described in ${detectedLanguage}, at least 3-4 traits that make the character unique)
 - Expertise in 2-4 skills (if the class grants expertise, like Rogue or Bard)
-- Appropriate spells for their class and level (if spellcasting class). CRITICAL: Non-spellcasting classes (Fighter, Barbarian, Rogue, Monk) MUST NOT have any spells. If the class does not cast spells, the spells array must be empty [].
+${spellInstruction}
 - ALL skills with accurate proficiency flags - mark proficiency: true for skills granted by class, background, or race. The modifier field should match: ability modifier + proficiency bonus (if proficient) or ability modifier + 2×proficiency bonus (if expertise)
 - Racial traits: Include ALL standard D&D 5e racial features for the character's race (e.g., Tiefling: Darkvision, Hellish Resistance, Infernal Legacy; Elf: Darkvision, Fey Ancestry, Keen Senses; Dwarf: Darkvision, Dwarven Resilience, Stonecunning)
 - Class Features: Include ALL mandatory class features for this class and level. This is REQUIRED for every character. Examples:
