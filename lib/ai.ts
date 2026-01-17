@@ -554,7 +554,7 @@ You are an expert D&D 5e game master and character creator. Create detailed, imm
 
 FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every name, description, trait, and text field must be in ${detectedLanguage}.`
         // Build name instruction with emphasis on unique names
-        const nameInstruction = `CRITICAL: Generate a UNIQUE, CREATIVE character name appropriate for ${detectedLanguage} culture. DO NOT use generic names like "${race || 'Race'} ${normalizedClass || 'Class'}" or literal translations. Create an authentic, memorable name that fits the character's background and culture (e.g., ${detectedLanguage === 'Portuguese' ? 'João, Maria, Carlos, Elena, Rafael' : detectedLanguage === 'Spanish' ? 'Juan, María, Carlos, Elena, Rafael' : 'John, Mary, Charles, Elena, Robert'}). The name field must contain ONLY the character's name, not their race and class.`
+        const nameInstruction = `CRITICAL: Generate a UNIQUE, CREATIVE character name appropriate for ${detectedLanguage} culture. DO NOT use generic names like "${charInput?.race || 'Race'} ${normalizedClass || 'Class'}" or literal translations. Create an authentic, memorable name that fits the character's background and culture (e.g., ${detectedLanguage === 'Portuguese' ? 'João, Maria, Carlos, Elena, Rafael' : detectedLanguage === 'Spanish' ? 'Juan, María, Carlos, Elena, Rafael' : 'John, Mary, Charles, Elena, Robert'}). The name field must contain ONLY the character's name, not their race and class.`
 
         // Build spell instruction based on class
         const spellInstruction = normalizedClass === 'Wizard' 
