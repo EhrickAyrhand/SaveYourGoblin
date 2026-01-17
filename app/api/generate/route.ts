@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
     const content = await generateRPGContent(scenario, contentType, advancedInput, generationParams)
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/generate/route.ts:44',message:'Content generated',data:{contentType,generatedLevel:content?.level,generatedClass:content?.class,generatedRace:content?.race,hasSpells:!!(content as any)?.spells?.length,spellCount:(content as any)?.spells?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    const contentForLog = content as any
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/generate/route.ts:44',message:'Content generated',data:{contentType,generatedLevel:contentForLog?.level,generatedClass:contentForLog?.class,generatedRace:contentForLog?.race,hasSpells:!!contentForLog?.spells?.length,spellCount:contentForLog?.spells?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
     
     // Stream the response back
