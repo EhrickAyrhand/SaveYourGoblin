@@ -354,7 +354,7 @@ export async function generateRPGContent(
   if (!process.env.OPENAI_API_KEY) {
     // Fallback to mock if no API key (for local development)
     console.warn('OPENAI_API_KEY not found, using mock data')
-    return generateMockContent(scenario, contentType)
+    return generateMockContent(scenario, contentType, advancedInput)
   }
 
   try {
@@ -686,7 +686,7 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
     console.error('OpenAI generation error:', error)
     // Fallback to mock on error
     console.warn('Falling back to mock data due to error')
-    return generateMockContent(scenario, contentType)
+    return generateMockContent(scenario, contentType, advancedInput)
   }
 }
 
@@ -968,29 +968,83 @@ function generateMockSection(contentType: ContentType, section: string, currentC
 }
 
 // Fallback mock functions (kept for development/testing)
-function generateMockContent(scenario: string, contentType: ContentType): GeneratedContent {
+function generateMockContent(scenario: string, contentType: ContentType, advancedInput?: AdvancedInput): GeneratedContent {
   switch (contentType) {
     case 'character':
-      return generateMockCharacter(scenario)
+      return generateMockCharacter(scenario, advancedInput as AdvancedCharacterInput | undefined)
     case 'environment':
-      return generateMockEnvironment(scenario)
+      return generateMockEnvironment(scenario, advancedInput as AdvancedEnvironmentInput | undefined)
     case 'mission':
-      return generateMockMission(scenario)
+      return generateMockMission(scenario, advancedInput as AdvancedMissionInput | undefined)
     default:
       throw new Error(`Unknown content type: ${contentType}`)
   }
 }
 
-function generateMockCharacter(scenario: string): Character {
+// Helper functions to normalize names for mock (same as in main function)
+function normalizeClassNameForMock(className?: string): string {
+  if (!className) return ''
+  const classMap: Record<string, string> = {
+    'warrior': 'Fighter',
+    'guerreiro': 'Fighter',
+    'fighter': 'Fighter',
+    'barbarian': 'Barbarian',
+    'bárbaro': 'Barbarian',
+    'rogue': 'Rogue',
+    'ladino': 'Rogue',
+    'bard': 'Bard',
+    'bardo': 'Bard',
+    'wizard': 'Wizard',
+    'mago': 'Wizard',
+    'cleric': 'Cleric',
+    'clérigo': 'Cleric',
+    'ranger': 'Ranger',
+    'patrulheiro': 'Ranger',
+    'paladin': 'Paladin',
+    'paladino': 'Paladin',
+    'monk': 'Monk',
+    'monge': 'Monk',
+    'sorcerer': 'Sorcerer',
+    'feiticeiro': 'Sorcerer',
+    'warlock': 'Warlock',
+    'bruxo': 'Warlock',
+    'druid': 'Druid',
+    'druida': 'Druid',
+  }
+  return classMap[className.trim().toLowerCase()] || className.trim()
+}
+
+function normalizeBackgroundNameForMock(background?: string): string {
+  if (!background) return ''
+  const backgroundMap: Record<string, string> = {
+    'artist': 'Entertainer',
+    'artista': 'Entertainer',
+    'entertainer': 'Entertainer',
+    'noble': 'Noble',
+    'nobre': 'Noble',
+    'sage': 'Sage',
+    'sábio': 'Sage',
+    'acolyte': 'Acolyte',
+    'acólito': 'Acolyte',
+    'criminal': 'Criminal',
+    'criminoso': 'Criminal',
+  }
+  return backgroundMap[background.trim().toLowerCase()] || background.trim()
+}
+
+function generateMockCharacter(scenario: string, advancedInput?: AdvancedCharacterInput): Character {
   const races = ['Human', 'Elf', 'Dwarf', 'Halfling', 'Tiefling', 'Dragonborn', 'Gnome', 'Half-Elf']
   const classes = ['Bard', 'Wizard', 'Fighter', 'Rogue', 'Cleric', 'Paladin', 'Ranger', 'Sorcerer']
   const backgrounds = ['Entertainer', 'Sage', 'Noble', 'Criminal', 'Acolyte', 'Folk Hero', 'Hermit', 'Soldier']
   const voiceDescriptions = ['Hoarse voice', 'Sweet voice', 'Angry voice', 'Deep voice', 'Melodic voice', 'Raspy voice', 'Gentle voice', 'Commanding voice', 'Whispery voice', 'Boisterous voice']
   
-  const race = races[Math.floor(Math.random() * races.length)]
-  const charClass = classes[Math.floor(Math.random() * classes.length)]
-  const background = backgrounds[Math.floor(Math.random() * backgrounds.length)]
-  const level = Math.floor(Math.random() * 10) + 1
+  // Use advanced input values if provided, otherwise use random
+  const race = advancedInput?.race || races[Math.floor(Math.random() * races.length)]
+  const charClassRaw = advancedInput?.class || classes[Math.floor(Math.random() * classes.length)]
+  const charClass = normalizeClassNameForMock(charClassRaw)
+  const backgroundRaw = advancedInput?.background || backgrounds[Math.floor(Math.random() * backgrounds.length)]
+  const background = normalizeBackgroundNameForMock(backgroundRaw)
+  const level = advancedInput?.level || Math.floor(Math.random() * 10) + 1
 
   const nameMatch = scenario.match(/\b([A-Z][a-z]+)\b/)
   const name = nameMatch ? nameMatch[1] : `${race} ${charClass}`
@@ -1191,11 +1245,14 @@ function generateMockCharacter(scenario: string): Character {
     personality: `A ${charClass.toLowerCase()} with a ${background.toLowerCase()} background, ${name} is known for their quick wit and ${scenario.toLowerCase().includes('ancient') ? 'deep knowledge of ancient lore' : 'charming demeanor'}.`,
     attributes,
     expertise,
-    spells: [
-      { name: 'Magic Missile', level: 1, description: 'A dart of force strikes the target' },
-      { name: 'Charm Person', level: 1, description: 'Attempt to charm a humanoid' },
-      { name: 'Detect Magic', level: 1, description: 'Sense the presence of magic' },
-    ].slice(0, Math.min(3, level)),
+    // Only include spells for spellcasting classes
+    spells: (charClass === 'Wizard' || charClass === 'Sorcerer' || charClass === 'Bard' || charClass === 'Cleric' || charClass === 'Paladin' || charClass === 'Ranger' || charClass === 'Warlock' || charClass === 'Druid')
+      ? [
+          { name: 'Magic Missile', level: 1, description: 'A dart of force strikes the target' },
+          { name: 'Charm Person', level: 1, description: 'Attempt to charm a humanoid' },
+          { name: 'Detect Magic', level: 1, description: 'Sense the presence of magic' },
+        ].slice(0, Math.min(3, level))
+      : [], // Non-spellcasting classes (Fighter, Barbarian, Rogue, Monk) get no spells
     skills: [
       { name: 'Persuasion', proficiency: true, modifier: chaMod + mockProficiencyBonus },
       { name: 'Performance', proficiency: true, modifier: chaMod + mockProficiencyBonus },
@@ -1214,7 +1271,7 @@ function generateMockCharacter(scenario: string): Character {
   }
 }
 
-function generateMockEnvironment(scenario: string): Environment {
+function generateMockEnvironment(scenario: string, advancedInput?: AdvancedEnvironmentInput): Environment {
   const isDark = scenario.toLowerCase().includes('dark') || scenario.toLowerCase().includes('abandoned')
   const isTavern = scenario.toLowerCase().includes('tavern')
   const isTower = scenario.toLowerCase().includes('tower')
@@ -1269,7 +1326,7 @@ function generateMockEnvironment(scenario: string): Environment {
   }
 }
 
-function generateMockMission(scenario: string): Mission {
+function generateMockMission(scenario: string, advancedInput?: AdvancedMissionInput): Mission {
   const hasArtifact = scenario.toLowerCase().includes('artifact') || scenario.toLowerCase().includes('flute')
   const hasThieves = scenario.toLowerCase().includes('thief') || scenario.toLowerCase().includes('stolen')
   const hasGuild = scenario.toLowerCase().includes('guild')
