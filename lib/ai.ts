@@ -362,12 +362,21 @@ export async function generateRPGContent(
     fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:360',message:'generateRPGContent entry',data:{scenarioLength:scenario.length,contentType,hasAdvancedInput:!!advancedInput,advancedInput:advancedInput,generationParams},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
 
-    // Detect language from scenario text
-    let detectedLanguage = await detectLanguage(scenario)
+    // Detect language from scenario text AND advanced inputs
+    // Combine scenario with any text from advanced inputs for better detection
+    let textForDetection = scenario
+    if (advancedInput && contentType === 'character') {
+      const charInput = advancedInput as AdvancedCharacterInput
+      if (charInput.class) textForDetection += ' ' + charInput.class
+      if (charInput.race) textForDetection += ' ' + charInput.race
+      if (charInput.background) textForDetection += ' ' + charInput.background
+    }
+    
+    let detectedLanguage = await detectLanguage(textForDetection)
     console.log('[AI Generation] Detected language:', detectedLanguage, 'for scenario:', scenario.substring(0, 100))
     
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:363',message:'Language detected',data:{detectedLanguage,scenarioPreview:scenario.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:363',message:'Language detected',data:{detectedLanguage,scenarioPreview:scenario.substring(0,100),textForDetectionPreview:textForDetection.substring(0,150)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
     // #endregion
     
     // Validate detected language
@@ -383,6 +392,60 @@ export async function generateRPGContent(
     let systemPrompt: string
     let userPrompt: string
 
+    // Helper function to normalize class names (map common variations to D&D 5e standard names)
+    const normalizeClassName = (className?: string): string | undefined => {
+      if (!className) return undefined
+      const normalized = className.trim()
+      const classMap: Record<string, string> = {
+        'warrior': 'Fighter',
+        'guerreiro': 'Fighter',
+        'fighter': 'Fighter',
+        'barbarian': 'Barbarian',
+        'bárbaro': 'Barbarian',
+        'rogue': 'Rogue',
+        'ladino': 'Rogue',
+        'bard': 'Bard',
+        'bardo': 'Bard',
+        'wizard': 'Wizard',
+        'mago': 'Wizard',
+        'cleric': 'Cleric',
+        'clérigo': 'Cleric',
+        'ranger': 'Ranger',
+        'patrulheiro': 'Ranger',
+        'paladin': 'Paladin',
+        'paladino': 'Paladin',
+        'monk': 'Monk',
+        'monge': 'Monk',
+        'sorcerer': 'Sorcerer',
+        'feiticeiro': 'Sorcerer',
+        'warlock': 'Warlock',
+        'bruxo': 'Warlock',
+        'druid': 'Druid',
+        'druida': 'Druid',
+      }
+      return classMap[normalized.toLowerCase()] || normalized
+    }
+
+    // Helper function to normalize background names
+    const normalizeBackgroundName = (background?: string): string | undefined => {
+      if (!background) return undefined
+      const normalized = background.trim()
+      const backgroundMap: Record<string, string> = {
+        'artist': 'Entertainer',
+        'artista': 'Entertainer',
+        'entertainer': 'Entertainer',
+        'noble': 'Noble',
+        'nobre': 'Noble',
+        'sage': 'Sage',
+        'sábio': 'Sage',
+        'acolyte': 'Acolyte',
+        'acólito': 'Acolyte',
+        'criminal': 'Criminal',
+        'criminoso': 'Criminal',
+      }
+      return backgroundMap[normalized.toLowerCase()] || normalized
+    }
+
     // Helper function to build constraints from advanced inputs
     const buildAdvancedConstraints = (contentType: ContentType, input?: AdvancedInput): string => {
       if (!input) return ''
@@ -391,10 +454,22 @@ export async function generateRPGContent(
       
       if (contentType === 'character' && 'level' in input) {
         const charInput = input as AdvancedCharacterInput
-        if (charInput.level) constraints.push(`The character MUST be level ${charInput.level}`)
-        if (charInput.class) constraints.push(`The character MUST be a ${charInput.class}`)
-        if (charInput.race) constraints.push(`The character MUST be a ${charInput.race}`)
-        if (charInput.background) constraints.push(`The character MUST have the ${charInput.background} background`)
+        // Normalize class and background names
+        const normalizedClass = normalizeClassName(charInput.class)
+        const normalizedBackground = normalizeBackgroundName(charInput.background)
+        
+        if (charInput.level) {
+          constraints.push(`CRITICAL: The character MUST be exactly level ${charInput.level}. Do NOT change this level.`)
+        }
+        if (normalizedClass) {
+          constraints.push(`CRITICAL: The character MUST be a ${normalizedClass}. Do NOT use any other class. The "class" field in the JSON response must be exactly "${normalizedClass}".`)
+        }
+        if (charInput.race) {
+          constraints.push(`CRITICAL: The character MUST be a ${charInput.race}. Do NOT use any other race. The "race" field in the JSON response must be exactly "${charInput.race}".`)
+        }
+        if (normalizedBackground) {
+          constraints.push(`CRITICAL: The character MUST have the ${normalizedBackground} background. Do NOT use any other background. The "background" field in the JSON response must be exactly "${normalizedBackground}".`)
+        }
       } else if (contentType === 'environment' && 'mood' in input) {
         const envInput = input as AdvancedEnvironmentInput
         if (envInput.mood) constraints.push(`The environment MUST have a ${envInput.mood} mood`)
@@ -410,11 +485,11 @@ export async function generateRPGContent(
       }
       
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:379',message:'Building advanced constraints',data:{contentType,hasInput:!!input,input:input,constraints,constraintsCount:constraints.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:379',message:'Building advanced constraints',data:{contentType,hasInput:!!input,input:input,normalizedClass:contentType==='character'?normalizeClassName((input as any)?.class):undefined,normalizedBackground:contentType==='character'?normalizeBackgroundName((input as any)?.background):undefined,constraints,constraintsCount:constraints.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
       // #endregion
       
       if (constraints.length === 0) return ''
-      return `\n\nSPECIFIC REQUIREMENTS:\n${constraints.map(c => `- ${c}`).join('\n')}\n\nThese requirements are MANDATORY and must be strictly followed.`
+      return `\n\n═══════════════════════════════════════════════════════\nCRITICAL USER REQUIREMENTS (MUST BE FOLLOWED EXACTLY):\n═══════════════════════════════════════════════════════\n${constraints.map(c => `• ${c}`).join('\n')}\n═══════════════════════════════════════════════════════\n\nThese requirements are ABSOLUTELY MANDATORY. The JSON output MUST match these specifications exactly. Do not deviate from these requirements.`
     }
 
     // Helper function to adjust tone in prompts
@@ -455,8 +530,11 @@ export async function generateRPGContent(
       case 'character':
         schema = characterSchema
         const charInput = advancedInput as AdvancedCharacterInput | undefined
+        // Normalize class and background for consistent matching
+        const normalizedClass = normalizeClassName(charInput?.class)
+        const normalizedBackground = normalizeBackgroundName(charInput?.background)
         const charLevel = charInput?.level ? ` Level ${charInput.level}` : ''
-        const charClass = charInput?.class ? ` ${charInput.class}` : ''
+        const charClass = normalizedClass ? ` ${normalizedClass}` : ''
         const charRace = charInput?.race ? ` ${charInput.race}` : ''
         
         systemPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario is written in ${detectedLanguage}. You MUST generate ALL content in ${detectedLanguage}. This includes ALL text, descriptions, names, titles, dialogue, and every single word of output. Every field must be in ${detectedLanguage}. 
@@ -473,12 +551,12 @@ Create a D&D 5e character based on this scenario: "${scenario}"${charLevel}${cha
 IMPORTANT: The scenario above is written in ${detectedLanguage}. You MUST match this language exactly. All character names, descriptions, backstories, personality traits, and every single text field must be in ${detectedLanguage}. Use names appropriate for ${detectedLanguage} culture (e.g., ${detectedLanguage === 'Portuguese' ? 'João, Maria, Carlos' : detectedLanguage === 'Spanish' ? 'Juan, María, Carlos' : 'John, Mary, Charles'}).
 
 Generate a complete character with:
-- A fitting name, race, class, and background (ALL in ${detectedLanguage} - names should be appropriate for ${detectedLanguage} culture)${charInput?.level ? `\n- MUST be level ${charInput.level}` : '\n- Level between 1-10 (choose appropriately based on the scenario)'}${charInput?.class ? `\n- MUST be a ${charInput.class}` : ''}${charInput?.race ? `\n- MUST be a ${charInput.race}` : ''}${charInput?.background ? `\n- MUST have the ${charInput.background} background` : ''}
+- A fitting name, race, class, and background (ALL in ${detectedLanguage} - names should be appropriate for ${detectedLanguage} culture)${charInput?.level ? `\n- CRITICAL: MUST be exactly level ${charInput.level} (the "level" field in JSON must be ${charInput.level})` : '\n- Level between 1-10 (choose appropriately based on the scenario)'}${normalizedClass ? `\n- CRITICAL: MUST be a ${normalizedClass} (the "class" field in JSON must be exactly "${normalizedClass}")` : ''}${charInput?.race ? `\n- CRITICAL: MUST be a ${charInput.race} (the "race" field in JSON must be exactly "${charInput.race}")` : ''}${normalizedBackground ? `\n- CRITICAL: MUST have the ${normalizedBackground} background (the "background" field in JSON must be exactly "${normalizedBackground}")` : ''}
 - D&D 5e ability scores (STR, DEX, CON, INT, WIS, CHA) - values typically 8-15 for starting characters, with one or two higher stats (15-17) based on class
 - A compelling backstory that connects to the scenario (written entirely in ${detectedLanguage})
 - Distinct personality traits (described in ${detectedLanguage})
 - Expertise in 2-4 skills (if the class grants expertise, like Rogue or Bard)
-- Appropriate spells for their class and level (if spellcasting class)
+- Appropriate spells for their class and level (if spellcasting class). CRITICAL: Non-spellcasting classes (Fighter, Barbarian, Rogue, Monk) MUST NOT have any spells. If the class does not cast spells, the spells array must be empty [].
 - ALL skills with accurate proficiency flags - mark proficiency: true for skills granted by class, background, or race. The modifier field should match: ability modifier + proficiency bonus (if proficient) or ability modifier + 2×proficiency bonus (if expertise)
 - Racial traits: Include ALL standard D&D 5e racial features for the character's race (e.g., Tiefling: Darkvision, Hellish Resistance, Infernal Legacy; Elf: Darkvision, Fey Ancestry, Keen Senses; Dwarf: Darkvision, Dwarven Resilience, Stonecunning)
 - Class Features: Include ALL mandatory class features for this class and level. This is REQUIRED for every character. Examples:
