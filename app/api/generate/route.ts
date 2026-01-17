@@ -10,18 +10,27 @@ import { generateRPGContent } from '@/lib/ai'
 import type { ContentType, AdvancedInput, AdvancedGenerationParams } from '@/types/rpg'
 
 export async function POST(request: NextRequest) {
+  let advancedInput: AdvancedInput | undefined
+  let generationParams: AdvancedGenerationParams | undefined
+  let contentType: ContentType | undefined
+  let scenario: string | undefined
+
   try {
     // Authenticate user and require email verification
     const user = await requireVerifiedEmail(request)
 
     // Parse request body
     const body = await request.json()
-    const { scenario, contentType, advancedInput, generationParams } = body as {
+    const parsed = body as {
       scenario: string
       contentType: ContentType
       advancedInput?: AdvancedInput
       generationParams?: AdvancedGenerationParams
     }
+    scenario = parsed.scenario
+    contentType = parsed.contentType
+    advancedInput = parsed.advancedInput
+    generationParams = parsed.generationParams
 
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/generate/route.ts:18',message:'Request body received',data:{scenario:scenario?.substring(0,100),contentType,advancedInput,generationParams},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
