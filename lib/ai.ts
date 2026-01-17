@@ -662,18 +662,23 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
     fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:571',message:'Before AI generation',data:{contentType,detectedLanguage,hasAdvancedConstraints:advancedConstraints.length>0,advancedConstraintsPreview:advancedConstraints.substring(0,200),userPromptPreview:userPrompt.substring(0,300),systemPromptPreview:systemPrompt.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
     // #endregion
 
+    // #region agent log
+    const finalTemperature = Math.max(0.1, Math.min(1.5, temperature))
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:665',message:'Calling generateObject with params',data:{contentType,detectedLanguage,temperature:finalTemperature,generationParams,userPromptLength:userPrompt.length,systemPromptLength:systemPrompt.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+    // #endregion
+
     const result = await (generateObject as any)({
       model: openai('gpt-4o-mini'),
       schema,
       system: systemPrompt,
       prompt: userPrompt,
-      temperature: Math.max(0.1, Math.min(1.5, temperature)), // Clamp between 0.1 and 1.5
+      temperature: finalTemperature, // Clamp between 0.1 and 1.5
     })
     
     let object = result.object
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:579',message:'AI generation result received',data:{contentType,generatedLevel:object?.level,generatedClass:object?.class,generatedRace:object?.race,generatedBackground:object?.background,hasSpells:!!object?.spells?.length,spellNames:object?.spells?.map((s:any)=>s.name)||[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:679',message:'AI generation result received',data:{contentType,generatedLevel:object?.level,generatedClass:object?.class,generatedRace:object?.race,generatedBackground:object?.background,hasSpells:!!object?.spells?.length,spellNames:object?.spells?.map((s:any)=>s.name)||[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
     // #endregion
 
     // Validate and correct skill modifiers for characters
@@ -683,6 +688,12 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
 
     return object as GeneratedContent
   } catch (error) {
+    // #region agent log
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:690',message:'OpenAI generation error caught',data:{contentType,errorMessage,errorStack,hasAdvancedInput:!!advancedInput,generationParams,willFallbackToMock:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+
     console.error('OpenAI generation error:', error)
     // Fallback to mock on error
     console.warn('Falling back to mock data due to error')

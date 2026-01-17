@@ -462,6 +462,9 @@ export default function GeneratorPage() {
       }
 
       if (!parsedContent) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/[locale]/generator/page.tsx:464',message:'No parsed content after reading stream',data:{bufferLength:buffer.length,bufferPreview:buffer.substring(0,200),hasResponse:!!response,responseStatus:response?.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
+        // #endregion
         throw new Error("No content was generated")
       }
 
@@ -476,6 +479,12 @@ export default function GeneratorPage() {
         })
       }, 300)
     } catch (err) {
+      // #region agent log
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      const errorStack = err instanceof Error ? err.stack : undefined
+      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/[locale]/generator/page.tsx:478',message:'Generation error in frontend',data:{errorMessage,errorStack,hasAdvancedMode:advancedMode,generationParams,contentType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'M'})}).catch(()=>{});
+      // #endregion
+
       setError(err instanceof Error ? err.message : "Failed to generate content. Please try again.")
       console.error(err)
     } finally {

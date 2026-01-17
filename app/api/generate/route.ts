@@ -87,6 +87,12 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error: any) {
+    // #region agent log
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/generate/route.ts:89',message:'API route error caught',data:{errorMessage,errorStack,errorStatus:error?.status,hasAdvancedInput:!!advancedInput,generationParams},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'K'})}).catch(()=>{});
+    // #endregion
+
     console.error('Generation error:', error)
     
     // Handle authentication and verification errors
