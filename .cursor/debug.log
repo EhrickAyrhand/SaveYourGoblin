@@ -1,1 +1,0 @@
-{"location":"components/recovery-session-guard.tsx:63","message":"Auth state change in guard","data":{"event":"SIGNED_IN","hasSession":true,"hasHash":false,"hashIncludesRecovery":false,"hasRecoveryFlag":false},"timestamp":1768678939579,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}

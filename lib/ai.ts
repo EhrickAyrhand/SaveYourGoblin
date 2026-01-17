@@ -533,6 +533,8 @@ export async function generateRPGContent(
     const temperature = generationParams?.temperature ?? 0.8
     const toneInstruction = getToneInstruction(generationParams?.tone)
     const complexityInstruction = getComplexityInstruction(generationParams?.complexity)
+    const complexity = generationParams?.complexity || 'standard' // Store for later checks
+    const tone = generationParams?.tone || 'balanced' // Store for later checks
     const advancedConstraints = buildAdvancedConstraints(contentType, advancedInput)
 
     switch (contentType) {
@@ -574,7 +576,7 @@ ${nameInstruction}
 Generate a complete character with:
 - Name: ${nameInstruction}${charInput?.level ? `\n- CRITICAL: MUST be exactly level ${charInput.level} (the "level" field in JSON must be ${charInput.level})` : '\n- Level between 1-10 (choose appropriately based on the scenario)'}${normalizedClass ? `\n- CRITICAL: MUST be a ${normalizedClass} (the "class" field in JSON must be exactly "${normalizedClass}")` : ''}${charInput?.race ? `\n- CRITICAL: MUST be a ${charInput.race} (the "race" field in JSON must be exactly "${charInput.race}")` : ''}${normalizedBackground ? `\n- CRITICAL: MUST have the ${normalizedBackground} background (the "background" field in JSON must be exactly "${normalizedBackground}")` : ''}
 - D&D 5e ability scores (STR, DEX, CON, INT, WIS, CHA) - values typically 8-15 for starting characters, with one or two higher stats (15-17) based on class
-- A compelling backstory that connects to the scenario${complexityInstruction.includes('extensive') ? '. This backstory MUST be detailed, extensive, and rich with sensory descriptions, deeper motivations, and elaborate world-building elements. Write at least 3-5 paragraphs of backstory that fully explores the character\'s past, relationships, motivations, and how they came to be who they are today.' : complexityInstruction.includes('detailed') ? '. This backstory MUST be detailed and rich with descriptions. Write at least 2-3 paragraphs exploring the character\'s past, motivations, and connections.' : ' (written entirely in ' + detectedLanguage + ')'}${toneInstruction.includes('serious') ? ' Maintain a serious, dramatic tone. Focus on realism, consequences, and meaningful experiences that shaped the character.' : ''} (ALL text in ${detectedLanguage})
+- A compelling backstory that connects to the scenario${complexity === 'detailed' ? '. This backstory MUST be detailed and rich with descriptions. Write at least 2-3 paragraphs exploring the character\'s past, motivations, and connections.' : ' (written entirely in ' + detectedLanguage + ')'}${tone === 'serious' ? ' Maintain a serious, dramatic tone. Focus on realism, consequences, and meaningful experiences that shaped the character.' : ''} (ALL text in ${detectedLanguage})
 - Distinct personality traits (described in ${detectedLanguage}, at least 3-4 traits that make the character unique)
 - Expertise in 2-4 skills (if the class grants expertise, like Rogue or Bard)
 ${spellInstruction}
