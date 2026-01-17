@@ -23,6 +23,10 @@ export async function POST(request: NextRequest) {
       generationParams?: AdvancedGenerationParams
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/generate/route.ts:18',message:'Request body received',data:{scenario:scenario?.substring(0,100),contentType,advancedInput,generationParams},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
     if (!scenario || !contentType) {
       return new Response(
         JSON.stringify({ error: 'Missing scenario or contentType' }),
@@ -37,8 +41,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/generate/route.ts:41',message:'Calling generateRPGContent',data:{scenarioLength:scenario.length,contentType,hasAdvancedInput:!!advancedInput,advancedInputKeys:advancedInput?Object.keys(advancedInput):[],generationParams},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+
     // Generate content using OpenAI (or fallback to mock if no API key)
     const content = await generateRPGContent(scenario, contentType, advancedInput, generationParams)
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/generate/route.ts:44',message:'Content generated',data:{contentType,generatedLevel:content?.level,generatedClass:content?.class,generatedRace:content?.race,hasSpells:!!(content as any)?.spells?.length,spellCount:(content as any)?.spells?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     
     // Stream the response back
     const stream = new ReadableStream({

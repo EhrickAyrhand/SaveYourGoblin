@@ -358,9 +358,17 @@ export async function generateRPGContent(
   }
 
   try {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:360',message:'generateRPGContent entry',data:{scenarioLength:scenario.length,contentType,hasAdvancedInput:!!advancedInput,advancedInput:advancedInput,generationParams},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+
     // Detect language from scenario text
     let detectedLanguage = await detectLanguage(scenario)
     console.log('[AI Generation] Detected language:', detectedLanguage, 'for scenario:', scenario.substring(0, 100))
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:363',message:'Language detected',data:{detectedLanguage,scenarioPreview:scenario.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     
     // Validate detected language
     const validLanguages = ['English', 'Portuguese', 'Spanish']
@@ -400,6 +408,10 @@ export async function generateRPGContent(
           constraints.push(`The mission rewards MUST include: ${missionInput.rewardTypes.join(', ')}`)
         }
       }
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:379',message:'Building advanced constraints',data:{contentType,hasInput:!!input,input:input,constraints,constraintsCount:constraints.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
       
       if (constraints.length === 0) return ''
       return `\n\nSPECIFIC REQUIREMENTS:\n${constraints.map(c => `- ${c}`).join('\n')}\n\nThese requirements are MANDATORY and must be strictly followed.`
@@ -568,6 +580,10 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
         throw new Error(`Unknown content type: ${contentType}`)
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:571',message:'Before AI generation',data:{contentType,detectedLanguage,hasAdvancedConstraints:advancedConstraints.length>0,advancedConstraintsPreview:advancedConstraints.substring(0,200),userPromptPreview:userPrompt.substring(0,300),systemPromptPreview:systemPrompt.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+    // #endregion
+
     const result = await (generateObject as any)({
       model: openai('gpt-4o-mini'),
       schema,
@@ -577,6 +593,10 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
     })
     
     let object = result.object
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:579',message:'AI generation result received',data:{contentType,generatedLevel:object?.level,generatedClass:object?.class,generatedRace:object?.race,generatedBackground:object?.background,hasSpells:!!object?.spells?.length,spellNames:object?.spells?.map((s:any)=>s.name)||[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+    // #endregion
 
     // Validate and correct skill modifiers for characters
     if (contentType === 'character' && 'skills' in object && 'level' in object && 'attributes' in object) {

@@ -70,10 +70,10 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
 ---
 
 ### Priority 2: Content Search Improvements ⭐⭐⭐
-**Status**: Basic search exists, needs enhancement  
+**Status**: ✅ COMPLETED  
 **Complexity**: Medium  
 **Dependencies**: None  
-**Estimated Time**: 4-5 days
+**Estimated Time**: 4-5 days (Completed)
 
 **Why Second**:
 - Improves user experience significantly
@@ -82,65 +82,65 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
 
 **Implementation Steps**:
 
-1. **Enhanced Search Functionality** (2-3 days)
-   - [ ] Review current search implementation in `app/api/content/route.ts`
-   - [ ] Add full-text search in content_data JSONB:
-     - [ ] Search in character names, descriptions, abilities
-     - [ ] Search in environment names, descriptions, features
-     - [ ] Search in mission titles, descriptions, objectives
-   - [ ] Add tag-based filtering (multiple tags support)
-   - [ ] Add type filtering (already exists, enhance UI)
-   - [ ] Add date range filtering
-   - [ ] Add favorite-only filter
-   - [ ] Combine filters (AND/OR logic)
+1. **Enhanced Search Functionality** (2-3 days) ✅ COMPLETED
+   - [x] Review current search implementation in `app/api/content/route.ts`
+   - [x] Add full-text search in content_data JSONB:
+     - [x] Search in character names, descriptions, abilities
+     - [x] Search in environment names, descriptions, features
+     - [x] Search in mission titles, descriptions, objectives
+   - [x] Add tag-based filtering (multiple tags support)
+   - [x] Add type filtering (already exists, enhance UI)
+   - [x] Add date range filtering
+   - [x] Add favorite-only filter
+   - [x] Combine filters (AND/OR logic)
 
-2. **Search UI Improvements** (1-2 days)
-   - [ ] Add advanced search panel/modal:
-     - [ ] Type selector (character/environment/mission/all)
-     - [ ] Tag multi-select
-     - [ ] Date range picker
-     - [ ] Favorite checkbox
-     - [ ] Clear filters button
-   - [ ] Add search suggestions/autocomplete
-   - [ ] Add search history (recent searches)
-   - [ ] Improve search result highlighting
-   - [ ] Add "no results" message with suggestions
+2. **Search UI Improvements** (1-2 days) ✅ COMPLETED
+   - [x] Add advanced search panel/modal:
+     - [x] Type selector (character/environment/mission/all)
+     - [x] Tag multi-select
+     - [x] Date range picker
+     - [x] Favorite checkbox
+     - [x] Clear filters button
+   - [ ] Add search suggestions/autocomplete (optional enhancement)
+   - [ ] Add search history (recent searches) (optional enhancement)
+   - [ ] Improve search result highlighting (optional enhancement)
+   - [x] Add "no results" message with suggestions
 
-3. **Search Performance** (1 day)
-   - [ ] Add search debouncing for real-time search
-   - [ ] Optimize database queries with proper indexes
-   - [ ] Add pagination for large result sets
-   - [ ] Add result count display
+3. **Search Performance** (1 day) ✅ COMPLETED
+   - [x] Add search debouncing for real-time search
+   - [x] Optimize database queries with proper indexes
+   - [x] Add pagination for large result sets (via limit/offset)
+   - [x] Add result count display
 
 ---
 
 ### Priority 3: Regenerate Sections ⭐⭐
-**Status**: Not implemented  
+**Status**: API implemented, UI missing  
 **Complexity**: Medium-High  
 **Dependencies**: AI generation, content structure  
-**Estimated Time**: 5-7 days
+**Estimated Time**: 2-3 days remaining
 
 **Implementation Steps**:
 
-1. **Section Identification** (1-2 days)
-   - [ ] Analyze content structure for all types:
-     - [ ] Characters: abilities, equipment, backstory, traits
-     - [ ] Environments: description, features, NPCs, lighting
-     - [ ] Missions: objectives, rewards, context, hooks
-   - [ ] Create section mapping interface
-   - [ ] Identify which sections can be regenerated independently
+1. **Section Identification** (1-2 days) ✅ COMPLETED
+   - [x] Analyze content structure for all types:
+     - [x] Characters: spells, skills, traits, racialTraits, classFeatures, background, personality
+     - [x] Environments: npcs, features, adventureHooks, currentConflict
+     - [x] Missions: objectives, rewards, relatedNPCs, context, hooks
+   - [x] Create section mapping interface (defined in `lib/ai.ts` with schemas)
+   - [x] Identify which sections can be regenerated independently
 
-2. **Regeneration API** (2-3 days)
-   - [ ] Create API route: `app/api/content/[id]/regenerate/route.ts`
-   - [ ] Design prompt system for section-specific regeneration:
-     - [ ] Take original content as context
-     - [ ] Generate prompt for specific section
-     - [ ] Maintain consistency with rest of content
-   - [ ] Handle partial content updates
-   - [ ] Validate regenerated section structure
-   - [ ] Merge new section with existing content
+2. **Regeneration API** (2-3 days) ✅ COMPLETED
+   - [x] Create API route: `app/api/generate/regenerate/route.ts`
+   - [x] Design prompt system for section-specific regeneration:
+     - [x] Take original content as context
+     - [x] Generate prompt for specific section
+     - [x] Maintain consistency with rest of content
+   - [x] Handle partial content updates
+   - [x] Validate regenerated section structure (using Zod schemas)
+   - [x] Merge new section with existing content
 
-3. **UI for Section Regeneration** (2 days)
+3. **UI for Section Regeneration** (2-3 days) ⚠️ IN PROGRESS
    - [ ] Add section selector in content detail modal:
      - [ ] Show all regenerable sections for current content type
      - [ ] Add "Regenerate" button for each section
@@ -149,6 +149,8 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
    - [ ] Allow "regenerate all" option
    - [ ] Show diff preview (optional, advanced)
    - [ ] Add undo/accept new changes
+   - [ ] Update content in database after regeneration
+   - [ ] Handle errors gracefully
 
 ---
 
