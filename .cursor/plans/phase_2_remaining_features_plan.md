@@ -101,9 +101,9 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
      - [x] Date range picker
      - [x] Favorite checkbox
      - [x] Clear filters button
-   - [ ] Add search suggestions/autocomplete (optional enhancement)
-   - [ ] Add search history (recent searches) (optional enhancement)
-   - [ ] Improve search result highlighting (optional enhancement)
+   - [x] Add search suggestions/autocomplete (optional enhancement)
+   - [x] Add search history (recent searches) (optional enhancement)
+   - [x] Improve search result highlighting (optional enhancement)
    - [x] Add "no results" message with suggestions
 
 3. **Search Performance** (1 day) ✅ COMPLETED
@@ -155,44 +155,39 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
 ---
 
 ### Priority 4: Advanced Prompts/Structured Inputs ⭐⭐⭐
-**Status**: Partially started (Generation Parameters Temporarily Removed)  
+**Status**: ✅ COMPLETED  
 **Complexity**: High  
 **Dependencies**: Generator page, AI generation  
-**Estimated Time**: 7-10 days
+**Estimated Time**: 7-10 days (Completed)
 
-**⚠️ NOTE**: Generation Parameters (Temperature, Tone, Complexity) were temporarily removed from the UI due to issues with AI prompt engineering. These controls were not properly affecting the generated content and caused inconsistent behavior. This feature needs to be reimplemented in the future with:
-- Proper prompt engineering to ensure parameters actually affect output
-- Better integration with AI generation logic
-- Thorough testing with various parameter combinations
-- Clear documentation on what each parameter does
+**✅ NOTE**: Generation Parameters (Temperature, Tone, Complexity) were reimplemented and are working: UI in Advanced mode (temperature slider, tone select, complexity select), passed to `lib/ai` as `generationParams`, and wired into prompts (`getToneInstruction`, `getComplexityInstruction`). Temperature is capped at 1.2 to reduce runaway text. Mission difficulty from advanced input is applied when the model omits it. Schema defaults added for mission `difficulty`, `rewardSchema.items`, `choiceBasedRewardSchema.rewards`, and `classFeatureSchema.level` to handle intermittent model omissions.
 
 **Implementation Steps**:
 
-1. **Structured Input Forms** (3-4 days)
-   - [ ] Review existing `types/rpg.ts` for AdvancedInput types
-   - [ ] Create dynamic form components for each content type:
-     - [ ] Character: race, class, level, alignment, personality traits
-     - [ ] Environment: setting type, mood, size, era, culture
-     - [ ] Mission: difficulty, length, type, themes
-   - [ ] Add form validation using Zod schemas
-   - [ ] Create reusable form field components
-   - [ ] Add form state management
-   - [ ] Integrate with generator page
+1. **Structured Input Forms** (3-4 days) ✅ COMPLETED
+   - [x] Review existing `types/rpg.ts` for AdvancedInput types
+   - [x] Create dynamic form components for each content type:
+     - [x] Character: level, class, race, background (alignment/personality as separate struct: optional, not implemented)
+     - [x] Environment: mood, lighting, npcCount
+     - [x] Mission: difficulty, objectiveCount, rewardTypes
+   - [x] Add form state management
+   - [x] Integrate with generator page
+   - [x] Add form validation using Zod schemas (optional; API/backend validates)
+   - [x] Create reusable form field components (optional; inline for now)
 
-2. **Prompt Engineering** (2-3 days)
-   - [ ] Update `lib/ai.ts` to accept AdvancedInput
-   - [ ] Build structured prompts from form inputs
-   - [ ] Combine structured inputs with free-form scenario
-   - [ ] Test prompt variations for quality
-   - [ ] Add prompt preview in generator
+2. **Prompt Engineering** (2-3 days) ✅ COMPLETED
+   - [x] Update `lib/ai.ts` to accept AdvancedInput and AdvancedGenerationParams
+   - [x] Build structured prompts from form inputs (`buildAdvancedConstraints`, contentType-specific prompts)
+   - [x] Combine structured inputs with free-form scenario
+   - [x] Tone and complexity instructions in system prompts; temperature in generateObject
+   - [ ] Add prompt preview in generator (optional)
 
-3. **UI Integration** (2-3 days)
-   - [ ] Add "Advanced Options" expandable section in generator
-   - [ ] Create collapsible form sections
-   - [ ] Add input examples/placeholders
-   - [ ] Add tooltips explaining each field
-   - [ ] Add "Reset to Defaults" button
-   - [ ] Save user preferences for structured inputs
+3. **UI Integration** (2-3 days) ✅ COMPLETED
+   - [x] Add "Advanced Options" expandable section in generator (⚙️ Advanced mode)
+   - [x] Create collapsible form sections (Character, Environment, Mission, Generation Parameters)
+   - [x] Add input placeholders and help text under each field
+   - [ ] Add "Reset to Defaults" button (optional)
+   - [ ] Save user preferences for structured inputs (optional)
 
 ---
 

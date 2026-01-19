@@ -49,7 +49,7 @@ const spellSchema = z.object({
 const classFeatureSchema = z.object({
   name: z.string().describe('The name of the class feature (e.g., "Rage", "Sneak Attack", "Bardic Inspiration")'),
   description: z.string().describe('A brief description of what the feature does'),
-  level: z.number().int().min(1).max(20).describe('The level at which this feature is obtained (1-20)'),
+  level: z.number().int().min(1).max(20).describe('The level at which this feature is obtained (1-20)').optional().default(1),
 })
 
 const skillSchema = z.object({
@@ -106,7 +106,7 @@ const objectiveSchema = z.object({
 const rewardSchema = z.object({
   xp: z.number().int().min(0).optional().describe('Experience points reward'),
   gold: z.number().int().min(0).optional().describe('Gold pieces reward'),
-  items: z.array(z.string()).describe('List of item rewards'),
+  items: z.array(z.string()).optional().default([]).describe('List of item rewards'),
 })
 
 const powerfulItemSchema = z.object({
@@ -116,7 +116,7 @@ const powerfulItemSchema = z.object({
 
 const choiceBasedRewardSchema = z.object({
   condition: z.string().describe('The condition or path that triggers these rewards (e.g., "If negotiated", "If combat", "If artifact kept")'),
-  rewards: rewardSchema.describe('Rewards for this specific condition/path'),
+  rewards: rewardSchema.optional().default({}).describe('Rewards for this specific condition/path'),
 })
 
 const missionSchema = z.object({
@@ -125,7 +125,7 @@ const missionSchema = z.object({
   context: z.string().describe('The background context and setup for this mission'),
   objectives: z.array(objectiveSchema).describe('List of mission objectives (primary and optional). Mark objectives as alternative paths (isAlternative: true) when they represent mutually exclusive approaches (e.g., negotiate vs. combat).'),
   rewards: rewardSchema.describe('Rewards for completing the mission'),
-  difficulty: z.enum(['easy', 'medium', 'hard', 'deadly']).describe('Mission difficulty level'),
+  difficulty: z.enum(['easy', 'medium', 'hard', 'deadly']).optional().describe('Mission difficulty level'),
   relatedNPCs: z.array(z.string()).describe('NPCs involved in or related to this mission'),
   relatedLocations: z.array(z.string()).describe('Locations relevant to this mission'),
   recommendedLevel: z.string().optional().describe('Recommended party level range based on difficulty and stakes (e.g., "Level 4-6", "Level 8-10"). Easy: 1-3, Medium: 4-6, Hard: 7-10, Deadly: 11+. World-altering stakes should match higher tier levels.'),
@@ -529,6 +529,8 @@ Example: If the user writes in Portuguese like "um bardo na taverna", you MUST r
 
 You are an expert D&D 5e game master and character creator. Create detailed, immersive characters that feel authentic to the D&D 5e universe. Characters should have rich backstories, distinct personalities, and appropriate abilities for their level and class.${toneInstruction}${complexityInstruction} Include spells appropriate to the character's class and level. IMPORTANT: Ensure all skill proficiency flags are correctly set based on class, background, and race. Include all standard racial traits for the character's race. CRITICAL: Every character MUST include ALL mandatory class features for their class and level - this is non-negotiable. Non-spellcasting classes (Barbarian, Rogue, Fighter, Monk) must have their complete feature list.
 
+OUTPUT FORMAT: You MUST output a single valid JSON object with ALL required fields. Output them in this order: name, race, class, level, background, attributes, expertise, skills, traits, voiceDescription, history, personality, spells. CRITICAL: history = 2-5 sentences only. personality = 2-4 sentences only. Do NOT write long paragraphs, random words, code, or multiple languages in any field. Each spell: { name (string), level (number 0-9), description (string) }. Each skill: { name (string), proficiency (boolean), modifier (number) }. Do not output anything outside the JSON.
+
 FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every name, description, trait, and text field must be in ${detectedLanguage}.`
         // Build name instruction with emphasis on unique names
         const nameInstruction = `CRITICAL: Generate a UNIQUE, CREATIVE character name appropriate for ${detectedLanguage} culture. DO NOT use generic names like "${charInput?.race || 'Race'} ${normalizedClass || 'Class'}" or literal translations. Create an authentic, memorable name that fits the character's background and culture (e.g., ${detectedLanguage === 'Portuguese' ? 'João, Maria, Carlos, Elena, Rafael' : detectedLanguage === 'Spanish' ? 'Juan, María, Carlos, Elena, Rafael' : 'John, Mary, Charles, Elena, Robert'}). The name field must contain ONLY the character's name, not their race and class.`
@@ -656,16 +658,17 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
         throw new Error(`Unknown content type: ${contentType}`)
     }
 
-    const finalTemperature = Math.max(0.1, Math.min(1.5, temperature))
+    const finalTemperature = Math.max(0.1, Math.min(1.2, temperature)) // Cap at 1.2 to reduce runaway text in history/personality
 
     const result = await (generateObject as any)({
       model: openai('gpt-4o-mini'),
       schema,
       system: systemPrompt,
       prompt: userPrompt,
-      temperature: finalTemperature, // Clamp between 0.1 and 1.5
+      temperature: finalTemperature,
+      maxTokens: 16384, // Full character JSON needs room; default truncates before attributes/skills/spells/traits/voiceDescription
     })
-    
+
     let object = result.object
 
     // Validate and correct skill modifiers for characters
@@ -673,8 +676,29 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
       object = validateCharacterSkills(object as Character)
     }
 
+    // Mission difficulty: prefer user's choice from advanced input, then model's, then default medium
+    if (contentType === 'mission' && object) {
+      const m = object as Mission
+      const req = (advancedInput as AdvancedMissionInput)?.difficulty
+      m.difficulty = (req === 'easy' || req === 'medium' || req === 'hard' || req === 'deadly' ? req : m.difficulty) || 'medium'
+    }
+
     return object as GeneratedContent
   } catch (error) {
+    // #region agent log
+    const err = error as { name?: string; value?: unknown; cause?: { issues?: Array<{ path?: unknown; code?: string; expected?: string; received?: string }> } }
+    const v = err?.value
+    const isObj = v != null && typeof v === 'object'
+    const valueKeys = isObj ? Object.keys(v as object) : null
+    const valueStr = isObj ? JSON.stringify(v) : String(v)
+    const valueStrLength = valueStr.length
+    const valueStrEnd = valueStrLength > 400 ? valueStr.slice(-400) : valueStr
+    const val = v as Record<string, unknown> | undefined
+    const valueHistoryLen = val?.history != null ? String(val.history).length : null
+    const valuePersonalityLen = val?.personality != null ? String(val.personality).length : null
+    const issuesDetail = err?.cause?.issues?.slice(0, 14).map(i => ({ path: i.path, code: i.code, expected: i.expected, received: i.received })) ?? []
+    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:catch',message:'generateObject error',data:{name:err?.name,valueKeys,valueKeysCount:valueKeys?.length??0,valueStrLength,valueStrEnd,valueHistoryLen,valuePersonalityLen,issuePaths:err?.cause?.issues?.map(i=>i.path),issuesDetail},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H2,H3,H4'})}).catch(()=>{});
+    // #endregion
     console.error('OpenAI generation error:', error)
     // Re-throw error - no fallback to mock
     throw error

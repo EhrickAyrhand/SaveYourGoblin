@@ -122,6 +122,7 @@
     "simpleMode": "Simple Mode",
     "advancedMode": "Advanced Mode",
     "advancedModeDescription": "Use structured inputs and custom parameters for more precise generation",
+    "advancedValidationError": "Please fix the errors in the advanced options below.",
     "advancedFields": {
       "character": {
         "title": "Character Parameters",
@@ -236,6 +237,10 @@
     "all": "All",
     "retry": "Retry",
     "searchPlaceholder": "Search by scenario or content name...",
+    "searchPressEnter": "Press Enter to search",
+    "recentSearches": "Recent searches",
+    "clearSearchHistory": "Clear history",
+    "suggestions": "Suggestions",
     "item": "item",
     "items": "items",
     "itemsFound": "{count} {item} found",

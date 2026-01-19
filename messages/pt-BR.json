@@ -122,6 +122,7 @@
     "simpleMode": "Modo Simples",
     "advancedMode": "Modo Avançado",
     "advancedModeDescription": "Use entradas estruturadas e parâmetros personalizados para uma geração mais precisa",
+    "advancedValidationError": "Corrija os erros nas opções avançadas abaixo.",
     "advancedFields": {
       "character": {
         "title": "Parâmetros do Personagem",
@@ -236,6 +237,10 @@
     "all": "Todos",
     "retry": "Tentar novamente",
     "searchPlaceholder": "Pesquisar por cenário ou nome do conteúdo...",
+    "searchPressEnter": "Pressione Enter para pesquisar",
+    "recentSearches": "Pesquisas recentes",
+    "clearSearchHistory": "Limpar histórico",
+    "suggestions": "Sugestões",
     "item": "item",
     "items": "itens",
     "found": "encontrado(s)",

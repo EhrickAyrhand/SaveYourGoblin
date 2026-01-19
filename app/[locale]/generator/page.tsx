@@ -17,13 +17,19 @@ import {
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { AdvancedFormField } from "@/components/generator/advanced-form-field"
+import {
+  advancedCharacterInputSchema,
+  advancedEnvironmentInputSchema,
+  advancedMissionInputSchema,
+} from "@/lib/schemas/advanced-input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AnimatedBanner } from "@/components/ui/animated-banner"
 import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
 import { CharacterCard } from "@/components/rpg/character-card"
 import { EnvironmentCard } from "@/components/rpg/environment-card"
 import { MissionCard } from "@/components/rpg/mission-card"
-import type { ContentType, GeneratedContent, Character, Environment, Mission, AdvancedCharacterInput, AdvancedEnvironmentInput, AdvancedMissionInput } from "@/types/rpg"
+import type { ContentType, GeneratedContent, Character, Environment, Mission, AdvancedCharacterInput, AdvancedEnvironmentInput, AdvancedMissionInput, AdvancedGenerationParams } from "@/types/rpg"
 
 interface GeneratorState {
   generatedContent: GeneratedContent | null
@@ -61,6 +67,12 @@ export default function GeneratorPage() {
   const [advancedCharacterInput, setAdvancedCharacterInput] = useState<AdvancedCharacterInput>({})
   const [advancedEnvironmentInput, setAdvancedEnvironmentInput] = useState<AdvancedEnvironmentInput>({})
   const [advancedMissionInput, setAdvancedMissionInput] = useState<AdvancedMissionInput>({})
+  const [generationParams, setGenerationParams] = useState<AdvancedGenerationParams>({
+    temperature: 0.8,
+    tone: 'balanced',
+    complexity: 'standard',
+  })
+  const [advancedFieldErrors, setAdvancedFieldErrors] = useState<Record<string, string>>({})
   const generatedContentRef = useRef<HTMLDivElement>(null)
   const hasRestoredState = useRef(false)
   const previousUserRef = useRef<User | null>(null)
@@ -161,6 +173,7 @@ export default function GeneratorPage() {
     setShowSaveBanner(false)
     setScenario("")
     setScenarioUsedForGeneration("") // Clear stored scenario too
+    setAdvancedFieldErrors({})
   }, [contentType])
 
   // Load templates when user or contentType changes
@@ -380,6 +393,36 @@ export default function GeneratorPage() {
     const scenarioToUse = scenario.trim()
     setScenarioUsedForGeneration(scenarioToUse)
 
+    // Validate advanced inputs when in advanced mode
+    if (advancedMode) {
+      const schema =
+        contentType === "character"
+          ? advancedCharacterInputSchema
+          : contentType === "environment"
+            ? advancedEnvironmentInputSchema
+            : advancedMissionInputSchema
+      const input =
+        contentType === "character"
+          ? advancedCharacterInput
+          : contentType === "environment"
+            ? advancedEnvironmentInput
+            : advancedMissionInput
+      const result = schema.safeParse(input)
+      if (!result.success) {
+        const byPath = result.error.issues.reduce(
+          (acc, i) => {
+            acc[String(i.path[0])] = i.message
+            return acc
+          },
+          {} as Record<string, string>
+        )
+        setAdvancedFieldErrors(byPath)
+        setError(t("generator.advancedValidationError"))
+        return
+      }
+      setAdvancedFieldErrors({})
+    }
+
     setIsGenerating(true)
     setError(null)
     setGeneratedContent(null)
@@ -409,6 +452,7 @@ export default function GeneratorPage() {
               : contentType === 'environment' 
               ? advancedEnvironmentInput 
               : advancedMissionInput,
+            generationParams,
           }),
         }),
       })
@@ -696,7 +740,10 @@ export default function GeneratorPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setAdvancedMode(!advancedMode)}
+                    onClick={() => {
+                      setAdvancedMode(!advancedMode)
+                      setAdvancedFieldErrors({})
+                    }}
                     className={`font-body transition-all ${
                       advancedMode 
                         ? 'bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90' 
@@ -779,10 +826,12 @@ export default function GeneratorPage() {
                     <div className="space-y-4 p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl border-2 border-purple-500/30">
                       <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.character.title')}</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="char-level" className="font-body text-sm font-semibold">
-                            {t('generator.advancedFields.character.level')}
-                          </Label>
+                        <AdvancedFormField
+                          htmlFor="char-level"
+                          label={t('generator.advancedFields.character.level')}
+                          help={t('generator.advancedFields.character.levelHelp')}
+                          error={advancedFieldErrors['level']}
+                        >
                           <Input
                             id="char-level"
                             type="number"
@@ -796,14 +845,13 @@ export default function GeneratorPage() {
                             placeholder="1-20"
                             className="font-body"
                           />
-                          <p className="text-xs text-muted-foreground font-body">
-                            {t('generator.advancedFields.character.levelHelp')}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="char-class" className="font-body text-sm font-semibold">
-                            {t('generator.advancedFields.character.class')}
-                          </Label>
+                        </AdvancedFormField>
+                        <AdvancedFormField
+                          htmlFor="char-class"
+                          label={t('generator.advancedFields.character.class')}
+                          help={t('generator.advancedFields.character.classHelp')}
+                          error={advancedFieldErrors['class']}
+                        >
                           <Input
                             id="char-class"
                             type="text"
@@ -815,14 +863,13 @@ export default function GeneratorPage() {
                             placeholder={t('generator.advancedFields.character.classPlaceholder')}
                             className="font-body"
                           />
-                          <p className="text-xs text-muted-foreground font-body">
-                            {t('generator.advancedFields.character.classHelp')}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="char-race" className="font-body text-sm font-semibold">
-                            {t('generator.advancedFields.character.race')}
-                          </Label>
+                        </AdvancedFormField>
+                        <AdvancedFormField
+                          htmlFor="char-race"
+                          label={t('generator.advancedFields.character.race')}
+                          help={t('generator.advancedFields.character.raceHelp')}
+                          error={advancedFieldErrors['race']}
+                        >
                           <Input
                             id="char-race"
                             type="text"
@@ -834,14 +881,13 @@ export default function GeneratorPage() {
                             placeholder={t('generator.advancedFields.character.racePlaceholder')}
                             className="font-body"
                           />
-                          <p className="text-xs text-muted-foreground font-body">
-                            {t('generator.advancedFields.character.raceHelp')}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="char-background" className="font-body text-sm font-semibold">
-                            {t('generator.advancedFields.character.background')}
-                          </Label>
+                        </AdvancedFormField>
+                        <AdvancedFormField
+                          htmlFor="char-background"
+                          label={t('generator.advancedFields.character.background')}
+                          help={t('generator.advancedFields.character.backgroundHelp')}
+                          error={advancedFieldErrors['background']}
+                        >
                           <Input
                             id="char-background"
                             type="text"
@@ -853,10 +899,7 @@ export default function GeneratorPage() {
                             placeholder={t('generator.advancedFields.character.backgroundPlaceholder')}
                             className="font-body"
                           />
-                          <p className="text-xs text-muted-foreground font-body">
-                            {t('generator.advancedFields.character.backgroundHelp')}
-                          </p>
-                        </div>
+                        </AdvancedFormField>
                       </div>
                     </div>
                   )}
@@ -866,10 +909,12 @@ export default function GeneratorPage() {
                     <div className="space-y-4 p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl border-2 border-green-500/30">
                       <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.environment.title')}</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="env-mood" className="font-body text-sm font-semibold">
-                            {t('generator.advancedFields.environment.mood')}
-                          </Label>
+                        <AdvancedFormField
+                          htmlFor="env-mood"
+                          label={t('generator.advancedFields.environment.mood')}
+                          help={t('generator.advancedFields.environment.moodHelp')}
+                          error={advancedFieldErrors['mood']}
+                        >
                           <Input
                             id="env-mood"
                             type="text"
@@ -881,14 +926,13 @@ export default function GeneratorPage() {
                             placeholder={t('generator.advancedFields.environment.moodPlaceholder')}
                             className="font-body"
                           />
-                          <p className="text-xs text-muted-foreground font-body">
-                            {t('generator.advancedFields.environment.moodHelp')}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="env-lighting" className="font-body text-sm font-semibold">
-                            {t('generator.advancedFields.environment.lighting')}
-                          </Label>
+                        </AdvancedFormField>
+                        <AdvancedFormField
+                          htmlFor="env-lighting"
+                          label={t('generator.advancedFields.environment.lighting')}
+                          help={t('generator.advancedFields.environment.lightingHelp')}
+                          error={advancedFieldErrors['lighting']}
+                        >
                           <Input
                             id="env-lighting"
                             type="text"
@@ -900,14 +944,13 @@ export default function GeneratorPage() {
                             placeholder={t('generator.advancedFields.environment.lightingPlaceholder')}
                             className="font-body"
                           />
-                          <p className="text-xs text-muted-foreground font-body">
-                            {t('generator.advancedFields.environment.lightingHelp')}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="env-npc-count" className="font-body text-sm font-semibold">
-                            {t('generator.advancedFields.environment.npcCount')}
-                          </Label>
+                        </AdvancedFormField>
+                        <AdvancedFormField
+                          htmlFor="env-npc-count"
+                          label={t('generator.advancedFields.environment.npcCount')}
+                          help={t('generator.advancedFields.environment.npcCountHelp')}
+                          error={advancedFieldErrors['npcCount']}
+                        >
                           <Input
                             id="env-npc-count"
                             type="number"
@@ -921,10 +964,7 @@ export default function GeneratorPage() {
                             placeholder={t('generator.advancedFields.environment.npcCountPlaceholder')}
                             className="font-body"
                           />
-                          <p className="text-xs text-muted-foreground font-body">
-                            {t('generator.advancedFields.environment.npcCountHelp')}
-                          </p>
-                        </div>
+                        </AdvancedFormField>
                       </div>
                     </div>
                   )}
@@ -934,10 +974,12 @@ export default function GeneratorPage() {
                     <div className="space-y-4 p-4 bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-xl border-2 border-red-500/30">
                       <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.mission.title')}</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="mission-difficulty" className="font-body text-sm font-semibold">
-                            {t('generator.advancedFields.mission.difficulty')}
-                          </Label>
+                        <AdvancedFormField
+                          htmlFor="mission-difficulty"
+                          label={t('generator.advancedFields.mission.difficulty')}
+                          help={t('generator.advancedFields.mission.difficultyHelp')}
+                          error={advancedFieldErrors['difficulty']}
+                        >
                           <select
                             id="mission-difficulty"
                             value={advancedMissionInput.difficulty || ''}
@@ -953,14 +995,13 @@ export default function GeneratorPage() {
                             <option value="hard">{t('generator.advancedFields.mission.difficultyHard')}</option>
                             <option value="deadly">{t('generator.advancedFields.mission.difficultyDeadly')}</option>
                           </select>
-                          <p className="text-xs text-muted-foreground font-body">
-                            {t('generator.advancedFields.mission.difficultyHelp')}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="mission-objectives" className="font-body text-sm font-semibold">
-                            {t('generator.advancedFields.mission.objectiveCount')}
-                          </Label>
+                        </AdvancedFormField>
+                        <AdvancedFormField
+                          htmlFor="mission-objectives"
+                          label={t('generator.advancedFields.mission.objectiveCount')}
+                          help={t('generator.advancedFields.mission.objectiveCountHelp')}
+                          error={advancedFieldErrors['objectiveCount']}
+                        >
                           <Input
                             id="mission-objectives"
                             type="number"
@@ -974,14 +1015,13 @@ export default function GeneratorPage() {
                             placeholder="2-5"
                             className="font-body"
                           />
-                          <p className="text-xs text-muted-foreground font-body">
-                            {t('generator.advancedFields.mission.objectiveCountHelp')}
-                          </p>
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label className="font-body text-sm font-semibold">
-                            {t('generator.advancedFields.mission.rewardTypes')}
-                          </Label>
+                        </AdvancedFormField>
+                        <AdvancedFormField
+                          label={t('generator.advancedFields.mission.rewardTypes')}
+                          help={t('generator.advancedFields.mission.rewardTypesHelp')}
+                          error={advancedFieldErrors['rewardTypes']}
+                          wrapperClassName="md:col-span-2"
+                        >
                           <div className="flex flex-wrap gap-3">
                             {(['xp', 'gold', 'items'] as const).map((type) => (
                               <label key={type} className="flex items-center gap-2 cursor-pointer">
@@ -994,7 +1034,7 @@ export default function GeneratorPage() {
                                       ...advancedMissionInput,
                                       rewardTypes: e.target.checked
                                         ? [...current, type]
-                                        : current.filter(t => t !== type)
+                                        : current.filter((x) => x !== type)
                                     })
                                   }}
                                   className="rounded"
@@ -1007,13 +1047,84 @@ export default function GeneratorPage() {
                               </label>
                             ))}
                           </div>
-                          <p className="text-xs text-muted-foreground font-body">
-                            {t('generator.advancedFields.mission.rewardTypesHelp')}
-                          </p>
-                        </div>
+                        </AdvancedFormField>
                       </div>
                     </div>
                   )}
+
+                  {/* Generation Parameters (temperature, tone, complexity) */}
+                  <div className="space-y-4 p-4 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 rounded-xl border-2 border-amber-500/30">
+                    <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.generation.title')}</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gen-temperature" className="font-body text-sm font-semibold">
+                          {t('generator.advancedFields.generation.temperature')}
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{t('generator.advancedFields.generation.temperatureLow')}</span>
+                          <input
+                            id="gen-temperature"
+                            type="range"
+                            min="0.1"
+                            max="1.5"
+                            step="0.1"
+                            value={generationParams.temperature ?? 0.8}
+                            onChange={(e) => setGenerationParams({
+                              ...generationParams,
+                              temperature: parseFloat(e.target.value),
+                            })}
+                            className="flex-1 h-2 min-w-[120px] cursor-pointer accent-primary [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-lg [&::-webkit-slider-runnable-track]:bg-muted [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:-mt-1 [&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-lg [&::-moz-range-track]:bg-muted [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0"
+                          />
+                          <span className="text-xs text-muted-foreground">{t('generator.advancedFields.generation.temperatureHigh')}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-body">
+                          {(generationParams.temperature ?? 0.8).toFixed(1)} — {t('generator.advancedFields.generation.temperatureHelp')}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gen-tone" className="font-body text-sm font-semibold">
+                          {t('generator.advancedFields.generation.tone')}
+                        </Label>
+                        <select
+                          id="gen-tone"
+                          value={generationParams.tone || 'balanced'}
+                          onChange={(e) => setGenerationParams({
+                            ...generationParams,
+                            tone: e.target.value as 'serious' | 'balanced' | 'playful',
+                          })}
+                          className="w-full px-3 py-2 rounded-lg border-2 border-primary/20 bg-background font-body"
+                        >
+                          <option value="serious">{t('generator.advancedFields.generation.toneSerious')}</option>
+                          <option value="balanced">{t('generator.advancedFields.generation.toneBalanced')}</option>
+                          <option value="playful">{t('generator.advancedFields.generation.tonePlayful')}</option>
+                        </select>
+                        <p className="text-xs text-muted-foreground font-body">
+                          {t('generator.advancedFields.generation.toneHelp')}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gen-complexity" className="font-body text-sm font-semibold">
+                          {t('generator.advancedFields.generation.complexity')}
+                        </Label>
+                        <select
+                          id="gen-complexity"
+                          value={generationParams.complexity || 'standard'}
+                          onChange={(e) => setGenerationParams({
+                            ...generationParams,
+                            complexity: e.target.value as 'simple' | 'standard' | 'detailed',
+                          })}
+                          className="w-full px-3 py-2 rounded-lg border-2 border-primary/20 bg-background font-body"
+                        >
+                          <option value="simple">{t('generator.advancedFields.generation.complexitySimple')}</option>
+                          <option value="standard">{t('generator.advancedFields.generation.complexityStandard')}</option>
+                          <option value="detailed">{t('generator.advancedFields.generation.complexityDetailed')}</option>
+                        </select>
+                        <p className="text-xs text-muted-foreground font-body">
+                          {t('generator.advancedFields.generation.complexityHelp')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
                 </div>
               </div>

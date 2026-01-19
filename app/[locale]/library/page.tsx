@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter, Link } from '@/i18n/routing'
 import { getCurrentUser, signOut } from "@/lib/auth"
@@ -22,6 +22,9 @@ import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
 import { LibraryCard } from "@/components/rpg/library-card"
 import { ContentDetailModal } from "@/components/rpg/content-detail-modal"
 import { ContentComparisonModal } from "@/components/rpg/content-comparison-modal"
+
+const SEARCH_HISTORY_KEY = "syg-library-search-history"
+const MAX_RECENT_SEARCHES = 10
 
 export default function LibraryPage() {
   const t = useTranslations()
@@ -49,6 +52,77 @@ export default function LibraryPage() {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const [itemsToCompare, setItemsToCompare] = useState<[LibraryContentItem, LibraryContentItem] | null>(null)
   const [isComparisonOpen, setIsComparisonOpen] = useState(false)
+  const [searchFocused, setSearchFocused] = useState(false)
+  const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const searchWrapperRef = useRef<HTMLDivElement>(null)
+  const searchBlurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Load recent searches from localStorage on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem(SEARCH_HISTORY_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as unknown
+        if (Array.isArray(parsed) && parsed.every((x) => typeof x === "string")) {
+          setRecentSearches(parsed.slice(0, MAX_RECENT_SEARCHES))
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  const addToSearchHistory = useCallback((q: string) => {
+    const s = q.trim()
+    if (!s) return
+    setRecentSearches((prev) => {
+      const next = [s, ...prev.filter((x) => x.toLowerCase() !== s.toLowerCase())].slice(0, MAX_RECENT_SEARCHES)
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next))
+        } catch {
+          // ignore
+        }
+      }
+      return next
+    })
+  }, [])
+
+  const clearSearchHistory = useCallback(() => {
+    setRecentSearches([])
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(SEARCH_HISTORY_KEY, "[]")
+      } catch {
+        // ignore
+      }
+    }
+    setSearchFocused(false)
+  }, [])
+
+  const handleSearchBlur = useCallback(() => {
+    searchBlurTimeoutRef.current = setTimeout(() => {
+      if (searchWrapperRef.current && !searchWrapperRef.current.contains(document.activeElement)) {
+        setSearchFocused(false)
+      }
+      searchBlurTimeoutRef.current = null
+    }, 200)
+  }, [])
+
+  const handleSearchFocus = useCallback(() => {
+    if (searchBlurTimeoutRef.current) {
+      clearTimeout(searchBlurTimeoutRef.current)
+      searchBlurTimeoutRef.current = null
+    }
+    setSearchFocused(true)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (searchBlurTimeoutRef.current) clearTimeout(searchBlurTimeoutRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     // SECURITY: Check recovery session SYNCHRONOUSLY before any async operations
@@ -84,16 +158,24 @@ export default function LibraryPage() {
     checkUser()
   }, [router])
 
-  // Debounce search query
+  // Applied search (used for API and filtering). Updated on Enter, suggestion select, or clear.
   const [debouncedSearch, setDebouncedSearch] = useState("")
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery)
-    }, 300)
-
-    return () => clearTimeout(timer)
+  const applySearch = useCallback(() => {
+    setDebouncedSearch(searchQuery)
+    setSearchFocused(false)
   }, [searchQuery])
+
+  const applySuggestion = useCallback((text: string) => {
+    setSearchQuery(text)
+    setDebouncedSearch(text)
+    setSearchFocused(false)
+  }, [])
+
+  // Add current applied search to history when it changes to a non-empty value when it changes to a non-empty value (must be after debouncedSearch declaration)
+  useEffect(() => {
+    if (debouncedSearch.trim()) addToSearchHistory(debouncedSearch.trim())
+  }, [debouncedSearch, addToSearchHistory])
 
   useEffect(() => {
     if (user) {
@@ -122,6 +204,29 @@ export default function LibraryPage() {
       return (item.content_data as Mission).title
     }
   }
+
+  // Search suggestions from tags, content names, and scenario snippets (min 2 chars)
+  const searchSuggestions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (q.length < 2) return []
+    const seen = new Set<string>()
+    const out: { type: "tag" | "name" | "scenario"; text: string }[] = []
+    const add = (type: "tag" | "name" | "scenario", text: string) => {
+      const t = text.trim()
+      if (!t || seen.has(t.toLowerCase())) return
+      seen.add(t.toLowerCase())
+      out.push({ type, text: t })
+    }
+    allTags.filter((tag) => tag.toLowerCase().includes(q)).forEach((tag) => add("tag", tag))
+    const source = allContent.length > 0 ? allContent : content
+    for (const item of source) {
+      const name = getContentName(item)
+      if (name.toLowerCase().includes(q)) add("name", name)
+      if (item.scenario_input && item.scenario_input.toLowerCase().includes(q))
+        add("scenario", item.scenario_input)
+    }
+    return out.slice(0, 10)
+  }, [searchQuery, allTags, allContent, content])
 
   // Sort and filter content client-side for better UX
   // Also enhance search to include tags (since SQL can't search TEXT[] arrays easily)
@@ -676,26 +781,98 @@ export default function LibraryPage() {
                   <h3 className="font-body text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">
                     {t('library.searchAndSort')}
                   </h3>
-                  <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl">🔎</div>
+                  <div ref={searchWrapperRef} className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl z-10">🔎</div>
                     <input
                       type="text"
                       placeholder={t('library.searchPlaceholder')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={handleSearchFocus}
+                      onBlur={handleSearchBlur}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault()
+                          applySearch()
+                        }
+                      }}
                       disabled={isFetching}
                       className="w-full rounded-xl border-2 border-primary/20 bg-background pl-14 pr-12 py-4 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:border-primary disabled:opacity-50 disabled:cursor-not-allowed font-body shadow-sm hover:shadow-md transition-all"
                     />
                     {searchQuery && (
                       <button
                         type="button"
-                        onClick={() => setSearchQuery("")}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xl font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors"
+                        onClick={() => {
+                          setSearchQuery("")
+                          setDebouncedSearch("")
+                        }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xl font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors z-10"
                       >
                         ✕
                       </button>
                     )}
+                    {/* Recent searches (focused + empty input) or Suggestions (focused + 2+ chars) */}
+                    {searchFocused &&
+                      ((searchQuery.trim().length === 0 && recentSearches.length > 0) ||
+                        (searchQuery.trim().length >= 2 && searchSuggestions.length > 0)) && (
+                      <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-auto rounded-xl border-2 border-primary/20 bg-background shadow-xl">
+                        {searchQuery.trim().length === 0 ? (
+                          <>
+                            <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-primary/10">
+                              {t("library.recentSearches")}
+                            </div>
+                            {recentSearches.map((s) => (
+                              <button
+                                key={s}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  applySuggestion(s)
+                                }}
+                                className="w-full px-4 py-2.5 text-left text-sm font-body hover:bg-primary/10 flex items-center gap-2"
+                              >
+                                <span className="text-muted-foreground">🕐</span>
+                                {s}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                clearSearchHistory()
+                              }}
+                              className="w-full px-4 py-2 text-left text-xs text-muted-foreground hover:bg-primary/10 hover:text-foreground font-body border-t border-primary/10"
+                            >
+                              {t("library.clearSearchHistory")}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-primary/10">
+                              {t("library.suggestions")}
+                            </div>
+                            {searchSuggestions.map((s, i) => (
+                              <button
+                                key={`${s.type}-${s.text}-${i}`}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  applySuggestion(s.text)
+                                }}
+                                className="w-full px-4 py-2.5 text-left text-sm font-body hover:bg-primary/10 flex items-center gap-2"
+                              >
+                                <span className="text-muted-foreground shrink-0">
+                                  {s.type === "tag" ? "🏷️" : s.type === "name" ? "📄" : "📝"}
+                                </span>
+                                <span className="truncate">{s.text}</span>
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1.5 font-body">{t("library.searchPressEnter")}</p>
                 </div>
 
                 {/* Sort and Tag Filters */}
@@ -978,6 +1155,7 @@ export default function LibraryPage() {
                   onDuplicate={handleDuplicate}
                   onToggleFavorite={handleToggleFavorite}
                   onGenerateVariation={handleGenerateVariation}
+                  searchHighlight={debouncedSearch.trim() || undefined}
                 />
               </div>
             ))}

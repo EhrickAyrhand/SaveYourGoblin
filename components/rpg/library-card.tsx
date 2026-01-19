@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import type { ContentType, GeneratedContent, Character, Environment, Mission } from "@/types/rpg"
+import { highlightText } from "@/lib/highlight-text"
 import { RaceBadge } from "./race-badge"
 import { ClassBadge } from "./class-badge"
 import { LightingIndicator } from "./lighting-indicator"
@@ -36,7 +37,7 @@ interface LibraryCardProps {
   onGenerateVariation?: (item: LibraryContentItem) => void
 }
 
-export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavorite, onGenerateVariation }: LibraryCardProps) {
+export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavorite, onGenerateVariation, searchHighlight }: LibraryCardProps) {
   const t = useTranslations()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDuplicating, setIsDuplicating] = useState(false)
@@ -104,7 +105,7 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
         {/* Description below */}
         {shortDesc && (
           <p className="text-xs text-muted-foreground/80 text-center leading-relaxed line-clamp-2 max-w-full min-h-[40px]">
-            {shortDesc}
+            {searchHighlight ? highlightText(shortDesc, searchHighlight) : shortDesc}
           </p>
         )}
       </div>
@@ -173,7 +174,7 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
         {/* Description below */}
         {shortDesc && (
           <p className="text-xs text-muted-foreground/80 text-center leading-relaxed line-clamp-2 max-w-full min-h-[40px]">
-            {shortDesc}
+            {searchHighlight ? highlightText(shortDesc, searchHighlight) : shortDesc}
           </p>
         )}
       </div>
@@ -207,7 +208,7 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
         {/* Description below */}
         {shortDesc && (
           <p className="text-xs text-muted-foreground/80 text-center leading-relaxed line-clamp-2 max-w-full min-h-[40px]">
-            {shortDesc}
+            {searchHighlight ? highlightText(shortDesc, searchHighlight) : shortDesc}
           </p>
         )}
       </div>
@@ -292,7 +293,7 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
 
         {/* Name */}
         <CardTitle className="font-display text-xl md:text-2xl font-bold mb-4 text-center group-hover:text-primary transition-colors duration-300 break-words">
-          {getContentName()}
+          {searchHighlight ? highlightText(getContentName(), searchHighlight) : getContentName()}
         </CardTitle>
 
         {/* Spacer to push descriptions down */}
