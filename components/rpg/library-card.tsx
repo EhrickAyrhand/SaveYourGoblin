@@ -35,6 +35,8 @@ interface LibraryCardProps {
   onDuplicate?: (item: LibraryContentItem) => void
   onToggleFavorite?: (id: string, isFavorite: boolean) => void
   onGenerateVariation?: (item: LibraryContentItem) => void
+  /** When set, highlights matches of this term in the card title and description. */
+  searchHighlight?: string
 }
 
 export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavorite, onGenerateVariation, searchHighlight }: LibraryCardProps) {
