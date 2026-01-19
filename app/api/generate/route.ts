@@ -32,10 +32,6 @@ export async function POST(request: NextRequest) {
     advancedInput = parsed.advancedInput
     generationParams = parsed.generationParams
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/generate/route.ts:18',message:'Request body received',data:{scenario:scenario?.substring(0,100),contentType,advancedInput,generationParams},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-
     if (!scenario || !contentType) {
       return new Response(
         JSON.stringify({ error: 'Missing scenario or contentType' }),
@@ -50,17 +46,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/generate/route.ts:41',message:'Calling generateRPGContent',data:{scenarioLength:scenario.length,contentType,hasAdvancedInput:!!advancedInput,advancedInputKeys:advancedInput?Object.keys(advancedInput):[],generationParams},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
-
-    // Generate content using OpenAI (or fallback to mock if no API key)
+    // Generate content using OpenAI (requires OPENAI_API_KEY to be configured)
     const content = await generateRPGContent(scenario, contentType, advancedInput, generationParams)
-
-    // #region agent log
-    const contentForLog = content as any
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/generate/route.ts:44',message:'Content generated',data:{contentType,generatedLevel:contentForLog?.level,generatedClass:contentForLog?.class,generatedRace:contentForLog?.race,hasSpells:!!contentForLog?.spells?.length,spellCount:contentForLog?.spells?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     
     // Stream the response back
     const stream = new ReadableStream({
@@ -96,12 +83,6 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error: any) {
-    // #region agent log
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    const errorStack = error instanceof Error ? error.stack : undefined
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/generate/route.ts:89',message:'API route error caught',data:{errorMessage,errorStack,errorStatus:error?.status,hasAdvancedInput:!!advancedInput,generationParams},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'K'})}).catch(()=>{});
-    // #endregion
-
     console.error('Generation error:', error)
     
     // Handle authentication and verification errors

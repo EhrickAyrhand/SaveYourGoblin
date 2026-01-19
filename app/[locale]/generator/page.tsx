@@ -23,7 +23,7 @@ import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
 import { CharacterCard } from "@/components/rpg/character-card"
 import { EnvironmentCard } from "@/components/rpg/environment-card"
 import { MissionCard } from "@/components/rpg/mission-card"
-import type { ContentType, GeneratedContent, Character, Environment, Mission, AdvancedCharacterInput, AdvancedEnvironmentInput, AdvancedMissionInput, AdvancedGenerationParams } from "@/types/rpg"
+import type { ContentType, GeneratedContent, Character, Environment, Mission, AdvancedCharacterInput, AdvancedEnvironmentInput, AdvancedMissionInput } from "@/types/rpg"
 
 interface GeneratorState {
   generatedContent: GeneratedContent | null
@@ -61,11 +61,6 @@ export default function GeneratorPage() {
   const [advancedCharacterInput, setAdvancedCharacterInput] = useState<AdvancedCharacterInput>({})
   const [advancedEnvironmentInput, setAdvancedEnvironmentInput] = useState<AdvancedEnvironmentInput>({})
   const [advancedMissionInput, setAdvancedMissionInput] = useState<AdvancedMissionInput>({})
-  const [generationParams, setGenerationParams] = useState<AdvancedGenerationParams>({
-    temperature: 0.8,
-    tone: 'balanced',
-    complexity: 'standard',
-  })
   const generatedContentRef = useRef<HTMLDivElement>(null)
   const hasRestoredState = useRef(false)
   const previousUserRef = useRef<User | null>(null)
@@ -414,7 +409,6 @@ export default function GeneratorPage() {
               : contentType === 'environment' 
               ? advancedEnvironmentInput 
               : advancedMissionInput,
-            generationParams: generationParams,
           }),
         }),
       })
@@ -462,9 +456,6 @@ export default function GeneratorPage() {
       }
 
       if (!parsedContent) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/[locale]/generator/page.tsx:464',message:'No parsed content after reading stream',data:{bufferLength:buffer.length,bufferPreview:buffer.substring(0,200),hasResponse:!!response,responseStatus:response?.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-        // #endregion
         throw new Error("No content was generated")
       }
 
@@ -479,12 +470,6 @@ export default function GeneratorPage() {
         })
       }, 300)
     } catch (err) {
-      // #region agent log
-      const errorMessage = err instanceof Error ? err.message : String(err)
-      const errorStack = err instanceof Error ? err.stack : undefined
-      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/[locale]/generator/page.tsx:478',message:'Generation error in frontend',data:{errorMessage,errorStack,hasAdvancedMode:advancedMode,generationParams,contentType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'M'})}).catch(()=>{});
-      // #endregion
-
       setError(err instanceof Error ? err.message : "Failed to generate content. Please try again.")
       console.error(err)
     } finally {
@@ -1030,79 +1015,6 @@ export default function GeneratorPage() {
                     </div>
                   )}
 
-                  {/* Generation Parameters (All Content Types) */}
-                  <div className="space-y-4 p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl border-2 border-primary/30">
-                    <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.generation.title')}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="temperature" className="font-body text-sm font-semibold">
-                          {t('generator.advancedFields.generation.temperature')} ({generationParams.temperature?.toFixed(1) || '0.8'})
-                        </Label>
-                        <input
-                          id="temperature"
-                          type="range"
-                          min="0.1"
-                          max="1.5"
-                          step="0.1"
-                          value={generationParams.temperature || 0.8}
-                          onChange={(e) => setGenerationParams({
-                            ...generationParams,
-                            temperature: parseFloat(e.target.value)
-                          })}
-                          className="w-full"
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground font-body">
-                          <span>{t('generator.advancedFields.generation.temperatureLow')}</span>
-                          <span>{t('generator.advancedFields.generation.temperatureHigh')}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground font-body">
-                          {t('generator.advancedFields.generation.temperatureHelp')}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="tone" className="font-body text-sm font-semibold">
-                          {t('generator.advancedFields.generation.tone')}
-                        </Label>
-                        <select
-                          id="tone"
-                          value={generationParams.tone || 'balanced'}
-                          onChange={(e) => setGenerationParams({
-                            ...generationParams,
-                            tone: e.target.value as 'serious' | 'balanced' | 'playful'
-                          })}
-                          className="w-full px-3 py-2 rounded-lg border-2 border-primary/20 bg-background font-body"
-                        >
-                          <option value="serious">{t('generator.advancedFields.generation.toneSerious')}</option>
-                          <option value="balanced">{t('generator.advancedFields.generation.toneBalanced')}</option>
-                          <option value="playful">{t('generator.advancedFields.generation.tonePlayful')}</option>
-                        </select>
-                        <p className="text-xs text-muted-foreground font-body">
-                          {t('generator.advancedFields.generation.toneHelp')}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="complexity" className="font-body text-sm font-semibold">
-                          {t('generator.advancedFields.generation.complexity')}
-                        </Label>
-                        <select
-                          id="complexity"
-                          value={generationParams.complexity || 'standard'}
-                          onChange={(e) => setGenerationParams({
-                            ...generationParams,
-                            complexity: e.target.value as 'simple' | 'standard' | 'detailed'
-                          })}
-                          className="w-full px-3 py-2 rounded-lg border-2 border-primary/20 bg-background font-body"
-                        >
-                          <option value="simple">{t('generator.advancedFields.generation.complexitySimple')}</option>
-                          <option value="standard">{t('generator.advancedFields.generation.complexityStandard')}</option>
-                          <option value="detailed">{t('generator.advancedFields.generation.complexityDetailed')}</option>
-                        </select>
-                        <p className="text-xs text-muted-foreground font-body">
-                          {t('generator.advancedFields.generation.complexityHelp')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}

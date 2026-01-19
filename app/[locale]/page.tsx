@@ -28,17 +28,11 @@ export default function Home() {
       // This prevents users from accessing the app without changing their password
       // Even though Supabase session exists, we treat it as not logged in
       if (isRecoverySessionActive()) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/[locale]/page.tsx:26',message:'Recovery session active on home - hiding user',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         setUser(null) // Don't show user as logged in during recovery session
         return
       }
 
       const currentUser = await getCurrentUser()
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/[locale]/page.tsx:33',message:'Home page user check',data:{hasUser:!!currentUser,userEmail:currentUser?.email},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       setUser(currentUser)
     }
     checkAuth()

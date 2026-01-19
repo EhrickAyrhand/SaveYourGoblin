@@ -5,7 +5,7 @@
  */
 
 import { generateObject } from 'ai'
-import { openai } from '@ai-sdk/openai'
+import { createOpenAI } from '@ai-sdk/openai'
 import { z } from 'zod'
 import type {
   Character,
@@ -55,35 +55,33 @@ const classFeatureSchema = z.object({
 const skillSchema = z.object({
   name: z.string().describe('The skill name (e.g., Persuasion, Stealth)'),
   proficiency: z.boolean().describe('Whether the character is proficient in this skill'),
-  modifier: z.number().int().describe('The skill modifier (typically -5 to +10)'),
-})
-
-const attributesSchema = z.object({
-  strength: z.number().int().min(1).max(30).describe('Strength attribute value (1-30, typically 8-15 for starting characters)'),
-  dexterity: z.number().int().min(1).max(30).describe('Dexterity attribute value (1-30, typically 8-15 for starting characters)'),
-  constitution: z.number().int().min(1).max(30).describe('Constitution attribute value (1-30, typically 8-15 for starting characters)'),
-  intelligence: z.number().int().min(1).max(30).describe('Intelligence attribute value (1-30, typically 8-15 for starting characters)'),
-  wisdom: z.number().int().min(1).max(30).describe('Wisdom attribute value (1-30, typically 8-15 for starting characters)'),
-  charisma: z.number().int().min(1).max(30).describe('Charisma attribute value (1-30, typically 8-15 for starting characters)'),
+  modifier: z.number().describe('The skill modifier (ability modifier + proficiency bonus if proficient, or ability modifier + 2×proficiency bonus if expertise)'),
 })
 
 const characterSchema = z.object({
-  name: z.string().describe('The character\'s full name'),
-  race: z.string().describe('D&D 5e race (e.g., Human, Elf, Dwarf, Tiefling)'),
-  class: z.string().describe('D&D 5e class (e.g., Bard, Wizard, Fighter, Rogue)'),
-  level: z.number().int().min(1).max(20).describe('Character level (1-20)'),
-  background: z.string().describe('Character background (e.g., Entertainer, Sage, Noble)'),
-  history: z.string().describe('A detailed backstory and history of the character'),
-  personality: z.string().describe('A description of the character\'s personality traits and demeanor'),
-  attributes: attributesSchema.describe('D&D 5e ability scores (STR, DEX, CON, INT, WIS, CHA)'),
-  expertise: z.array(z.string()).describe('Array of skill names that the character has expertise in (double proficiency bonus). Typically 2-4 skills for classes like Rogue or Bard.'),
-  spells: z.array(spellSchema).describe('Array of spells the character knows'),
-  skills: z.array(skillSchema).describe('Array of skills with proficiency and modifiers'),
-  traits: z.array(z.string()).describe('Character traits, quirks, or notable features'),
-  racialTraits: z.array(z.string()).optional().describe('Array of racial traits and features (e.g., "Darkvision 60ft", "Hellish Resistance", "Infernal Legacy", "Fey Ancestry", "Dwarven Resilience"). Include all standard D&D 5e racial features for the character\'s race.'),
-  classFeatures: z.array(classFeatureSchema).optional().describe('Array of ALL mandatory class features for this class and level. MUST include every class feature the character has access to at their level. Examples: Barbarian (Level 3) should include Rage, Unarmored Defense, Reckless Attack, Danger Sense, Primal Path feature. Rogue (Level 3) should include Sneak Attack, Thieves\' Cant, Cunning Action, Expertise, Roguish Archetype feature. Every class has mandatory features that must be included, even non-spellcasting classes.'),
-  voiceDescription: z.string().describe('Voice description (e.g., "Hoarse voice", "Sweet voice", "Angry voice", "Deep voice", "Melodic voice", "Raspy voice") - NOT dialogue lines, just the voice quality/characteristics'),
-  associatedMission: z.string().optional().describe('Optional: Name of a related mission or quest'),
+  name: z.string().describe('The character\'s name'),
+  race: z.string().describe('The character\'s race (e.g., Human, Elf, Dwarf)'),
+  class: z.string().describe('The character\'s class (e.g., Fighter, Wizard, Rogue)'),
+  level: z.number().int().min(1).max(20).describe('The character\'s level (1-20)'),
+  background: z.string().describe('The character\'s background (e.g., Noble, Sage, Criminal)'),
+  history: z.string().describe('The character\'s backstory and history'),
+  personality: z.string().describe('The character\'s personality traits and quirks'),
+  attributes: z.object({
+    strength: z.number().int().min(1).max(20).describe('STR value (1-20)'),
+    dexterity: z.number().int().min(1).max(20).describe('DEX value (1-20)'),
+    constitution: z.number().int().min(1).max(20).describe('CON value (1-20)'),
+    intelligence: z.number().int().min(1).max(20).describe('INT value (1-20)'),
+    wisdom: z.number().int().min(1).max(20).describe('WIS value (1-20)'),
+    charisma: z.number().int().min(1).max(20).describe('CHA value (1-20)'),
+  }),
+  expertise: z.array(z.string()).describe('Array of skill names with expertise (e.g., ["Stealth", "Persuasion"])'),
+  spells: z.array(spellSchema).describe('Array of spells the character knows (empty for non-spellcasting classes)'),
+  skills: z.array(skillSchema).describe('Array of skills with proficiency flags and modifiers'),
+  traits: z.array(z.string()).describe('Array of personality traits and quirks'),
+  racialTraits: z.array(z.string()).optional().describe('Array of racial traits for the character\'s race (standard D&D 5e racial features)'),
+  classFeatures: z.array(classFeatureSchema).optional().describe('Array of class features for the character\'s class and level (ALL mandatory features)'),
+  voiceDescription: z.string().describe('Description of the character\'s voice (e.g., "Hoarse voice", "Sweet voice", "Commanding voice")'),
+  associatedMission: z.string().optional().describe('Optional associated mission or quest'),
 })
 
 const environmentSchema = z.object({
@@ -313,36 +311,27 @@ function validateCharacterSkills(character: Character): Character {
     'Survival': 'WIS',
   }
   
-  // Validate and correct skill modifiers
-  const validatedSkills = character.skills.map(skill => {
+  // Update skill modifiers
+  const updatedSkills = character.skills.map(skill => {
     const ability = skillToAbility[skill.name] || 'STR'
-    const baseMod = getSkillAbilityModifier(ability)
-    const isExpertise = character.expertise?.includes(skill.name) || false
-    const isProficient = skill.proficiency
+    const abilityModifier = getSkillAbilityModifier(ability)
+    const hasExpertise = character.expertise.includes(skill.name)
+    const correctModifier = abilityModifier + (skill.proficiency ? proficiencyBonus : 0) + (hasExpertise ? proficiencyBonus : 0)
     
-    // Calculate expected modifier
-    let expectedModifier = baseMod
-    if (isExpertise) {
-      expectedModifier = baseMod + (proficiencyBonus * 2)
-    } else if (isProficient) {
-      expectedModifier = baseMod + proficiencyBonus
-    }
-    
-    // Return skill with corrected modifier if needed
     return {
       ...skill,
-      modifier: expectedModifier,
+      modifier: correctModifier,
     }
   })
   
   return {
     ...character,
-    skills: validatedSkills,
+    skills: updatedSkills,
   }
 }
 
 /**
- * Generate RPG content using OpenAI GPT-4o-mini
+ * Generate RPG content using AI
  */
 export async function generateRPGContent(
   scenario: string,
@@ -350,27 +339,21 @@ export async function generateRPGContent(
   advancedInput?: AdvancedInput,
   generationParams?: AdvancedGenerationParams
 ): Promise<GeneratedContent> {
-  // Check if OpenAI API key is configured
-  const hasApiKey = !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim().length > 0
-  
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:354',message:'Checking OpenAI API key',data:{hasApiKey,apiKeyLength:process.env.OPENAI_API_KEY?.length||0,apiKeyPrefix:process.env.OPENAI_API_KEY?.substring(0,7)||'missing',willUseMock:!hasApiKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'N'})}).catch(()=>{});
-  // #endregion
-  
-  if (!hasApiKey) {
-    // Fallback to mock if no API key (for local development)
-    console.warn('OPENAI_API_KEY not found or empty, using mock data')
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:358',message:'Using mock data (API key missing)',data:{scenario:scenario.substring(0,100),contentType,hasAdvancedInput:!!advancedInput},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'O'})}).catch(()=>{});
-    // #endregion
-    return generateMockContent(scenario, contentType, advancedInput)
+  // Require OpenAI API key - no fallback to mock
+  const rawKey = process.env.OPENAI_API_KEY?.trim()
+  if (!rawKey || rawKey.length === 0) {
+    throw new Error('OPENAI_API_KEY is required but not configured. Add it to .env.local (local) or Vercel env (production).')
   }
+  // Valid OpenAI keys start with sk- or sk-proj-
+  if (!rawKey.startsWith('sk-') && !rawKey.startsWith('sk-proj-')) {
+    throw new Error(
+      'OPENAI_API_KEY must start with sk- or sk-proj-. The value in .env.local looks wrong. ' +
+      'Get a key from https://platform.openai.com/api-keys and set: OPENAI_API_KEY=sk-your-key (no quotes, no extra spaces).'
+    )
+  }
+  const openai = createOpenAI({ apiKey: rawKey })
 
   try {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:360',message:'generateRPGContent entry',data:{scenarioLength:scenario.length,contentType,hasAdvancedInput:!!advancedInput,advancedInput:advancedInput,generationParams},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-
     // Detect language from scenario text AND advanced inputs
     // Combine scenario with any text from advanced inputs for better detection
     let textForDetection = scenario
@@ -383,10 +366,6 @@ export async function generateRPGContent(
     
     let detectedLanguage = await detectLanguage(textForDetection)
     console.log('[AI Generation] Detected language:', detectedLanguage, 'for scenario:', scenario.substring(0, 100))
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:363',message:'Language detected',data:{detectedLanguage,scenarioPreview:scenario.substring(0,100),textForDetectionPreview:textForDetection.substring(0,150)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     
     // Validate detected language
     const validLanguages = ['English', 'Portuguese', 'Spanish']
@@ -492,10 +471,6 @@ export async function generateRPGContent(
           constraints.push(`The mission rewards MUST include: ${missionInput.rewardTypes.join(', ')}`)
         }
       }
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:379',message:'Building advanced constraints',data:{contentType,hasInput:!!input,input:input,normalizedClass:contentType==='character'?normalizeClassName((input as any)?.class):undefined,normalizedBackground:contentType==='character'?normalizeBackgroundName((input as any)?.background):undefined,constraints,constraintsCount:constraints.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       
       if (constraints.length === 0) return ''
       return `\n\n═══════════════════════════════════════════════════════\nCRITICAL USER REQUIREMENTS (MUST BE FOLLOWED EXACTLY):\n═══════════════════════════════════════════════════════\n${constraints.map(c => `• ${c}`).join('\n')}\n═══════════════════════════════════════════════════════\n\nThese requirements are ABSOLUTELY MANDATORY. The JSON output MUST match these specifications exactly. Do not deviate from these requirements.`
@@ -681,14 +656,7 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
         throw new Error(`Unknown content type: ${contentType}`)
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:571',message:'Before AI generation',data:{contentType,detectedLanguage,hasAdvancedConstraints:advancedConstraints.length>0,advancedConstraintsPreview:advancedConstraints.substring(0,200),userPromptPreview:userPrompt.substring(0,300),systemPromptPreview:systemPrompt.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-    // #endregion
-
-    // #region agent log
     const finalTemperature = Math.max(0.1, Math.min(1.5, temperature))
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:665',message:'Calling generateObject with params',data:{contentType,detectedLanguage,temperature:finalTemperature,generationParams,userPromptLength:userPrompt.length,systemPromptLength:systemPrompt.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-    // #endregion
 
     const result = await (generateObject as any)({
       model: openai('gpt-4o-mini'),
@@ -700,10 +668,6 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
     
     let object = result.object
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:679',message:'AI generation result received',data:{contentType,generatedLevel:object?.level,generatedClass:object?.class,generatedRace:object?.race,generatedBackground:object?.background,hasSpells:!!object?.spells?.length,spellNames:object?.spells?.map((s:any)=>s.name)||[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
-    // #endregion
-
     // Validate and correct skill modifiers for characters
     if (contentType === 'character' && 'skills' in object && 'level' in object && 'attributes' in object) {
       object = validateCharacterSkills(object as Character)
@@ -711,16 +675,9 @@ FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Mission 
 
     return object as GeneratedContent
   } catch (error) {
-    // #region agent log
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    const errorStack = error instanceof Error ? error.stack : undefined
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/ai.ts:690',message:'OpenAI generation error caught',data:{contentType,errorMessage,errorStack,hasAdvancedInput:!!advancedInput,generationParams,willFallbackToMock:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'J'})}).catch(()=>{});
-    // #endregion
-
     console.error('OpenAI generation error:', error)
-    // Fallback to mock on error
-    console.warn('Falling back to mock data due to error')
-    return generateMockContent(scenario, contentType, advancedInput)
+    // Re-throw error - no fallback to mock
+    throw error
   }
 }
 
@@ -820,7 +777,7 @@ export async function generateRPGContentSection(
     },
     background: {
       schema: z.string(),
-      description: 'backstory and background',
+      description: 'character background',
     },
     personality: {
       schema: z.string(),
@@ -831,19 +788,19 @@ export async function generateRPGContentSection(
   const environmentSections: Record<string, { schema: z.ZodType<any>, description: string }> = {
     npcs: {
       schema: z.array(z.string()),
-      description: 'NPCs present, each with name and short role description',
+      description: 'NPCs present in the environment',
     },
     features: {
       schema: z.array(z.string()),
-      description: 'notable features, objects, or architectural elements',
+      description: 'notable features and interactive elements',
     },
     adventureHooks: {
       schema: z.array(z.string()),
-      description: '2-3 concrete adventure hooks that can immediately involve the players',
+      description: 'adventure hooks that can involve players',
     },
     currentConflict: {
       schema: z.string(),
-      description: 'what is currently wrong or unstable in this location',
+      description: 'current conflict or instability in the location',
     },
   }
 
@@ -855,7 +812,7 @@ export async function generateRPGContentSection(
         isAlternative: z.boolean().optional(),
         pathType: z.enum(['combat', 'social', 'stealth', 'mixed']).optional(),
       })),
-      description: 'mission objectives (primary and optional)',
+      description: 'mission objectives',
     },
     rewards: {
       schema: z.object({
@@ -863,68 +820,57 @@ export async function generateRPGContentSection(
         gold: z.number().int().min(0).optional(),
         items: z.array(z.string()),
       }),
-      description: 'rewards for completing the mission',
+      description: 'mission rewards',
     },
     relatedNPCs: {
       schema: z.array(z.string()),
-      description: 'NPCs involved in or related to this mission',
+      description: 'NPCs related to the mission',
     },
     relatedLocations: {
       schema: z.array(z.string()),
-      description: 'locations relevant to this mission',
+      description: 'locations related to the mission',
     },
     powerfulItems: {
       schema: z.array(z.object({
         name: z.string(),
         status: z.string(),
-      })).optional(),
+      })),
       description: 'powerful items or artifacts in the mission',
     },
     possibleOutcomes: {
-      schema: z.array(z.string()).optional(),
-      description: '3-4 possible outcomes based on player choices',
+      schema: z.array(z.string()),
+      description: 'possible outcomes based on player choices',
+    },
+    context: {
+      schema: z.string(),
+      description: 'background context and setup',
     },
   }
 
-  // Get section config
-  let sectionConfig: { schema: z.ZodType<any>, description: string } | null = null
-  switch (contentType) {
-    case 'character':
-      sectionConfig = characterSections[section]
-      break
-    case 'environment':
-      sectionConfig = environmentSections[section]
-      break
-    case 'mission':
-      sectionConfig = missionSections[section]
-      break
+  let sectionConfig: { schema: z.ZodType<any>, description: string } | undefined
+
+  if (contentType === 'character') {
+    sectionConfig = characterSections[section]
+  } else if (contentType === 'environment') {
+    sectionConfig = environmentSections[section]
+  } else if (contentType === 'mission') {
+    sectionConfig = missionSections[section]
   }
 
   if (!sectionConfig) {
-    throw new Error(`Invalid section "${section}" for content type "${contentType}"`)
+    throw new Error(`Unknown section: ${contentType}:${section}`)
   }
 
   schema = sectionConfig.schema
 
-  // Build prompts based on content type and section
-  systemPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario is written in ${finalLanguage}. You MUST generate ALL content in ${finalLanguage}.
+  systemPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario is written in ${finalLanguage}. You MUST generate ALL content in ${finalLanguage}. This includes ALL text, descriptions, names, and every single word of output.
 
-You are regenerating only the "${section}" section of a ${contentType}. The rest of the content already exists and should not be changed. Generate ONLY the requested section data, maintaining consistency with the existing content.
+You are an expert D&D 5e game master. Regenerate ONLY the specified section of content, maintaining consistency with the rest of the content provided.
 
 FINAL REMINDER: All output MUST be in ${finalLanguage}.`
 
-  // Create context about existing content
-  const contextSummary = contentType === 'character'
-    ? `Character: ${currentContent.name}, ${currentContent.race} ${currentContent.class} (Level ${currentContent.level})`
-    : contentType === 'environment'
-    ? `Environment: ${currentContent.name}`
-    : `Mission: ${currentContent.title}`
+  userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${finalLanguage}. You MUST respond entirely in ${finalLanguage}. Every word, name, description, and text must be in ${finalLanguage}.
 
-  userPrompt = `CRITICAL LANGUAGE REQUIREMENT: Respond entirely in ${finalLanguage}.
-
-Regenerate the "${section}" section for this ${contentType}:
-
-Context: ${contextSummary}
 Original Scenario: "${scenario}"
 
 Current Content (for reference only - do NOT regenerate these):
@@ -934,17 +880,21 @@ Generate NEW ${sectionConfig.description} (ALL in ${finalLanguage}).
 
 Return ONLY the ${section} data in the required format. Do not include any other fields or explanations.`
 
-  // Check if OpenAI API key is available
-  const openaiApiKey = process.env.OPENAI_API_KEY
-  if (!openaiApiKey) {
-    console.warn('OpenAI API key not found, using mock data for section regeneration')
-    // Return mock section data
-    return generateMockSection(contentType, section, currentContent)
+  // Require OpenAI API key and validate format
+  const rawKeySection = process.env.OPENAI_API_KEY?.trim()
+  if (!rawKeySection || rawKeySection.length === 0) {
+    throw new Error('OPENAI_API_KEY is required but not configured. Add it to .env.local or Vercel env.')
   }
+  if (!rawKeySection.startsWith('sk-') && !rawKeySection.startsWith('sk-proj-')) {
+    throw new Error(
+      'OPENAI_API_KEY must start with sk- or sk-proj-. Fix the value in .env.local. Get a key from https://platform.openai.com/api-keys'
+    )
+  }
+  const openaiSection = createOpenAI({ apiKey: rawKeySection })
 
   try {
     const result = await (generateObject as any)({
-      model: openai('gpt-4o-mini'),
+      model: openaiSection('gpt-4o-mini'),
       schema,
       system: systemPrompt,
       prompt: userPrompt,
@@ -954,547 +904,7 @@ Return ONLY the ${section} data in the required format. Do not include any other
     return result.object
   } catch (error) {
     console.error('Section regeneration error:', error)
-    // Fallback to mock
-    return generateMockSection(contentType, section, currentContent)
-  }
-}
-
-function generateMockSection(contentType: ContentType, section: string, currentContent: any): any {
-  // Return mock section data based on section type
-  switch (`${contentType}:${section}`) {
-    case 'character:spells':
-      return []
-    case 'character:skills':
-      return []
-    case 'character:traits':
-      return ['Mock trait 1', 'Mock trait 2']
-    case 'character:racialTraits':
-      return ['Mock racial trait']
-    case 'character:classFeatures':
-      return []
-    case 'character:background':
-      return 'Mock background'
-    case 'character:personality':
-      return 'Mock personality'
-    case 'environment:npcs':
-      return ['Mock NPC']
-    case 'environment:features':
-      return ['Mock feature']
-    case 'environment:adventureHooks':
-      return ['Mock hook']
-    case 'environment:currentConflict':
-      return 'Mock conflict'
-    case 'mission:objectives':
-      return []
-    case 'mission:rewards':
-      return { items: [] }
-    case 'mission:relatedNPCs':
-      return []
-    case 'mission:relatedLocations':
-      return []
-    case 'mission:powerfulItems':
-      return []
-    case 'mission:possibleOutcomes':
-      return []
-    default:
-      throw new Error(`Unknown section: ${contentType}:${section}`)
-  }
-}
-
-// Fallback mock functions (kept for development/testing)
-function generateMockContent(scenario: string, contentType: ContentType, advancedInput?: AdvancedInput): GeneratedContent {
-  switch (contentType) {
-    case 'character':
-      return generateMockCharacter(scenario, advancedInput as AdvancedCharacterInput | undefined)
-    case 'environment':
-      return generateMockEnvironment(scenario, advancedInput as AdvancedEnvironmentInput | undefined)
-    case 'mission':
-      return generateMockMission(scenario, advancedInput as AdvancedMissionInput | undefined)
-    default:
-      throw new Error(`Unknown content type: ${contentType}`)
-  }
-}
-
-// Helper functions to normalize names for mock (same as in main function)
-function normalizeClassNameForMock(className?: string): string {
-  if (!className) return ''
-  const classMap: Record<string, string> = {
-    'warrior': 'Fighter',
-    'guerreiro': 'Fighter',
-    'fighter': 'Fighter',
-    'barbarian': 'Barbarian',
-    'bárbaro': 'Barbarian',
-    'rogue': 'Rogue',
-    'ladino': 'Rogue',
-    'bard': 'Bard',
-    'bardo': 'Bard',
-    'wizard': 'Wizard',
-    'mago': 'Wizard',
-    'cleric': 'Cleric',
-    'clérigo': 'Cleric',
-    'ranger': 'Ranger',
-    'patrulheiro': 'Ranger',
-    'paladin': 'Paladin',
-    'paladino': 'Paladin',
-    'monk': 'Monk',
-    'monge': 'Monk',
-    'sorcerer': 'Sorcerer',
-    'feiticeiro': 'Sorcerer',
-    'warlock': 'Warlock',
-    'bruxo': 'Warlock',
-    'druid': 'Druid',
-    'druida': 'Druid',
-  }
-  return classMap[className.trim().toLowerCase()] || className.trim()
-}
-
-function normalizeBackgroundNameForMock(background?: string): string {
-  if (!background) return ''
-  const backgroundMap: Record<string, string> = {
-    'artist': 'Entertainer',
-    'artista': 'Entertainer',
-    'entertainer': 'Entertainer',
-    'noble': 'Noble',
-    'nobre': 'Noble',
-    'sage': 'Sage',
-    'sábio': 'Sage',
-    'acolyte': 'Acolyte',
-    'acólito': 'Acolyte',
-    'criminal': 'Criminal',
-    'criminoso': 'Criminal',
-  }
-  return backgroundMap[background.trim().toLowerCase()] || background.trim()
-}
-
-function generateMockCharacter(scenario: string, advancedInput?: AdvancedCharacterInput): Character {
-  const races = ['Human', 'Elf', 'Dwarf', 'Halfling', 'Tiefling', 'Dragonborn', 'Gnome', 'Half-Elf']
-  const classes = ['Bard', 'Wizard', 'Fighter', 'Rogue', 'Cleric', 'Paladin', 'Ranger', 'Sorcerer']
-  const backgrounds = ['Entertainer', 'Sage', 'Noble', 'Criminal', 'Acolyte', 'Folk Hero', 'Hermit', 'Soldier']
-  const voiceDescriptions = ['Hoarse voice', 'Sweet voice', 'Angry voice', 'Deep voice', 'Melodic voice', 'Raspy voice', 'Gentle voice', 'Commanding voice', 'Whispery voice', 'Boisterous voice']
-  
-  // Use advanced input values if provided, otherwise use random
-  const race = advancedInput?.race || races[Math.floor(Math.random() * races.length)]
-  const charClassRaw = advancedInput?.class || classes[Math.floor(Math.random() * classes.length)]
-  const charClass = normalizeClassNameForMock(charClassRaw)
-  const backgroundRaw = advancedInput?.background || backgrounds[Math.floor(Math.random() * backgrounds.length)]
-  const background = normalizeBackgroundNameForMock(backgroundRaw)
-  const level = advancedInput?.level || Math.floor(Math.random() * 10) + 1
-
-  const nameMatch = scenario.match(/\b([A-Z][a-z]+)\b/)
-  const name = nameMatch ? nameMatch[1] : `${race} ${charClass}`
-
-  // Generate ability scores (standard array or point buy equivalent)
-  // One primary stat higher (15-17), secondary (13-15), others (10-12)
-  const primaryStat = 15 + Math.floor(Math.random() * 3) // 15-17
-  const secondaryStat = 13 + Math.floor(Math.random() * 3) // 13-15
-  const otherStats = Array(4).fill(0).map(() => 10 + Math.floor(Math.random() * 3)) // 10-12
-  
-  // Assign stats based on class
-  let attributes
-  if (charClass === 'Wizard' || charClass === 'Sorcerer') {
-    attributes = {
-      strength: otherStats[0],
-      dexterity: secondaryStat,
-      constitution: otherStats[1],
-      intelligence: primaryStat,
-      wisdom: otherStats[2],
-      charisma: otherStats[3],
-    }
-  } else if (charClass === 'Bard' || charClass === 'Paladin' || charClass === 'Sorcerer') {
-    attributes = {
-      strength: otherStats[0],
-      dexterity: secondaryStat,
-      constitution: otherStats[1],
-      intelligence: otherStats[2],
-      wisdom: otherStats[3],
-      charisma: primaryStat,
-    }
-  } else if (charClass === 'Rogue' || charClass === 'Ranger') {
-    attributes = {
-      strength: otherStats[0],
-      dexterity: primaryStat,
-      constitution: secondaryStat,
-      intelligence: otherStats[1],
-      wisdom: otherStats[2],
-      charisma: otherStats[3],
-    }
-  } else {
-    // Fighter, Paladin, etc.
-    attributes = {
-      strength: primaryStat,
-      dexterity: otherStats[0],
-      constitution: secondaryStat,
-      intelligence: otherStats[1],
-      wisdom: otherStats[2],
-      charisma: otherStats[3],
-    }
-  }
-
-  // Expertise for classes that get it (Rogue, Bard)
-  const expertise = (charClass === 'Rogue' || charClass === 'Bard')
-    ? ['Stealth', 'Persuasion'].slice(0, 2)
-    : []
-
-  // Calculate proficiency bonus for mock character
-  const mockProficiencyBonus = Math.floor((level + 7) / 4)
-  const getMockModifier = (score: number): number => Math.floor((score - 10) / 2)
-  
-  // Get racial traits based on race
-  const getRacialTraits = (raceName: string): string[] => {
-    const raceLower = raceName.toLowerCase()
-    if (raceLower.includes('tiefling')) {
-      return ['Darkvision 60ft', 'Hellish Resistance', 'Infernal Legacy']
-    } else if (raceLower.includes('elf')) {
-      return ['Darkvision 60ft', 'Fey Ancestry', 'Keen Senses', 'Trance']
-    } else if (raceLower.includes('dwarf')) {
-      return ['Darkvision 60ft', 'Dwarven Resilience', 'Stonecunning']
-    } else if (raceLower.includes('halfling')) {
-      return ['Brave', 'Halfling Luck', 'Nimble']
-    } else if (raceLower.includes('dragonborn')) {
-      return ['Draconic Ancestry', 'Breath Weapon', 'Damage Resistance']
-    } else if (raceLower.includes('gnome')) {
-      return ['Darkvision 60ft', 'Gnome Cunning']
-    } else if (raceLower.includes('half-elf')) {
-      return ['Darkvision 60ft', 'Fey Ancestry', 'Skill Versatility']
-    } else {
-      // Human - no standard racial traits in base 5e
-      return []
-    }
-  }
-  
-  const racialTraits = getRacialTraits(race)
-
-  // Get class features based on class and level
-  const getClassFeatures = (className: string, charLevel: number): Array<{name: string, description: string, level: number}> => {
-    const classLower = className.toLowerCase()
-    const features: Array<{name: string, description: string, level: number}> = []
-
-    if (classLower.includes('barbarian')) {
-      features.push({ name: 'Rage', description: 'In battle, you can enter a berserker rage, gaining advantage on Strength checks and saving throws, bonus damage, and resistance to bludgeoning, piercing, and slashing damage.', level: 1 })
-      features.push({ name: 'Unarmored Defense', description: 'While not wearing armor, your AC equals 10 + Dexterity modifier + Constitution modifier.', level: 1 })
-      if (charLevel >= 2) {
-        features.push({ name: 'Reckless Attack', description: 'When you make your first attack on your turn, you can decide to attack recklessly, giving you advantage on melee weapon attack rolls but attacks against you have advantage until your next turn.', level: 2 })
-        features.push({ name: 'Danger Sense', description: 'You gain advantage on Dexterity saving throws against effects you can see.', level: 2 })
-      }
-      if (charLevel >= 3) {
-        features.push({ name: 'Primal Path', description: 'You choose a path that shapes the nature of your rage.', level: 3 })
-      }
-    } else if (classLower.includes('rogue')) {
-      features.push({ name: 'Sneak Attack', description: 'Once per turn, you can deal extra damage to one creature you hit with an attack if you have advantage on the attack roll.', level: 1 })
-      features.push({ name: 'Thieves\' Cant', description: 'You learn the secret language of thieves, allowing you to hide messages in seemingly normal conversation.', level: 1 })
-      features.push({ name: 'Expertise', description: 'Your proficiency bonus is doubled for two skills of your choice.', level: 1 })
-      if (charLevel >= 2) {
-        features.push({ name: 'Cunning Action', description: 'Your quick thinking and agility allow you to take a bonus action on each of your turns to Dash, Disengage, or Hide.', level: 2 })
-      }
-      if (charLevel >= 3) {
-        features.push({ name: 'Roguish Archetype', description: 'You choose an archetype that reflects the nature of your training.', level: 3 })
-      }
-    } else if (classLower.includes('fighter')) {
-      features.push({ name: 'Fighting Style', description: 'You adopt a particular style of fighting as your specialty.', level: 1 })
-      features.push({ name: 'Second Wind', description: 'You have a limited well of stamina that you can draw on to protect yourself from harm. On your turn, you can use a bonus action to regain hit points.', level: 1 })
-      if (charLevel >= 2) {
-        features.push({ name: 'Action Surge', description: 'You can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action.', level: 2 })
-      }
-      if (charLevel >= 3) {
-        features.push({ name: 'Martial Archetype', description: 'You choose an archetype that embodies the martial traditions you follow.', level: 3 })
-      }
-    } else if (classLower.includes('monk')) {
-      features.push({ name: 'Unarmored Defense', description: 'While you are not wearing any armor, your AC equals 10 + Dexterity modifier + Wisdom modifier.', level: 1 })
-      features.push({ name: 'Martial Arts', description: 'Your practice of martial arts gives you mastery of combat styles that use unarmed strikes and monk weapons.', level: 1 })
-      if (charLevel >= 2) {
-        features.push({ name: 'Ki', description: 'Your training allows you to harness the mystic energy of ki. You have a number of ki points equal to your monk level.', level: 2 })
-        features.push({ name: 'Unarmored Movement', description: 'Your speed increases by 10 feet while you are not wearing armor or wielding a shield.', level: 2 })
-      }
-      if (charLevel >= 3) {
-        features.push({ name: 'Monastic Tradition', description: 'You commit yourself to a monastic tradition that shapes your technique and philosophy.', level: 3 })
-      }
-    } else if (classLower.includes('bard')) {
-      features.push({ name: 'Bardic Inspiration', description: 'You can inspire others through stirring words or music. A creature that has a Bardic Inspiration die can add it to one ability check, attack roll, or saving throw.', level: 1 })
-      features.push({ name: 'Spellcasting', description: 'You have learned to cast spells through your study of magic and music.', level: 1 })
-      if (charLevel >= 2) {
-        features.push({ name: 'Jack of All Trades', description: 'You can add half your proficiency bonus, rounded down, to any ability check you make that doesn\'t already include your proficiency bonus.', level: 2 })
-        features.push({ name: 'Song of Rest', description: 'You can use soothing music or oration to help revitalize your wounded allies during a short rest.', level: 2 })
-      }
-      if (charLevel >= 3) {
-        features.push({ name: 'Bard College', description: 'You delve into the advanced techniques of a bard college of your choice.', level: 3 })
-        features.push({ name: 'Expertise', description: 'Your proficiency bonus is doubled for two skills of your choice.', level: 3 })
-      }
-    } else if (classLower.includes('wizard')) {
-      features.push({ name: 'Spellcasting', description: 'As a student of arcane magic, you have a spellbook containing spells that show the first glimmerings of your true power.', level: 1 })
-      features.push({ name: 'Arcane Recovery', description: 'You have learned to regain some of your magical energy by studying your spellbook. Once per day when you finish a short rest, you can recover expended spell slots.', level: 1 })
-      if (charLevel >= 2) {
-        features.push({ name: 'Arcane Tradition', description: 'You choose an arcane tradition, shaping your practice of magic through one of eight schools.', level: 2 })
-      }
-    } else if (classLower.includes('cleric')) {
-      features.push({ name: 'Spellcasting', description: 'As a conduit for divine power, you can cast cleric spells.', level: 1 })
-      features.push({ name: 'Divine Domain', description: 'You choose a domain related to your deity, granting you domain spells and other features.', level: 1 })
-      if (charLevel >= 2) {
-        features.push({ name: 'Channel Divinity', description: 'You gain the ability to channel divine energy directly from your deity, using that energy to fuel magical effects.', level: 2 })
-      }
-    } else if (classLower.includes('paladin')) {
-      features.push({ name: 'Divine Sense', description: 'The presence of strong evil registers on your senses like a noxious odor, and powerful good rings like heavenly music in your ears.', level: 1 })
-      features.push({ name: 'Lay on Hands', description: 'Your blessed touch can heal wounds. You have a pool of healing power that replenishes when you take a long rest.', level: 1 })
-      if (charLevel >= 2) {
-        features.push({ name: 'Fighting Style', description: 'You adopt a particular style of fighting as your specialty.', level: 2 })
-        features.push({ name: 'Spellcasting', description: 'By 2nd level, you have learned to draw on divine magic through meditation and prayer to cast spells as a cleric does.', level: 2 })
-        features.push({ name: 'Divine Smite', description: 'When you hit a creature with a melee weapon attack, you can expend one spell slot to deal radiant damage to the target.', level: 2 })
-      }
-      if (charLevel >= 3) {
-        features.push({ name: 'Sacred Oath', description: 'When you reach 3rd level, you swear the oath that binds you as a paladin forever.', level: 3 })
-      }
-    } else if (classLower.includes('ranger')) {
-      features.push({ name: 'Favored Enemy', description: 'You have significant experience studying, tracking, hunting, and even talking to a certain type of enemy.', level: 1 })
-      features.push({ name: 'Natural Explorer', description: 'You are particularly familiar with one type of natural environment and are adept at traveling and surviving in such regions.', level: 1 })
-      if (charLevel >= 2) {
-        features.push({ name: 'Fighting Style', description: 'You adopt a particular style of fighting as your specialty.', level: 2 })
-        features.push({ name: 'Spellcasting', description: 'By the time you reach 2nd level, you have learned to use the magical essence of nature to cast spells.', level: 2 })
-      }
-      if (charLevel >= 3) {
-        features.push({ name: 'Ranger Archetype', description: 'You choose an archetype that you strive to emulate in your combat styles and techniques.', level: 3 })
-      }
-    } else if (classLower.includes('sorcerer')) {
-      features.push({ name: 'Spellcasting', description: 'An event in your past, or in the life of a parent or ancestor, left an indelible mark on you, infusing you with arcane magic.', level: 1 })
-      features.push({ name: 'Sorcerous Origin', description: 'Your innate magic comes from a magical bloodline, a connection to a powerful magical source, or exposure to raw magic.', level: 1 })
-      if (charLevel >= 2) {
-        features.push({ name: 'Font of Magic', description: 'You tap into a deep wellspring of magic within yourself. This wellspring is represented by sorcery points.', level: 2 })
-      }
-    }
-
-    return features
-  }
-
-  const classFeatures = getClassFeatures(charClass, level)
-
-  // Calculate skill modifiers correctly
-  const chaMod = getMockModifier(attributes.charisma)
-  const intMod = getMockModifier(attributes.intelligence)
-
-  return {
-    name,
-    race,
-    class: charClass,
-    level,
-    background,
-    history: `Born in a ${scenario.toLowerCase().includes('tavern') ? 'tavern' : 'distant land'}, ${name} has always been drawn to ${charClass.toLowerCase()} magic. Their past is shrouded in mystery, but their connection to ${scenario} is undeniable.`,
-    personality: `A ${charClass.toLowerCase()} with a ${background.toLowerCase()} background, ${name} is known for their quick wit and ${scenario.toLowerCase().includes('ancient') ? 'deep knowledge of ancient lore' : 'charming demeanor'}.`,
-    attributes,
-    expertise,
-    // Only include spells for spellcasting classes
-    spells: (charClass === 'Wizard' || charClass === 'Sorcerer' || charClass === 'Bard' || charClass === 'Cleric' || charClass === 'Paladin' || charClass === 'Ranger' || charClass === 'Warlock' || charClass === 'Druid')
-      ? [
-          { name: 'Magic Missile', level: 1, description: 'A dart of force strikes the target' },
-          { name: 'Charm Person', level: 1, description: 'Attempt to charm a humanoid' },
-          { name: 'Detect Magic', level: 1, description: 'Sense the presence of magic' },
-        ].slice(0, Math.min(3, level))
-      : [], // Non-spellcasting classes (Fighter, Barbarian, Rogue, Monk) get no spells
-    skills: [
-      { name: 'Persuasion', proficiency: true, modifier: chaMod + mockProficiencyBonus },
-      { name: 'Performance', proficiency: true, modifier: chaMod + mockProficiencyBonus },
-      { name: 'Investigation', proficiency: false, modifier: intMod },
-      { name: 'History', proficiency: true, modifier: intMod + mockProficiencyBonus },
-    ],
-    traits: [
-      'Quick to make friends',
-      'Loves telling stories',
-      'Always carries a musical instrument',
-    ],
-    racialTraits: racialTraits.length > 0 ? racialTraits : undefined,
-    classFeatures: classFeatures.length > 0 ? classFeatures : undefined,
-    voiceDescription: voiceDescriptions[Math.floor(Math.random() * voiceDescriptions.length)],
-    associatedMission: scenario.toLowerCase().includes('flute') ? 'The Lost Melody' : undefined,
-  }
-}
-
-function generateMockEnvironment(scenario: string, advancedInput?: AdvancedEnvironmentInput): Environment {
-  const isDark = scenario.toLowerCase().includes('dark') || scenario.toLowerCase().includes('abandoned')
-  const isTavern = scenario.toLowerCase().includes('tavern')
-  const isTower = scenario.toLowerCase().includes('tower')
-
-  let name = 'Mysterious Location'
-  if (isTavern) name = 'The Rusty Tankard'
-  if (isTower) name = 'The Abandoned Tower'
-  if (scenario.toLowerCase().includes('wizard')) name = "Wizard's Sanctum"
-
-  const currentConflict = isTavern
-    ? 'A heated argument between two merchants is escalating, and the tavern keeper is trying to calm them down before it turns violent.'
-    : isTower
-    ? 'Magical wards are failing, causing unpredictable magical effects throughout the tower.'
-    : 'Strange occurrences have been reported, and the locals are growing increasingly fearful.'
-
-  const adventureHooks = isTavern
-    ? [
-        'The merchants offer gold to anyone who can help resolve their dispute',
-        'A mysterious figure in the corner watches the party with keen interest',
-        'The tavern keeper mentions a missing shipment that needs investigating',
-      ]
-    : isTower
-    ? [
-        'A magical artifact at the top of the tower is causing the instability',
-        'Ancient guardians have awakened and are hostile to all intruders',
-        'A previous explorer left behind valuable notes about the tower\'s secrets',
-      ]
-    : [
-        'Locals are offering a reward for anyone who can solve the mystery',
-        'A witness claims to have seen something important but is too scared to talk',
-        'The strange occurrences follow a pattern that suggests a hidden cause',
-      ]
-
-  return {
-    name,
-    description: scenario || `A ${isDark ? 'dark and foreboding' : 'welcoming'} place that holds many secrets.`,
-    ambient: isDark 
-      ? 'Echoing footsteps, distant whispers, the creaking of old wood'
-      : 'Lively chatter, clinking mugs, crackling fire, bardic music',
-    mood: isDark ? 'Tense and mysterious' : 'Warm and inviting',
-    lighting: isDark ? 'Dim torchlight casting long shadows' : 'Warm firelight illuminating the space',
-    features: isTavern
-      ? ['Large fireplace', 'Bar counter with stools', 'Stage for performers', 'Private booths']
-      : isTower
-      ? ['Spiral staircase', 'Ancient library', 'Magical traps', 'Observation deck']
-      : ['Mysterious artifacts', 'Hidden passages', 'Magical auras'],
-    npcs: scenario.toLowerCase().includes('bard')
-      ? ['The Mysterious Bard - Performs nightly and knows many local secrets', 'Tavern Keeper - Owner who keeps a watchful eye on patrons', 'Local Patrons - Regulars who gossip about town happenings']
-      : ['Guardian Spirit - Protects the location from intruders', 'Ancient Wizard - Former owner who left behind magical research', 'Curious Apprentice - Seeks knowledge about the location\'s history'],
-    currentConflict,
-    adventureHooks,
-  }
-}
-
-function generateMockMission(scenario: string, advancedInput?: AdvancedMissionInput): Mission {
-  const hasArtifact = scenario.toLowerCase().includes('artifact') || scenario.toLowerCase().includes('flute')
-  const hasThieves = scenario.toLowerCase().includes('thief') || scenario.toLowerCase().includes('stolen')
-  const hasGuild = scenario.toLowerCase().includes('guild')
-
-  const title = hasArtifact
-    ? 'The Lost Artifact'
-    : hasThieves
-    ? 'Thieves\' Guild Infiltration'
-    : 'A Mysterious Quest'
-
-  const difficulty: 'easy' | 'medium' | 'hard' | 'deadly' =
-    hasGuild ? 'hard' : hasArtifact ? 'medium' : 'easy'
-
-  // Map difficulty to recommended level
-  const recommendedLevel = 
-    difficulty === 'easy' ? 'Level 1-3'
-    : difficulty === 'medium' ? 'Level 4-6'
-    : difficulty === 'hard' ? 'Level 7-10'
-    : 'Level 11+'
-
-  // Generate objectives with path types and alternatives
-  const objectives = hasArtifact
-    ? [
-        { description: 'Retrieve the stolen artifact', primary: true, pathType: 'mixed' as const },
-        { description: 'Negotiate with the sorceress for the artifact', primary: false, isAlternative: true, pathType: 'social' as const },
-        { description: 'Defeat the sorceress in combat', primary: false, isAlternative: true, pathType: 'combat' as const },
-        { description: 'Rescue any hostages', primary: false },
-      ]
-    : hasThieves
-    ? [
-        { description: 'Infiltrate the thieves\' guild hideout', primary: true, pathType: 'stealth' as const },
-        { description: 'Negotiate with the guild leader', primary: false, isAlternative: true, pathType: 'social' as const },
-        { description: 'Assault the hideout directly', primary: false, isAlternative: true, pathType: 'combat' as const },
-        { description: 'Rescue any hostages', primary: false },
-      ]
-    : [
-        { description: 'Complete the primary objective', primary: true, pathType: 'mixed' as const },
-        { description: 'Avoid detection', primary: false, pathType: 'stealth' as const },
-        { description: 'Rescue any hostages', primary: false },
-      ]
-
-  // Generate powerful items if artifact is mentioned
-  const powerfulItems = hasArtifact
-    ? [{ name: 'The Heart of Balance', status: 'Dormant Artifact (awakens later, DM-controlled)' }]
-    : undefined
-
-  // Generate possible outcomes
-  const possibleOutcomes = hasArtifact
-    ? [
-        'If artifact is retrieved and sealed → Balance is maintained, but factions seek it later',
-        'If artifact is destroyed → Imbalance spreads, magical instability increases',
-        'If artifact is kept by party → Future consequences arise, attracts powerful enemies',
-        'If negotiation succeeds → Alliance formed, but artifact remains a threat',
-      ]
-    : hasThieves
-    ? [
-        'If guild is infiltrated successfully → Information gained, but guild becomes hostile',
-        'If negotiation succeeds → Temporary alliance, but guild demands favors',
-        'If combat is chosen → Guild is weakened, but other criminal groups take notice',
-        'If hostages are rescued → Reputation gained, but guild seeks revenge',
-      ]
-    : [
-        'If primary objective succeeds → Quest giver becomes ally',
-        'If stealth approach is used → Information gained without confrontation',
-        'If hostages are rescued → Additional rewards and reputation',
-      ]
-
-  // Generate choice-based rewards
-  const choiceBasedRewards = hasArtifact
-    ? [
-        {
-          condition: 'If negotiated with sorceress',
-          rewards: {
-            xp: 300,
-            gold: 150,
-            items: ['Alliance Favor', 'Ancient Knowledge Scroll'],
-          },
-        },
-        {
-          condition: 'If combat is chosen',
-          rewards: {
-            xp: 500,
-            gold: 250,
-            items: ['Sorceress\'s Staff', 'Combat Loot'],
-          },
-        },
-      ]
-    : hasThieves
-    ? [
-        {
-          condition: 'If negotiation succeeds',
-          rewards: {
-            xp: 400,
-            gold: 200,
-            items: ['Guild Favor', 'Information Package'],
-          },
-        },
-        {
-          condition: 'If combat is chosen',
-          rewards: {
-            xp: 600,
-            gold: 300,
-            items: ['Guild Leader\'s Dagger', 'Stolen Goods'],
-          },
-        },
-      ]
-    : undefined
-
-  return {
-    title,
-    description: scenario || 'A quest that will test the heroes\' resolve and skills.',
-    context: hasArtifact
-      ? 'An ancient artifact of great power has been stolen, and the heroes must retrieve it before it falls into the wrong hands.'
-      : hasThieves
-      ? 'The local thieves\' guild has been causing trouble, and someone needs to put a stop to their activities.'
-      : 'A mysterious figure has approached the heroes with an offer they cannot refuse.',
-    objectives,
-    rewards: {
-      xp: difficulty === 'easy' ? 200 : difficulty === 'medium' ? 500 : difficulty === 'hard' ? 1000 : 2000,
-      gold: difficulty === 'easy' ? 100 : difficulty === 'medium' ? 250 : difficulty === 'hard' ? 500 : 1000,
-      items: hasArtifact
-        ? ['Magical Scroll', 'Potion of Healing']
-        : ['Thieves\' Tools', 'Lockpicks', 'Smoke Bomb'],
-    },
-    difficulty,
-    recommendedLevel,
-    powerfulItems,
-    possibleOutcomes,
-    choiceBasedRewards,
-    relatedNPCs: hasGuild
-      ? ['Guild Master', 'Thief Leader', 'Innocent Bystander']
-      : ['Quest Giver', 'Ancient Guardian', 'Mysterious Benefactor'],
-    relatedLocations: hasGuild
-      ? ['Thieves\' Guild Hideout', 'City Streets', 'Underground Tunnels']
-      : ['Ancient Ruins', 'Mysterious Tower', 'Hidden Temple'],
+    // Re-throw error - no fallback to mock
+    throw error
   }
 }

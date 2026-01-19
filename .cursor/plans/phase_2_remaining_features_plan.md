@@ -155,10 +155,16 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
 ---
 
 ### Priority 4: Advanced Prompts/Structured Inputs ⭐⭐⭐
-**Status**: Partially started  
+**Status**: Partially started (Generation Parameters Temporarily Removed)  
 **Complexity**: High  
 **Dependencies**: Generator page, AI generation  
 **Estimated Time**: 7-10 days
+
+**⚠️ NOTE**: Generation Parameters (Temperature, Tone, Complexity) were temporarily removed from the UI due to issues with AI prompt engineering. These controls were not properly affecting the generated content and caused inconsistent behavior. This feature needs to be reimplemented in the future with:
+- Proper prompt engineering to ensure parameters actually affect output
+- Better integration with AI generation logic
+- Thorough testing with various parameter combinations
+- Clear documentation on what each parameter does
 
 **Implementation Steps**:
 

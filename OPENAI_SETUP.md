@@ -63,4 +63,4 @@ OPENAI_API_KEY=sk-your-api-key-here
 - **"OPENAI_API_KEY not found"**: Make sure you added it to Vercel and redeployed
 - **"Rate limit exceeded"**: You've hit OpenAI's rate limit, wait a moment
 - **"Invalid API key"**: Check that you copied the key correctly
-- **Still getting mock data**: The code falls back to mocks if there's an error - check Vercel logs
+- **"Failed to generate content"**: Check Vercel logs for OpenAI API errors

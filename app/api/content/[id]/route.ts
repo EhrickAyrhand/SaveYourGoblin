@@ -75,10 +75,6 @@ export async function PATCH(
       })
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/content/[id]/route.ts:85',message:'Before PATCH update',data:{id,updates:Object.keys(updates)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-
     // Update content (RLS ensures user can only update their own content)
     let { data, error } = await supabase
       .from('generated_content')
@@ -88,16 +84,8 @@ export async function PATCH(
       .select()
       .single()
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/content/[id]/route.ts:95',message:'After PATCH update attempt',data:{hasError:!!error,errorCode:error?.code,errorMessage:error?.message,hasData:!!data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
-
     // If error is due to missing columns (migration not run), return error with helpful message
     if (error && (error.code === 'PGRST204' || error.code === '42703')) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/content/[id]/route.ts:99',message:'Column missing error in PATCH',data:{errorCode:error.code,errorMessage:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
       // Check which column is missing
       const missingColumn = error.message.includes('is_favorite') ? 'is_favorite' :
                            error.message.includes('notes') ? 'notes' :

@@ -58,9 +58,6 @@ export function ContentDetailModal({
 
   // Load linked content when item changes
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'content-detail-modal.tsx:58',message:'useEffect triggered for linked content',data:{isOpen,itemId:item.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     if (isOpen && item.id) {
       // Clear linked content immediately when item changes to prevent stale data during render
       setLinkedContent({ outgoing: [], incoming: [] })
@@ -78,10 +75,6 @@ export function ContentDetailModal({
         return
       }
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'content-detail-modal.tsx:67',message:'loadLinkedContent called',data:{contentId,currentItemId:item.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
-
       const response = await fetch(`/api/content/${contentId}/links`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -90,9 +83,6 @@ export function ContentDetailModal({
 
       if (response.ok) {
         const result = await response.json()
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/f36a4b61-b46c-4425-8755-db39bb2e81e7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'content-detail-modal.tsx:81',message:'Linked content loaded',data:{requestedContentId:contentId,currentItemId:item.id,outgoingCount:result.data?.outgoing?.length || 0,incomingCount:result.data?.incoming?.length || 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         setLinkedContent(result.data || { outgoing: [], incoming: [] })
       }
     } catch (err) {
