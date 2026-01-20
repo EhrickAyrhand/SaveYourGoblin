@@ -39,6 +39,59 @@ interface GeneratorState {
   timestamp: number
 }
 
+interface GeneratorPreferences {
+  advancedMode?: boolean
+  advancedCharacterInput?: AdvancedCharacterInput
+  advancedEnvironmentInput?: AdvancedEnvironmentInput
+  advancedMissionInput?: AdvancedMissionInput
+  generationParams?: AdvancedGenerationParams
+}
+
+const DEFAULT_GENERATION_PARAMS: Required<AdvancedGenerationParams> = {
+  temperature: 0.8,
+  tone: "balanced",
+  complexity: "standard",
+}
+
+const normalizeGenerationParams = (
+  input?: Partial<AdvancedGenerationParams> | null
+): AdvancedGenerationParams => {
+  const temperatureRaw =
+    typeof input?.temperature === "number" && Number.isFinite(input.temperature)
+      ? input.temperature
+      : DEFAULT_GENERATION_PARAMS.temperature
+  const temperature = Math.min(1.5, Math.max(0.1, temperatureRaw))
+  const tone =
+    input?.tone === "serious" || input?.tone === "playful" || input?.tone === "balanced"
+      ? input.tone
+      : DEFAULT_GENERATION_PARAMS.tone
+  const complexity =
+    input?.complexity === "simple" || input?.complexity === "standard" || input?.complexity === "detailed"
+      ? input.complexity
+      : DEFAULT_GENERATION_PARAMS.complexity
+
+  return {
+    temperature,
+    tone,
+    complexity,
+  }
+}
+
+const normalizeAdvancedCharacterInput = (input: unknown): AdvancedCharacterInput => {
+  const result = advancedCharacterInputSchema.safeParse(input ?? {})
+  return result.success ? result.data : {}
+}
+
+const normalizeAdvancedEnvironmentInput = (input: unknown): AdvancedEnvironmentInput => {
+  const result = advancedEnvironmentInputSchema.safeParse(input ?? {})
+  return result.success ? result.data : {}
+}
+
+const normalizeAdvancedMissionInput = (input: unknown): AdvancedMissionInput => {
+  const result = advancedMissionInputSchema.safeParse(input ?? {})
+  return result.success ? result.data : {}
+}
+
 export default function GeneratorPage() {
   const t = useTranslations()
   const locale = useLocale()
@@ -69,12 +122,11 @@ export default function GeneratorPage() {
   const [advancedCharacterInput, setAdvancedCharacterInput] = useState<AdvancedCharacterInput>({})
   const [advancedEnvironmentInput, setAdvancedEnvironmentInput] = useState<AdvancedEnvironmentInput>({})
   const [advancedMissionInput, setAdvancedMissionInput] = useState<AdvancedMissionInput>({})
-  const [generationParams, setGenerationParams] = useState<AdvancedGenerationParams>({
-    temperature: 0.8,
-    tone: 'balanced',
-    complexity: 'standard',
-  })
+  const [generationParams, setGenerationParams] = useState<AdvancedGenerationParams>(() => ({
+    ...DEFAULT_GENERATION_PARAMS,
+  }))
   const [advancedFieldErrors, setAdvancedFieldErrors] = useState<Record<string, string>>({})
+  const [hasRestoredPreferences, setHasRestoredPreferences] = useState(false)
   const generatedContentRef = useRef<HTMLDivElement>(null)
   const hasRestoredState = useRef(false)
   const previousUserRef = useRef<User | null>(null)
@@ -135,6 +187,57 @@ export default function GeneratorPage() {
     }
   }, [user])
 
+  // Restore advanced preferences from localStorage on mount
+  useEffect(() => {
+    if (!user || hasRestoredPreferences) return
+
+    try {
+      const savedPreferences = localStorage.getItem(`generator_preferences_${user.id}`)
+      if (savedPreferences) {
+        const parsed = JSON.parse(savedPreferences) as GeneratorPreferences | null
+
+        if (parsed && typeof parsed === "object") {
+          setAdvancedMode(typeof parsed.advancedMode === "boolean" ? parsed.advancedMode : false)
+          setAdvancedCharacterInput(normalizeAdvancedCharacterInput(parsed.advancedCharacterInput))
+          setAdvancedEnvironmentInput(normalizeAdvancedEnvironmentInput(parsed.advancedEnvironmentInput))
+          setAdvancedMissionInput(normalizeAdvancedMissionInput(parsed.advancedMissionInput))
+          setGenerationParams(normalizeGenerationParams(parsed.generationParams))
+        }
+      }
+    } catch (err) {
+      console.error("Failed to restore generator preferences:", err)
+    } finally {
+      setHasRestoredPreferences(true)
+    }
+  }, [user, hasRestoredPreferences])
+
+  // Save advanced preferences to localStorage whenever they change
+  useEffect(() => {
+    if (!user || !hasRestoredPreferences) return
+    if (previousUserRef.current && previousUserRef.current.id !== user.id) return
+
+    try {
+      const preferences: GeneratorPreferences = {
+        advancedMode,
+        advancedCharacterInput,
+        advancedEnvironmentInput,
+        advancedMissionInput,
+        generationParams: normalizeGenerationParams(generationParams),
+      }
+      localStorage.setItem(`generator_preferences_${user.id}`, JSON.stringify(preferences))
+    } catch (err) {
+      console.error("Failed to save generator preferences:", err)
+    }
+  }, [
+    advancedMode,
+    advancedCharacterInput,
+    advancedEnvironmentInput,
+    advancedMissionInput,
+    generationParams,
+    user,
+    hasRestoredPreferences,
+  ])
+
   // Save state to localStorage when it changes
   useEffect(() => {
     if (!user || !hasRestoredState.current) return
@@ -159,6 +262,13 @@ export default function GeneratorPage() {
       setGeneratedContent(null)
       setScenario("")
       setContentType("character")
+      setAdvancedMode(false)
+      setAdvancedCharacterInput({})
+      setAdvancedEnvironmentInput({})
+      setAdvancedMissionInput({})
+      setGenerationParams({ ...DEFAULT_GENERATION_PARAMS })
+      setAdvancedFieldErrors({})
+      setHasRestoredPreferences(false)
     }
     previousUserRef.current = user
   }, [user])
@@ -616,6 +726,13 @@ export default function GeneratorPage() {
   const handleInsertToAdvanced = (field: "class" | "race" | "background", value: string) => {
     if (contentType === "character") setAdvancedCharacterInput((prev) => ({ ...prev, [field]: value }))
   }
+  const handleResetAdvancedDefaults = () => {
+    setAdvancedCharacterInput({})
+    setAdvancedEnvironmentInput({})
+    setAdvancedMissionInput({})
+    setGenerationParams({ ...DEFAULT_GENERATION_PARAMS })
+    setAdvancedFieldErrors({})
+  }
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -841,9 +958,20 @@ export default function GeneratorPage() {
                   {advancedMode && (
                     <div className="space-y-6 pt-4 border-t border-primary/20">
                       <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-4">
-                          <span className="text-xl">⚙️</span>
-                          <h3 className="font-display text-xl font-semibold">{t('generator.advancedModeDescription')}</h3>
+                        <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">⚙️</span>
+                            <h3 className="font-display text-xl font-semibold">{t('generator.advancedModeDescription')}</h3>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleResetAdvancedDefaults}
+                            className="font-body"
+                          >
+                            {t('generator.resetDefaults')}
+                          </Button>
                         </div>
 
                         {/* Character Advanced Fields */}

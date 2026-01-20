@@ -132,6 +132,7 @@
     "simpleMode": "Simple Mode",
     "advancedMode": "Advanced Mode",
     "advancedModeDescription": "Use structured inputs and custom parameters for more precise generation",
+    "resetDefaults": "Reset to Defaults",
     "advancedValidationError": "Please fix the errors in the advanced options below.",
     "exampleList": "Example List",
     "exampleListDescription": "Reference for your scenario and advanced fields.",
