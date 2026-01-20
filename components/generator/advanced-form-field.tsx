@@ -35,21 +35,28 @@ export function AdvancedFormField({
   children,
 }: AdvancedFormFieldProps) {
   return (
-    <div className={cn("space-y-2", wrapperClassName, className)}>
+    <div
+      className={cn(
+        "space-y-2 rounded-lg border border-primary/15 bg-background/40 p-3 shadow-sm",
+        "transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/20",
+        wrapperClassName,
+        className
+      )}
+    >
       <Label
         htmlFor={htmlFor}
-        className={cn("font-body text-sm font-semibold", error && "text-destructive")}
+        className={cn("font-body text-base font-semibold tracking-wide", error && "text-destructive")}
       >
         {label}
       </Label>
-      {children}
+      <div className="w-full">{children}</div>
       {error && (
-        <p className="text-xs font-medium text-destructive font-body" role="alert">
+        <p className="text-sm font-medium text-destructive font-body" role="alert">
           {error}
         </p>
       )}
       {help && !error && (
-        <p className="text-xs text-muted-foreground font-body">{help}</p>
+        <p className="text-sm text-muted-foreground font-body leading-relaxed">{help}</p>
       )}
     </div>
   )

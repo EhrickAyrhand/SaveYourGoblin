@@ -132,6 +132,7 @@
     "simpleMode": "Modo Simple",
     "advancedMode": "Modo Avanzado",
     "advancedModeDescription": "Usa entradas estructuradas y parámetros personalizados para una generación más precisa",
+    "resetDefaults": "Restablecer valores predeterminados",
     "advancedValidationError": "Corrije los errores en las opciones avanzadas.",
     "exampleList": "Lista de ejemplos",
     "exampleListDescription": "Referencia para tu escenario y campos avanzados.",
