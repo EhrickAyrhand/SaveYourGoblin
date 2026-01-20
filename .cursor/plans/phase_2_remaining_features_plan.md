@@ -186,8 +186,8 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
    - [x] Add "Advanced Options" expandable section in generator (⚙️ Advanced mode)
    - [x] Create collapsible form sections (Character, Environment, Mission, Generation Parameters)
    - [x] Add input placeholders and help text under each field
-   - [ ] Add "Reset to Defaults" button (optional)
-   - [ ] Save user preferences for structured inputs (optional)
+   - [x] Add "Reset to Defaults" button (optional)
+   - [x] Save user preferences for structured inputs (optional)
 
 ---
 
