@@ -18,6 +18,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { AdvancedFormField } from "@/components/generator/advanced-form-field"
+import { ExampleListSidebar } from "@/components/generator/example-list-sidebar"
 import {
   advancedCharacterInputSchema,
   advancedEnvironmentInputSchema,
@@ -608,6 +609,13 @@ export default function GeneratorPage() {
     return null
   }
 
+  const handleInsertToScenario = (text: string) => {
+    setScenario((prev) => (prev || "").trim() + (prev ? " " : "") + text)
+  }
+  const handleInsertToAdvanced = (field: "class" | "race" | "background", value: string) => {
+    if (contentType === "character") setAdvancedCharacterInput((prev) => ({ ...prev, [field]: value }))
+  }
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center gap-2 pt-4">
@@ -635,7 +643,7 @@ export default function GeneratorPage() {
         )}
       </div>
       
-      <div className="mx-auto max-w-5xl space-y-6 pt-4">
+      <div className={`mx-auto space-y-6 pt-4 ${advancedMode ? "max-w-6xl" : "max-w-5xl"}`}>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="min-w-0">
             <h1 className="font-display text-5xl font-bold mb-3 whitespace-nowrap">{t('generator.title')}</h1>
@@ -667,6 +675,9 @@ export default function GeneratorPage() {
           </Alert>
         )}
 
+        {(() => {
+          const main = () => (
+            <>
         <Card className="parchment ornate-border">
           <CardHeader>
             <CardTitle className="font-display text-3xl mb-2">{t('generator.cardTitle')}</CardTitle>
@@ -1276,6 +1287,18 @@ export default function GeneratorPage() {
             </CardContent>
           </Card>
         </div>
+            </>
+          );
+          return advancedMode ? (
+<div className="space-y-6">
+  {/* Conteúdo principal */}
+</div>
+) : (
+  <div className="space-y-6">
+    {main()}
+  </div>
+);
+        })()}
 
         {isGenerating && !generatedContent && (
           <Card className="parchment ornate-border animate-in fade-in border-2 border-primary/30">

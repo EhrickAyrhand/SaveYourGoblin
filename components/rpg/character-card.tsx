@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import type { Character } from "@/types/rpg"
 import { StatBar } from "./stat-bar"
 import { SkillBar } from "./skill-bar"
@@ -18,6 +19,9 @@ import { RaceBadge } from "./race-badge"
 interface CharacterCardProps {
   character: Character
   isLoading?: boolean
+  onRegenerateSection?: (sectionId: string) => void
+  regeneratingSection?: string | null
+  regenerateLabel?: (sectionId: string) => string
 }
 
 // Standard D&D 5e skills list
@@ -42,7 +46,7 @@ const DND_SKILLS = [
   { name: 'Survival', ability: 'WIS' },
 ] as const
 
-export function CharacterCard({ character, isLoading = false }: CharacterCardProps) {
+export function CharacterCard({ character, isLoading = false, onRegenerateSection, regeneratingSection, regenerateLabel }: CharacterCardProps) {
   const t = useTranslations()
   const [expandedSections, setExpandedSections] = useState<{
     spells: boolean
@@ -259,9 +263,16 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                     </p>
                   </div>
                 </div>
-                <span className="px-2 py-1 bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 rounded text-xs font-bold">
-                  {DND_SKILLS.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  {onRegenerateSection && (
+                    <Button variant="ghost" size="sm" onClick={() => onRegenerateSection('skills')} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('skills')}>
+                      {regeneratingSection === 'skills' ? '⏳' : '↻'}
+                    </Button>
+                  )}
+                  <span className="px-2 py-1 bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 rounded text-xs font-bold">
+                    {DND_SKILLS.length}
+                  </span>
+                </div>
               </div>
               <div className="space-y-3 text-base font-body">
               {DND_SKILLS.map((skill) => {
@@ -286,18 +297,18 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
           </div>
 
           {/* Right Column: Additional Info */}
-          <div className="space-y-3 h-fit">
+            <div className="space-y-3 h-fit min-w-0">
             {/* Expertise */}
             {character.expertise && character.expertise.length > 0 && (
-              <div className="border-2 border-blue-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent">
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
+              <div className="border-2 border-blue-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent min-w-0">
+                <div className="p-4 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="w-10 h-10 rounded-lg bg-blue-500/20 border-2 border-blue-500/30 flex items-center justify-center text-xl flex-shrink-0">
                         ⭐
                       </div>
-                      <div className="text-left">
-                        <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                      <div className="text-left min-w-0 flex-1">
+                        <h3 className="font-display text-xl font-semibold break-words">
                           {t('rpg.expertise')}
                         </h3>
                         <p className="text-xs text-muted-foreground font-body mt-0.5">
@@ -305,7 +316,7 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                         </p>
                       </div>
                     </div>
-                    <span className="px-2 py-1 bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded text-xs font-bold">
+                    <span className="px-2 py-1 bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 rounded text-xs font-bold flex-shrink-0">
                       {character.expertise.length}
                     </span>
                   </div>
@@ -326,17 +337,17 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                       return (
                         <div
                           key={idx}
-                          className={`p-3 rounded-lg bg-gradient-to-r ${colorClass} border-2 hover:scale-[1.02] transition-all flex items-center justify-between`}
+                          className={`p-3 rounded-lg bg-gradient-to-r ${colorClass} border-2 hover:scale-[1.02] transition-all flex items-center justify-between gap-2 min-w-0`}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
                             <div className="w-8 h-8 rounded-full bg-background/50 border-2 border-current/30 flex items-center justify-center text-xs font-bold flex-shrink-0">
                               {ability}
                             </div>
-                            <span className="font-body font-semibold text-sm">{skillName}</span>
+                            <span className="font-body font-semibold text-sm truncate">{skillName}</span>
                           </div>
-                          <div className="flex items-center gap-1 text-xs font-bold opacity-75">
-                            <span>⭐</span>
-                            <span>{t('rpg.expertise')}</span>
+                          <div className="flex items-center gap-1 text-xs font-bold opacity-75 min-w-0 overflow-hidden" title={t('rpg.expertise')}>
+                            <span className="flex-shrink-0">⭐</span>
+                            <span className="block truncate min-w-0">{t('rpg.expertise')}</span>
                           </div>
                         </div>
                       )
@@ -348,17 +359,20 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
 
             {/* Racial Traits */}
             {character.racialTraits && character.racialTraits.length > 0 && (
-              <div className="border-2 border-purple-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent">
-                <button
+              <div className="border-2 border-purple-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent min-w-0">
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggleSection("racialTraits")}
-                  className="w-full p-4 hover:bg-purple-500/10 transition-colors flex items-center justify-between"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection("racialTraits"); } }}
+                  className="w-full p-4 hover:bg-purple-500/10 transition-colors flex items-center justify-between gap-2 min-w-0 cursor-pointer"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-10 h-10 rounded-lg bg-purple-500/20 border-2 border-purple-500/30 flex items-center justify-center text-xl flex-shrink-0">
                       🧬
                     </div>
-                    <div className="text-left">
-                      <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                    <div className="text-left min-w-0 flex-1">
+                      <h3 className="font-display text-xl font-semibold break-words">
                         {t('rpg.racialTraits')}
                       </h3>
                       <p className="text-xs text-muted-foreground font-body mt-0.5">
@@ -367,6 +381,11 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {onRegenerateSection && (
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onRegenerateSection('racialTraits') }} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('racialTraits')}>
+                        {regeneratingSection === 'racialTraits' ? '⏳' : '↻'}
+                      </Button>
+                    )}
                     <span className="px-2 py-1 bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30 rounded text-xs font-bold">
                       {character.racialTraits.length}
                     </span>
@@ -374,7 +393,7 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                       {expandedSections.racialTraits ? "▼" : "▶"}
                     </span>
                   </div>
-                </button>
+                </div>
                 {expandedSections.racialTraits && (
                   <div className="p-4 pt-0 space-y-3">
                     {character.racialTraits.map((trait, idx) => (
@@ -397,17 +416,20 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
 
             {/* Class Features */}
             {character.classFeatures && character.classFeatures.length > 0 && (
-              <div className="border-2 border-primary/30 rounded-xl overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
-                <button
+              <div className="border-2 border-primary/30 rounded-xl overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent min-w-0">
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggleSection("classFeatures")}
-                  className="w-full p-4 hover:bg-primary/10 transition-colors flex items-center justify-between"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection("classFeatures"); } }}
+                  className="w-full p-4 hover:bg-primary/10 transition-colors flex items-center justify-between gap-2 min-w-0 cursor-pointer"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-10 h-10 rounded-lg bg-primary/20 border-2 border-primary/30 flex items-center justify-center text-xl flex-shrink-0">
                       🎯
                     </div>
-                    <div className="text-left">
-                      <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                    <div className="text-left min-w-0 flex-1">
+                      <h3 className="font-display text-xl font-semibold break-words">
                         {t('rpg.classFeatures')}
                       </h3>
                       <p className="text-xs text-muted-foreground font-body mt-0.5">
@@ -416,6 +438,11 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {onRegenerateSection && (
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onRegenerateSection('classFeatures') }} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('classFeatures')}>
+                        {regeneratingSection === 'classFeatures' ? '⏳' : '↻'}
+                      </Button>
+                    )}
                     <span className="px-2 py-1 bg-primary/20 text-primary border border-primary/30 rounded text-xs font-bold">
                       {character.classFeatures.length}
                     </span>
@@ -423,7 +450,7 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                       {expandedSections.classFeatures ? "▼" : "▶"}
                     </span>
                   </div>
-                </button>
+                </div>
                 {expandedSections.classFeatures && (
                   <div className="p-4 pt-0">
                     {(() => {
@@ -478,17 +505,20 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
 
             {/* Traits */}
             {character.traits && character.traits.length > 0 && (
-              <div className="border-2 border-emerald-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent">
-                <button
+              <div className="border-2 border-emerald-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent min-w-0">
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => toggleSection("traits")}
-                  className="w-full p-4 hover:bg-emerald-500/10 transition-colors flex items-center justify-between"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection("traits"); } }}
+                  className="w-full p-4 hover:bg-emerald-500/10 transition-colors flex items-center justify-between gap-2 min-w-0 cursor-pointer"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border-2 border-emerald-500/30 flex items-center justify-center text-xl flex-shrink-0">
                       💫
                     </div>
-                    <div className="text-left">
-                      <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                    <div className="text-left min-w-0 flex-1">
+                      <h3 className="font-display text-xl font-semibold break-words">
                         {t('rpg.traits')}
                       </h3>
                       <p className="text-xs text-muted-foreground font-body mt-0.5">
@@ -497,6 +527,11 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {onRegenerateSection && (
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onRegenerateSection('traits') }} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('traits')}>
+                        {regeneratingSection === 'traits' ? '⏳' : '↻'}
+                      </Button>
+                    )}
                     <span className="px-2 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded text-xs font-bold">
                       {character.traits.length}
                     </span>
@@ -504,7 +539,7 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                       {expandedSections.traits ? "▼" : "▶"}
                     </span>
                   </div>
-                </button>
+                </div>
                 {expandedSections.traits && (
                   <div className="p-4 pt-0 space-y-3">
                     {character.traits.map((trait, idx) => (
@@ -631,9 +666,12 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
         <div className="space-y-4">
           {/* History */}
           <div className="border-2 border-amber-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent">
-            <button
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => toggleSection("history")}
-              className="w-full p-4 hover:bg-amber-500/10 transition-colors flex items-center justify-between"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection("history"); } }}
+              className="w-full p-4 hover:bg-amber-500/10 transition-colors flex items-center justify-between cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-amber-500/20 border-2 border-amber-500/30 flex items-center justify-center text-xl flex-shrink-0">
@@ -648,10 +686,17 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                   </p>
                 </div>
               </div>
-              <span className="text-muted-foreground font-body text-lg transition-transform">
-                {expandedSections.history ? "▼" : "▶"}
-              </span>
-            </button>
+              <div className="flex items-center gap-2">
+                {onRegenerateSection && (
+                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onRegenerateSection('background') }} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('background')}>
+                    {regeneratingSection === 'background' ? '⏳' : '↻'}
+                  </Button>
+                )}
+                <span className="text-muted-foreground font-body text-lg transition-transform">
+                  {expandedSections.history ? "▼" : "▶"}
+                </span>
+              </div>
+            </div>
             {expandedSections.history && (
               <div className="p-4 pt-0">
                 <div className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-amber-500/20">
@@ -665,9 +710,12 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
 
           {/* Personality */}
           <div className="border-2 border-pink-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-pink-500/10 via-pink-500/5 to-transparent">
-            <button
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => toggleSection("personality")}
-              className="w-full p-4 hover:bg-pink-500/10 transition-colors flex items-center justify-between"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection("personality"); } }}
+              className="w-full p-4 hover:bg-pink-500/10 transition-colors flex items-center justify-between cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-pink-500/20 border-2 border-pink-500/30 flex items-center justify-center text-xl flex-shrink-0">
@@ -682,10 +730,17 @@ export function CharacterCard({ character, isLoading = false }: CharacterCardPro
                   </p>
                 </div>
               </div>
-              <span className="text-muted-foreground font-body text-lg transition-transform">
-                {expandedSections.personality ? "▼" : "▶"}
-              </span>
-            </button>
+              <div className="flex items-center gap-2">
+                {onRegenerateSection && (
+                  <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onRegenerateSection('personality') }} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('personality')}>
+                    {regeneratingSection === 'personality' ? '⏳' : '↻'}
+                  </Button>
+                )}
+                <span className="text-muted-foreground font-body text-lg transition-transform">
+                  {expandedSections.personality ? "▼" : "▶"}
+                </span>
+              </div>
+            </div>
             {expandedSections.personality && (
               <div className="p-4 pt-0">
                 <div className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-pink-500/20">

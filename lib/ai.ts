@@ -747,13 +747,15 @@ export async function generateContentVariation(
 
 /**
  * Regenerate a specific section of generated content
- * Returns only the regenerated section data, not the full content
+ * Returns only the regenerated section data, not the full content.
+ * For environment npcs, sectionIndex regenerates only the NPC at that 0-based index (returns a string).
  */
 export async function generateRPGContentSection(
   scenario: string,
   contentType: ContentType,
   section: string,
-  currentContent: any
+  currentContent: any,
+  sectionIndex?: number
 ): Promise<any> {
   // Detect language from scenario
   const detectedLanguage = await detectLanguage(scenario)
@@ -885,15 +887,27 @@ export async function generateRPGContentSection(
     throw new Error(`Unknown section: ${contentType}:${section}`)
   }
 
-  schema = sectionConfig.schema
-
   systemPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario is written in ${finalLanguage}. You MUST generate ALL content in ${finalLanguage}. This includes ALL text, descriptions, names, and every single word of output.
 
 You are an expert D&D 5e game master. Regenerate ONLY the specified section of content, maintaining consistency with the rest of the content provided.
 
 FINAL REMINDER: All output MUST be in ${finalLanguage}.`
 
-  userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${finalLanguage}. You MUST respond entirely in ${finalLanguage}. Every word, name, description, and text must be in ${finalLanguage}.
+  // Single NPC at index: schema is string; prompt asks for one slot only
+  if (contentType === 'environment' && section === 'npcs' && typeof sectionIndex === 'number') {
+    const npcs = (currentContent?.npcs as string[] | undefined) || []
+    schema = z.object({ value: z.string() })
+    userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${finalLanguage}. You MUST respond entirely in ${finalLanguage}.
+
+Original Scenario: "${scenario}"
+
+Current Content (for reference): ${JSON.stringify(currentContent, null, 2)}
+
+Regenerate ONLY the NPC at index ${sectionIndex} (0-based) in the npcs list. Current npcs: ${JSON.stringify(npcs)}. Return a single string: the new NPC description for that slot. Match the tone and style of the others. Do NOT return an array or object, only one string.`
+  } else {
+    // generateObject requires root type: "object"; wrap array/string schemas in { value: T }
+    schema = z.object({ value: sectionConfig.schema })
+    userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${finalLanguage}. You MUST respond entirely in ${finalLanguage}. Every word, name, description, and text must be in ${finalLanguage}.
 
 Original Scenario: "${scenario}"
 
@@ -903,6 +917,7 @@ ${JSON.stringify(currentContent, null, 2)}
 Generate NEW ${sectionConfig.description} (ALL in ${finalLanguage}).
 
 Return ONLY the ${section} data in the required format. Do not include any other fields or explanations.`
+  }
 
   // Require OpenAI API key and validate format
   const rawKeySection = process.env.OPENAI_API_KEY?.trim()
@@ -925,7 +940,7 @@ Return ONLY the ${section} data in the required format. Do not include any other
       temperature: 0.8,
     })
 
-    return result.object
+    return result.object.value
   } catch (error) {
     console.error('Section regeneration error:', error)
     // Re-throw error - no fallback to mock

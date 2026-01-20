@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import type { Mission } from "@/types/rpg"
 import { DifficultyMeter } from "./difficulty-meter"
 import { ObjectiveCard } from "./objective-card"
@@ -16,9 +17,12 @@ import { RewardCard } from "./reward-card"
 interface MissionCardProps {
   mission: Mission
   isLoading?: boolean
+  onRegenerateSection?: (sectionId: string) => void
+  regeneratingSection?: string | null
+  regenerateLabel?: (sectionId: string) => string
 }
 
-export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
+export function MissionCard({ mission, isLoading = false, onRegenerateSection, regeneratingSection, regenerateLabel }: MissionCardProps) {
   const t = useTranslations()
   
   if (isLoading) {
@@ -75,7 +79,14 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
           </div>
         </div>
         <CardDescription className="font-body text-base leading-relaxed p-3 rounded-lg bg-background/50 border border-border/50">
-          {mission.context}
+          <div className="flex items-start justify-between gap-2">
+            <span className="flex-1">{mission.context}</span>
+            {onRegenerateSection && (
+              <Button variant="ghost" size="sm" onClick={() => onRegenerateSection('context')} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('context')}>
+                {regeneratingSection === 'context' ? '⏳' : '↻'}
+              </Button>
+            )}
+          </div>
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6 space-y-4">
@@ -204,9 +215,16 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
                     </p>
                   </div>
                 </div>
-                <span className="px-2 py-1 bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/30 rounded text-xs font-bold">
-                  {mission.possibleOutcomes.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  {onRegenerateSection && (
+                    <Button variant="ghost" size="sm" onClick={() => onRegenerateSection('possibleOutcomes')} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('possibleOutcomes')}>
+                      {regeneratingSection === 'possibleOutcomes' ? '⏳' : '↻'}
+                    </Button>
+                  )}
+                  <span className="px-2 py-1 bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/30 rounded text-xs font-bold">
+                    {mission.possibleOutcomes.length}
+                  </span>
+                </div>
               </div>
               <div className="space-y-3">
                 {mission.possibleOutcomes.map((outcome, idx) => {
@@ -247,18 +265,25 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
         {mission.rewards && (
         <div className="border-2 border-green-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent">
           <div className="p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-green-500/20 border-2 border-green-500/30 flex items-center justify-center text-xl flex-shrink-0">
-                💰
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-green-500/20 border-2 border-green-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                  💰
+                </div>
+                <div className="text-left">
+                  <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                    {t('rpg.mission.baseRewards')}
+                  </h3>
+                  <p className="text-xs text-muted-foreground font-body mt-0.5">
+                    {t('rpg.mission.missionCompletionRewards')}
+                  </p>
+                </div>
               </div>
-              <div className="text-left">
-                <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                  {t('rpg.mission.baseRewards')}
-                </h3>
-                <p className="text-xs text-muted-foreground font-body mt-0.5">
-                  {t('rpg.mission.missionCompletionRewards')}
-                </p>
-              </div>
+              {onRegenerateSection && (
+                <Button variant="ghost" size="sm" onClick={() => onRegenerateSection('rewards')} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('rewards')}>
+                  {regeneratingSection === 'rewards' ? '⏳' : '↻'}
+                </Button>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
               {mission.rewards.xp !== undefined && (
@@ -409,9 +434,16 @@ export function MissionCard({ mission, isLoading = false }: MissionCardProps) {
                     </p>
                   </div>
                 </div>
-                <span className="px-2 py-1 bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30 rounded text-xs font-bold">
-                  {mission.relatedLocations.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  {onRegenerateSection && (
+                    <Button variant="ghost" size="sm" onClick={() => onRegenerateSection('relatedLocations')} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('relatedLocations')}>
+                      {regeneratingSection === 'relatedLocations' ? '⏳' : '↻'}
+                    </Button>
+                  )}
+                  <span className="px-2 py-1 bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30 rounded text-xs font-bold">
+                    {mission.relatedLocations.length}
+                  </span>
+                </div>
               </div>
               <div className="flex flex-wrap gap-3">
                 {mission.relatedLocations.map((location, idx) => (

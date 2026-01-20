@@ -27,10 +27,11 @@ export async function PATCH(
 
     // Parse request body
     const body = await request.json()
-    const { is_favorite, tags, notes } = body as {
+    const { is_favorite, tags, notes, content_data } = body as {
       is_favorite?: boolean
       tags?: string[]
       notes?: string
+      content_data?: Record<string, unknown>
     }
 
     // Build update object (only include provided fields)
@@ -38,6 +39,7 @@ export async function PATCH(
       is_favorite?: boolean
       tags?: string[]
       notes?: string
+      content_data?: Record<string, unknown>
     } = {}
 
     if (typeof is_favorite === 'boolean') {
@@ -48,6 +50,9 @@ export async function PATCH(
     }
     if (typeof notes === 'string') {
       updates.notes = notes
+    }
+    if (content_data != null && typeof content_data === 'object' && !Array.isArray(content_data)) {
+      updates.content_data = content_data
     }
 
     if (Object.keys(updates).length === 0) {

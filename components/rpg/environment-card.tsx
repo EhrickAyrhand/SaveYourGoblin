@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import type { Environment } from "@/types/rpg"
 import { MoodBadge } from "./mood-badge"
 import { LightingIndicator } from "./lighting-indicator"
@@ -15,9 +16,12 @@ import { LightingIndicator } from "./lighting-indicator"
 interface EnvironmentCardProps {
   environment: Environment
   isLoading?: boolean
+  onRegenerateSection?: (sectionId: string, index?: number) => void
+  regeneratingSection?: string | null
+  regenerateLabel?: (sectionId: string, index?: number) => string
 }
 
-export function EnvironmentCard({ environment, isLoading = false }: EnvironmentCardProps) {
+export function EnvironmentCard({ environment, isLoading = false, onRegenerateSection, regeneratingSection, regenerateLabel }: EnvironmentCardProps) {
   const t = useTranslations()
   
   if (isLoading) {
@@ -141,9 +145,16 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
                     </p>
                   </div>
                 </div>
-                <span className="px-2 py-1 bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded text-xs font-bold">
-                  {environment.features.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  {onRegenerateSection && (
+                    <Button variant="ghost" size="sm" onClick={() => onRegenerateSection('features')} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('features')}>
+                      {regeneratingSection === 'features' ? '⏳' : '↻'}
+                    </Button>
+                  )}
+                  <span className="px-2 py-1 bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded text-xs font-bold">
+                    {environment.features.length}
+                  </span>
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {environment.features.map((feature, idx) => {
@@ -182,18 +193,25 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
         {environment.currentConflict && (
           <div className="border-2 border-red-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent">
             <div className="p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg bg-red-500/20 border-2 border-red-500/30 flex items-center justify-center text-xl flex-shrink-0">
-                  ⚔️
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-red-500/20 border-2 border-red-500/30 flex items-center justify-center text-xl flex-shrink-0">
+                    ⚔️
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-display text-xl font-semibold flex items-center gap-2">
+                      {t('rpg.environment.currentConflict')}
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">
+                      {t('rpg.environment.activeIssues')}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <h3 className="font-display text-xl font-semibold flex items-center gap-2">
-                    {t('rpg.environment.currentConflict')}
-                  </h3>
-                  <p className="text-xs text-muted-foreground font-body mt-0.5">
-                    {t('rpg.environment.activeIssues')}
-                  </p>
-                </div>
+                {onRegenerateSection && (
+                  <Button variant="ghost" size="sm" onClick={() => onRegenerateSection('currentConflict')} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('currentConflict')}>
+                    {regeneratingSection === 'currentConflict' ? '⏳' : '↻'}
+                  </Button>
+                )}
               </div>
               <div className="p-4 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-red-500/40 ring-2 ring-red-500/20">
                 <div className="flex items-start gap-3">
@@ -225,9 +243,16 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
                     </p>
                   </div>
                 </div>
-                <span className="px-2 py-1 bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/30 rounded text-xs font-bold">
-                  {environment.npcs.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  {onRegenerateSection && (
+                    <Button variant="ghost" size="sm" onClick={() => onRegenerateSection('npcs')} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('npcs')}>
+                      {regeneratingSection === 'npcs' ? '⏳' : '↻'}
+                    </Button>
+                  )}
+                  <span className="px-2 py-1 bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-500/30 rounded text-xs font-bold">
+                    {environment.npcs.length}
+                  </span>
+                </div>
               </div>
               <div className="flex flex-wrap gap-3">
                 {environment.npcs.map((npc, idx) => (
@@ -236,7 +261,19 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
                     className="px-4 py-2.5 rounded-lg bg-gradient-to-r from-background/80 to-background/50 border-2 border-violet-500/20 hover:border-violet-500/40 text-primary font-semibold text-sm transition-all hover:shadow-md flex items-center gap-2"
                   >
                     <span className="text-base">👤</span>
-                    <span>{npc}</span>
+                    <span className="flex-1 min-w-0">{npc}</span>
+                    {onRegenerateSection && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onRegenerateSection('npcs', idx)}
+                        disabled={!!regeneratingSection}
+                        className="shrink-0 no-print h-7 w-7 p-0"
+                        title={regenerateLabel?.('npcs', idx)}
+                      >
+                        {regeneratingSection === `npcs@${idx}` ? '⏳' : '↻'}
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -262,9 +299,16 @@ export function EnvironmentCard({ environment, isLoading = false }: EnvironmentC
                     </p>
                   </div>
                 </div>
-                <span className="px-2 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded text-xs font-bold">
-                  {environment.adventureHooks.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  {onRegenerateSection && (
+                    <Button variant="ghost" size="sm" onClick={() => onRegenerateSection('adventureHooks')} disabled={!!regeneratingSection} className="shrink-0 no-print" title={regenerateLabel?.('adventureHooks')}>
+                      {regeneratingSection === 'adventureHooks' ? '⏳' : '↻'}
+                    </Button>
+                  )}
+                  <span className="px-2 py-1 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded text-xs font-bold">
+                    {environment.adventureHooks.length}
+                  </span>
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {environment.adventureHooks.map((hook, idx) => {

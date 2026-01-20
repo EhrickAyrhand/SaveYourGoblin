@@ -140,17 +140,17 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
    - [x] Validate regenerated section structure (using Zod schemas)
    - [x] Merge new section with existing content
 
-3. **UI for Section Regeneration** (2-3 days) ⚠️ IN PROGRESS
-   - [ ] Add section selector in content detail modal:
-     - [ ] Show all regenerable sections for current content type
-     - [ ] Add "Regenerate" button for each section
-     - [ ] Show loading state during regeneration
-   - [ ] Add confirmation before regenerating
-   - [ ] Allow "regenerate all" option
-   - [ ] Show diff preview (optional, advanced)
-   - [ ] Add undo/accept new changes
-   - [ ] Update content in database after regeneration
-   - [ ] Handle errors gracefully
+3. **UI for Section Regeneration** (2-3 days) ✅ COMPLETED
+   - [x] Add section selector in content detail modal:
+     - [x] Show all regenerable sections for current content type
+     - [x] Add "Regenerate" button for each section
+     - [x] Show loading state during regeneration
+   - [x] Add confirmation before regenerating
+   - [x] Allow "regenerate all" option
+   - [x] Show diff preview (optional, advanced)
+   - [x] Add undo/accept new changes
+   - [x] Update content in database after regeneration
+   - [x] Handle errors gracefully
 
 ---
 

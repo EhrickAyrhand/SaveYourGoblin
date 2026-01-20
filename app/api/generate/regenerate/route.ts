@@ -22,16 +22,18 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const { 
-      scenario, 
-      contentType, 
-      section, 
-      currentContent 
+    const {
+      scenario,
+      contentType,
+      section,
+      currentContent,
+      sectionIndex,
     } = body as {
       scenario: string
       contentType: ContentType
       section: string
       currentContent: any
+      sectionIndex?: number
     }
 
     if (!scenario || !contentType || !section || !currentContent) {
@@ -48,25 +50,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate the specific section
+    // Generate the specific section (sectionIndex used for single-NPC npcs)
     const regeneratedSection = await generateRPGContentSection(
       scenario,
       contentType,
       section,
-      currentContent
+      currentContent,
+      sectionIndex
     )
+
+    // Build response; include index when regenerating a single array item (e.g. npcs[i])
+    const payload: { section: string; data: unknown; index?: number } = {
+      section,
+      data: regeneratedSection,
+    }
+    if (typeof sectionIndex === 'number') payload.index = sectionIndex
 
     // Stream the response back
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder()
         try {
-          const chunk = encoder.encode(
-            JSON.stringify({
-              section,
-              data: regeneratedSection,
-            }) + '\n'
-          )
+          const chunk = encoder.encode(JSON.stringify(payload) + '\n')
           controller.enqueue(chunk)
           controller.close()
         } catch (error) {

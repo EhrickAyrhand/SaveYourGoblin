@@ -10,10 +10,149 @@ import { CharacterCard } from "@/components/rpg/character-card"
 import { EnvironmentCard } from "@/components/rpg/environment-card"
 import { MissionCard } from "@/components/rpg/mission-card"
 import type { LibraryContentItem } from "./library-card"
-import type { Character, Environment, Mission, ContentType } from "@/types/rpg"
+import type { Character, Environment, Mission, ContentType, GeneratedContent } from "@/types/rpg"
 import { supabase } from "@/lib/supabase"
 import { Input } from "@/components/ui/input"
 import { useLocale } from 'next-intl'
+
+/** Renders diff values as readable, formatted UI instead of raw JSON. */
+function DiffValueBlock({ value, className = "" }: { value: unknown; className?: string }) {
+  if (value === undefined || value === null) {
+    return <p className={`text-sm text-muted-foreground italic ${className}`}>—</p>
+  }
+  if (typeof value === "string") {
+    return <p className={`text-sm text-foreground leading-relaxed whitespace-pre-wrap ${className}`}>{value}</p>
+  }
+  if (Array.isArray(value)) {
+    const isStrings = value.length === 0 || value.every((x) => typeof x === "string")
+    if (isStrings) {
+      return (
+        <ul className={`list-disc list-outside pl-5 space-y-1.5 text-sm text-foreground ${className}`}>
+          {(value as string[]).map((item, i) => (
+            <li key={i} className="leading-relaxed">{item}</li>
+          ))}
+        </ul>
+      )
+    }
+    // Array of objects (spells, skills, objectives, classFeatures, powerfulItems, etc.)
+    return (
+      <div className={`space-y-3 ${className}`}>
+        {(value as Record<string, unknown>[]).map((item, i) => {
+          if (item && typeof item === "object" && !Array.isArray(item)) {
+            const o = item as Record<string, unknown>
+            // Rewards-like { xp, gold, items }
+            if ("items" in o && Array.isArray(o.items) && !("name" in o) && !("description" in o)) {
+              return (
+                <div key={i} className="text-sm space-y-1">
+                  {"xp" in o && o.xp != null && <div><span className="text-muted-foreground">XP:</span> {String(o.xp)}</div>}
+                  {"gold" in o && o.gold != null && <div><span className="text-muted-foreground">Gold:</span> {String(o.gold)}</div>}
+                  {o.items.length > 0 && <div><span className="text-muted-foreground">Items:</span><ul className="list-disc list-inside pl-2">{o.items.map((x, j) => <li key={j}>{String(x)}</li>)}</ul></div>}
+                </div>
+              )
+            }
+            // name + description (spells, classFeatures, powerfulItems with name/status)
+            const name = o.name != null ? String(o.name) : null
+            const desc = o.description != null ? String(o.description) : null
+            const level = o.level != null ? String(o.level) : null
+            const status = o.status != null ? String(o.status) : null
+            const primary = o.primary === true
+            if (name || desc) {
+              return (
+                <div key={i} className="rounded-md border border-border bg-muted/30 dark:bg-muted/20 p-2.5 text-sm">
+                  {name && <div className="font-medium text-foreground">{name}</div>}
+                  {(level || status || primary) && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {level && <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-xs">Level {level}</span>}
+                      {status && <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-xs">{status}</span>}
+                      {primary && <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs">Primary</span>}
+                    </div>
+                  )}
+                  {desc && <p className="mt-1 text-foreground/90 leading-relaxed">{desc}</p>}
+                </div>
+              )
+            }
+            // objectives: description + primary
+            if ("description" in o && typeof o.description === "string") {
+              const isPrimary = o.primary === true
+              return (
+                <div key={i} className="rounded-md border border-border bg-muted/30 dark:bg-muted/20 p-2.5 text-sm">
+                  {isPrimary && <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs mr-2">Primary</span>}
+                  <p className="text-foreground leading-relaxed">{o.description}</p>
+                </div>
+              )
+            }
+            // skills: name, proficiency, modifier
+            if ("name" in o && "proficiency" in o) {
+              return (
+                <div key={i} className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/30 dark:bg-muted/20 px-2.5 py-1.5 text-sm">
+                  <span className="font-medium">{String(o.name)}</span>
+                  <span className="text-muted-foreground text-xs">{o.proficiency ? "Proficient" : ""} {o.modifier != null ? `(${Number(o.modifier) >= 0 ? "+" : ""}${o.modifier})` : ""}</span>
+                </div>
+              )
+            }
+            // Fallback: compact key-value
+            return (
+              <div key={i} className="rounded-md border border-border bg-muted/30 dark:bg-muted/20 p-2.5 text-sm font-mono text-foreground/90">
+                {JSON.stringify(o)}
+              </div>
+            )
+          }
+          return <div key={i} className="text-sm text-muted-foreground">{String(item)}</div>
+        })}
+      </div>
+    )
+  }
+  if (typeof value === "object" && value !== null) {
+    const o = value as Record<string, unknown>
+    // rewards: { xp?, gold?, items }
+    if ("items" in o && Array.isArray(o.items)) {
+      return (
+        <div className={`space-y-1.5 text-sm ${className}`}>
+          {"xp" in o && o.xp != null && <div><span className="text-muted-foreground">XP:</span> {String(o.xp)}</div>}
+          {"gold" in o && o.gold != null && <div><span className="text-muted-foreground">Gold:</span> {String(o.gold)}</div>}
+          {o.items.length > 0 && <div><span className="text-muted-foreground">Items:</span><ul className="list-disc list-inside pl-2 mt-0.5">{o.items.map((x, j) => <li key={j}>{String(x)}</li>)}</ul></div>}
+        </div>
+      )
+    }
+    // generic object
+    return (
+      <div className={`space-y-1 text-sm ${className}`}>
+        {Object.entries(o).map(([k, v]) => (
+          <div key={k}><span className="text-muted-foreground">{k}:</span> {typeof v === "object" ? JSON.stringify(v) : String(v)}</div>
+        ))}
+      </div>
+    )
+  }
+  return <p className={`text-sm text-foreground ${className}`}>{String(value)}</p>
+}
+
+/** Section ids and i18n keys for each content type. Must match lib/ai generateRPGContentSection. */
+const REGENERABLE_SECTIONS: Record<ContentType, Array<{ id: string; labelKey: string }>> = {
+  character: [
+    { id: 'spells', labelKey: 'generator.regenerateSpells' },
+    { id: 'skills', labelKey: 'generator.regenerateSkills' },
+    { id: 'traits', labelKey: 'generator.regenerateTraits' },
+    { id: 'racialTraits', labelKey: 'generator.regenerateRacialTraits' },
+    { id: 'classFeatures', labelKey: 'generator.regenerateClassFeatures' },
+    { id: 'background', labelKey: 'generator.regenerateBackground' },
+    { id: 'personality', labelKey: 'generator.regeneratePersonality' },
+  ],
+  environment: [
+    { id: 'npcs', labelKey: 'generator.regenerateNPCs' },
+    { id: 'features', labelKey: 'generator.regenerateFeatures' },
+    { id: 'adventureHooks', labelKey: 'generator.regenerateHooks' },
+    { id: 'currentConflict', labelKey: 'generator.regenerateCurrentConflict' },
+  ],
+  mission: [
+    { id: 'objectives', labelKey: 'generator.regenerateObjectives' },
+    { id: 'rewards', labelKey: 'generator.regenerateRewards' },
+    { id: 'relatedNPCs', labelKey: 'generator.regenerateRelatedNPCs' },
+    { id: 'relatedLocations', labelKey: 'generator.regenerateRelatedLocations' },
+    { id: 'powerfulItems', labelKey: 'generator.regeneratePowerfulItems' },
+    { id: 'possibleOutcomes', labelKey: 'generator.regeneratePossibleOutcomes' },
+    { id: 'context', labelKey: 'generator.regenerateContext' },
+  ],
+}
 
 interface ContentDetailModalProps {
   item: LibraryContentItem
@@ -48,12 +187,27 @@ export function ContentDetailModal({
   const [isLoadingLinks, setIsLoadingLinks] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [linkedItemPopup, setLinkedItemPopup] = useState<LibraryContentItem | null>(null)
+  const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null)
+  const [regenerateError, setRegenerateError] = useState<string | null>(null)
+  const [diffPreview, setDiffPreview] = useState<{
+    sectionId: string
+    sectionLabel: string
+    oldValue: unknown
+    newValue: unknown
+    sectionIndex?: number
+  } | null>(null)
+  const [regenerateUndo, setRegenerateUndo] = useState<{ previousContentData: Record<string, unknown> } | null>(null)
+  const [isSavingDiff, setIsSavingDiff] = useState(false)
 
   // Update notes and tags when item ID changes (user opens a different item)
   // This prevents overwriting local changes while saving
   useEffect(() => {
     setNotes(item.notes || "")
     setTags(item.tags || [])
+    setRegenerateError(null)
+    setDiffPreview(null)
+    setRegenerateUndo(null)
+    setIsSavingDiff(false)
   }, [item.id])
 
   // Load linked content when item changes
@@ -257,6 +411,152 @@ export function ContentDetailModal({
     }
   }
 
+  /** Calls /api/generate/regenerate only; does not save. sectionIndex used for single-NPC npcs. */
+  async function regenerateSectionOnly(
+    sectionId: string,
+    contentData: Record<string, unknown>,
+    sectionIndex?: number
+  ): Promise<{ section: string; data: unknown; index?: number }> {
+    const { data: { session } } = await supabase.auth.getSession()
+    const accessToken = session?.access_token
+    if (!accessToken) throw new Error("Not authenticated")
+    const body: { scenario: string; contentType: string; section: string; currentContent: Record<string, unknown>; sectionIndex?: number } = {
+      scenario: item.scenario_input,
+      contentType: item.type,
+      section: sectionId,
+      currentContent: contentData,
+    }
+    if (typeof sectionIndex === 'number') body.sectionIndex = sectionIndex
+    const res = await fetch("/api/generate/regenerate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(j.error || "Failed to regenerate")
+    }
+    const text = await res.text()
+    const parsed = JSON.parse(text.trim()) as { section: string; data: unknown; index?: number }
+    return { section: parsed.section, data: parsed.data, index: parsed.index }
+  }
+
+  async function saveContentData(contentData: Record<string, unknown>): Promise<void> {
+    const { data: { session } } = await supabase.auth.getSession()
+    const accessToken = session?.access_token
+    if (!accessToken) throw new Error("Not authenticated")
+    const patchRes = await fetch(`/api/content/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ content_data: contentData }),
+    })
+    if (!patchRes.ok) {
+      const j = await patchRes.json().catch(() => ({})) as { error?: string }
+      throw new Error(j.error || "Failed to save")
+    }
+    if (onUpdate) onUpdate({ ...item, content_data: contentData as unknown as GeneratedContent })
+  }
+
+  async function regenerateAndSave(sectionId: string, contentData: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const { section, data } = await regenerateSectionOnly(sectionId, contentData)
+    const newData = { ...contentData, [section]: data }
+    await saveContentData(newData)
+    return newData
+  }
+
+  async function handleRegenerateSection(sectionId: string, index?: number) {
+    if (!confirm(t("library.regenerateConfirm"))) return
+    setRegeneratingSection(index != null ? `npcs@${index}` : sectionId)
+    setRegenerateError(null)
+    setDiffPreview(null)
+    try {
+      const contentData = item.content_data as unknown as Record<string, unknown>
+      const { section, data, index: resIndex } = await regenerateSectionOnly(sectionId, contentData, index)
+      const sectionMeta = REGENERABLE_SECTIONS[item.type].find((s) => s.id === section)
+      let sectionLabel = sectionMeta ? t(sectionMeta.labelKey) : section
+      let oldValue: unknown = contentData[section]
+      const sectionIndex: number | undefined = resIndex
+      if (typeof resIndex === 'number') {
+        const npcs = (contentData.npcs as string[] | undefined) || []
+        oldValue = npcs[resIndex]
+        sectionLabel = `${sectionLabel} #${resIndex + 1}`
+      }
+      setDiffPreview({
+        sectionId: section,
+        sectionLabel,
+        oldValue,
+        newValue: data,
+        sectionIndex,
+      })
+    } catch (e) {
+      setRegenerateError(e instanceof Error ? e.message : t("library.regenerateError"))
+    } finally {
+      setRegeneratingSection(null)
+    }
+  }
+
+  async function handleDiffAccept() {
+    if (!diffPreview || !onUpdate) return
+    const contentData = item.content_data as unknown as Record<string, unknown>
+    let merged: Record<string, unknown>
+    if (typeof diffPreview.sectionIndex === 'number') {
+      const npcs = ((contentData.npcs as string[]) || []).map((n, i) =>
+        i === diffPreview.sectionIndex ? (diffPreview.newValue as string) : n
+      )
+      merged = { ...contentData, npcs }
+    } else {
+      merged = { ...contentData, [diffPreview.sectionId]: diffPreview.newValue }
+    }
+    setRegenerateUndo({ previousContentData: contentData })
+    setRegenerateError(null)
+    setIsSavingDiff(true)
+    try {
+      await saveContentData(merged)
+      setDiffPreview(null)
+    } catch (e) {
+      setRegenerateUndo(null)
+      setRegenerateError(e instanceof Error ? e.message : t("library.regenerateError"))
+    } finally {
+      setIsSavingDiff(false)
+    }
+  }
+
+  function handleDiffReject() {
+    setDiffPreview(null)
+  }
+
+  async function handleUndoRegenerate() {
+    if (!regenerateUndo || !onUpdate) return
+    try {
+      await saveContentData(regenerateUndo.previousContentData)
+      setRegenerateUndo(null)
+      setRegenerateError(null)
+    } catch (e) {
+      setRegenerateError(e instanceof Error ? e.message : t("library.regenerateError"))
+    }
+  }
+
+  async function handleRegenerateAll() {
+    if (!confirm(t("library.regenerateAllConfirm"))) return
+    const sections = REGENERABLE_SECTIONS[item.type]
+    const beforeContent = item.content_data as unknown as Record<string, unknown>
+    let merged: LibraryContentItem = { ...item, content_data: item.content_data }
+    for (const { id } of sections) {
+      setRegeneratingSection(id)
+      setRegenerateError(null)
+      try {
+        const newData = await regenerateAndSave(id, merged.content_data as unknown as Record<string, unknown>)
+        merged = { ...merged, content_data: newData as unknown as GeneratedContent }
+        setRegenerateUndo({ previousContentData: beforeContent })
+      } catch (e) {
+        setRegenerateError(e instanceof Error ? e.message : t("library.regenerateError"))
+        break
+      } finally {
+        setRegeneratingSection(null)
+      }
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in"
@@ -266,7 +566,7 @@ export function ContentDetailModal({
         }
       }}
     >
-      <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in slide-in-from-bottom-4 duration-300 parchment ornate-border">
+      <div className="relative w-full max-w-6xl max-h-[95vh] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in slide-in-from-bottom-4 duration-300 parchment ornate-border">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-4 flex items-center justify-between">
           <div>
@@ -659,14 +959,51 @@ export function ContentDetailModal({
 
           {/* Generated Content */}
           <div>
+            {regenerateError && onUpdate && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription className="font-body text-sm">{regenerateError}</AlertDescription>
+              </Alert>
+            )}
+            {regenerateUndo && onUpdate && (
+              <Alert className="mb-4 bg-primary/10 border-primary/30">
+                <AlertDescription className="font-body text-sm flex items-center justify-between gap-2 flex-wrap">
+                  <span>{t("library.sectionUpdatedUndo")}</span>
+                  <Button variant="outline" size="sm" onClick={handleUndoRegenerate} className="shrink-0">
+                    {t("library.undoRegenerate")}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
             {item.type === "character" && (
-              <CharacterCard character={item.content_data as Character} />
+              <CharacterCard
+                character={item.content_data as Character}
+                onRegenerateSection={onUpdate ? handleRegenerateSection : undefined}
+                regeneratingSection={onUpdate ? regeneratingSection : null}
+                regenerateLabel={onUpdate ? (id: string) => { const s = REGENERABLE_SECTIONS.character.find((x) => x.id === id); return s ? t(s.labelKey) : "Regenerate"; } : undefined}
+              />
             )}
             {item.type === "environment" && (
-              <EnvironmentCard environment={item.content_data as Environment} />
+              <EnvironmentCard
+                environment={item.content_data as Environment}
+                onRegenerateSection={onUpdate ? handleRegenerateSection : undefined}
+                regeneratingSection={onUpdate ? regeneratingSection : null}
+                regenerateLabel={onUpdate ? (id, idx) => (typeof idx === 'number' ? t('library.regenerateThisNpc') : (() => { const s = REGENERABLE_SECTIONS.environment.find((x) => x.id === id); return s ? t(s.labelKey) : "Regenerate"; })()) : undefined}
+              />
             )}
             {item.type === "mission" && (
-              <MissionCard mission={item.content_data as Mission} />
+              <MissionCard
+                mission={item.content_data as Mission}
+                onRegenerateSection={onUpdate ? handleRegenerateSection : undefined}
+                regeneratingSection={onUpdate ? regeneratingSection : null}
+                regenerateLabel={onUpdate ? (id: string) => { const s = REGENERABLE_SECTIONS.mission.find((x) => x.id === id); return s ? t(s.labelKey) : "Regenerate"; } : undefined}
+              />
+            )}
+            {onUpdate && (
+              <div className="mt-4 flex justify-end">
+                <Button variant="ghost" size="sm" onClick={handleRegenerateAll} disabled={!!regeneratingSection} className="font-body text-muted-foreground no-print">
+                  {regeneratingSection ? `⏳ ${t("library.regenerating")}` : `↻ ${t("library.regenerateAll")}`}
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -678,6 +1015,38 @@ export function ContentDetailModal({
           </Button>
         </div>
       </div>
+
+      {/* Diff preview modal */}
+      {diffPreview && (
+        <div
+          className="fixed inset-0 z-[55] flex items-center justify-center p-4 bg-black/70"
+          onClick={(e) => { if (e.target === e.currentTarget) handleDiffReject() }}
+        >
+          <div className="relative w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col bg-background rounded-lg shadow-2xl border border-border">
+            <div className="shrink-0 px-4 py-3 border-b border-border">
+              <h3 className="font-display text-lg font-semibold">{t("library.diffPreviewTitle")}: {diffPreview.sectionLabel}</h3>
+            </div>
+            <div className="flex-1 overflow-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("library.diffPrevious")}</div>
+                <div className="max-h-72 overflow-auto bg-muted/50 dark:bg-muted/30 p-4 rounded-lg border border-border">
+                  <DiffValueBlock value={diffPreview.oldValue} />
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{t("library.diffRegenerated")}</div>
+                <div className="max-h-72 overflow-auto bg-primary/5 dark:bg-primary/10 p-4 rounded-lg border border-primary/20">
+                  <DiffValueBlock value={diffPreview.newValue} />
+                </div>
+              </div>
+            </div>
+            <div className="shrink-0 px-4 py-3 border-t border-border flex justify-end gap-2">
+              <Button variant="outline" onClick={handleDiffReject} disabled={isSavingDiff}>{t("library.diffReject")}</Button>
+              <Button onClick={handleDiffAccept} disabled={isSavingDiff}>{isSavingDiff ? t("library.saving") : t("library.diffAcceptAndSave")}</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Link Modal */}
       {showLinkModal && (
@@ -701,7 +1070,7 @@ export function ContentDetailModal({
             }
           }}
         >
-          <div className="relative w-full max-w-5xl max-h-[95vh] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in slide-in-from-bottom-4 duration-300 parchment ornate-border">
+          <div className="relative w-full max-w-6xl max-h-[95vh] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in slide-in-from-bottom-4 duration-300 parchment ornate-border">
             {/* Header with close button */}
             <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-6 flex items-center justify-between">
               <div>
