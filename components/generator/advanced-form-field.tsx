@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Label } from "@/components/ui/label"
+import { HelpTooltip } from "@/components/ui/help-tooltip"
 import { cn } from "@/lib/utils"
 
 export interface AdvancedFormFieldProps {
@@ -11,6 +12,8 @@ export interface AdvancedFormFieldProps {
   label: React.ReactNode
   /** Optional help/description below the input */
   help?: React.ReactNode
+  /** Optional tooltip text shown next to the label */
+  tooltip?: string
   /** Validation error message; when present, help is usually not shown or error takes precedence */
   error?: string
   /** Optional class for the wrapper */
@@ -29,11 +32,14 @@ export function AdvancedFormField({
   htmlFor,
   label,
   help,
+  tooltip,
   error,
   className,
   wrapperClassName,
   children,
 }: AdvancedFormFieldProps) {
+  const tooltipText = tooltip ?? (typeof help === "string" ? help : undefined)
+
   return (
     <div
       className={cn(
@@ -45,9 +51,13 @@ export function AdvancedFormField({
     >
       <Label
         htmlFor={htmlFor}
-        className={cn("font-body text-base font-semibold tracking-wide", error && "text-destructive")}
+        className={cn(
+          "flex flex-wrap items-center gap-2 font-body text-base font-semibold tracking-wide",
+          error && "text-destructive"
+        )}
       >
-        {label}
+        <span>{label}</span>
+        {tooltipText && <HelpTooltip text={tooltipText} />}
       </Label>
       <div className="w-full">{children}</div>
       {error && (

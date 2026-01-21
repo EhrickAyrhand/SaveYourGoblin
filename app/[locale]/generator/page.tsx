@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { HelpTooltip } from "@/components/ui/help-tooltip"
 import { AdvancedFormField } from "@/components/generator/advanced-form-field"
 import { ExampleListSidebar } from "@/components/generator/example-list-sidebar"
 import {
@@ -1210,8 +1211,12 @@ export default function GeneratorPage() {
                           <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.generation.title')}</h4>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-2">
-                              <Label htmlFor="gen-temperature" className="font-body text-sm font-semibold">
-                                {t('generator.advancedFields.generation.temperature')}
+                              <Label
+                                htmlFor="gen-temperature"
+                                className="flex flex-wrap items-center gap-2 font-body text-sm font-semibold"
+                              >
+                                <span>{t('generator.advancedFields.generation.temperature')}</span>
+                                <HelpTooltip text={t('generator.advancedFields.generation.temperatureHelp')} />
                               </Label>
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-muted-foreground">{t('generator.advancedFields.generation.temperatureLow')}</span>
@@ -1235,8 +1240,12 @@ export default function GeneratorPage() {
                               </p>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="gen-tone" className="font-body text-sm font-semibold">
-                                {t('generator.advancedFields.generation.tone')}
+                              <Label
+                                htmlFor="gen-tone"
+                                className="flex flex-wrap items-center gap-2 font-body text-sm font-semibold"
+                              >
+                                <span>{t('generator.advancedFields.generation.tone')}</span>
+                                <HelpTooltip text={t('generator.advancedFields.generation.toneHelp')} />
                               </Label>
                               <select
                                 id="gen-tone"
@@ -1256,8 +1265,12 @@ export default function GeneratorPage() {
                               </p>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="gen-complexity" className="font-body text-sm font-semibold">
-                                {t('generator.advancedFields.generation.complexity')}
+                              <Label
+                                htmlFor="gen-complexity"
+                                className="flex flex-wrap items-center gap-2 font-body text-sm font-semibold"
+                              >
+                                <span>{t('generator.advancedFields.generation.complexity')}</span>
+                                <HelpTooltip text={t('generator.advancedFields.generation.complexityHelp')} />
                               </Label>
                               <select
                                 id="gen-complexity"
