@@ -1,7 +1,6 @@
 import { Cinzel, Cinzel_Decorative, MedievalSharp } from "next/font/google";
 import "@/app/globals.css";
 import { ThemeLoader } from "@/components/theme-loader";
-import { ThemeSelector } from "@/components/ui/theme-selector";
 import { RecoverySessionGuard } from "@/components/recovery-session-guard";
 import { BackgroundImageWrapper } from "@/components/ui/background-image-wrapper";
 
@@ -41,7 +40,6 @@ export default function RootLayout({
           <RecoverySessionGuard />
           <ThemeLoader />
           {children}
-          <ThemeSelector />
         </BackgroundImageWrapper>
       </body>
     </html>
