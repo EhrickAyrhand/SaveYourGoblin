@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from '@/i18n/routing'
+import { Info } from "lucide-react"
 import { getCurrentUser, signOut } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
 import { isRecoverySessionActive, isResetPasswordRoute } from "@/lib/recovery-session"
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AdvancedFormField } from "@/components/generator/advanced-form-field"
 import { ExampleListSidebar } from "@/components/generator/example-list-sidebar"
 import {
@@ -1208,11 +1210,28 @@ export default function GeneratorPage() {
                         {/* Generation Parameters (temperature, tone, complexity) */}
                         <div className="space-y-4 p-4 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 rounded-xl border-2 border-amber-500/30">
                           <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.generation.title')}</h4>
+                        <TooltipProvider>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-2">
-                              <Label htmlFor="gen-temperature" className="font-body text-sm font-semibold">
-                                {t('generator.advancedFields.generation.temperature')}
-                              </Label>
+                              <div className="flex items-center gap-2">
+                                <Label htmlFor="gen-temperature" className="font-body text-sm font-semibold">
+                                  {t('generator.advancedFields.generation.temperature')}
+                                </Label>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="rounded-full p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                      aria-label={t('generator.advancedFields.generation.temperatureHelp')}
+                                    >
+                                      <Info className="h-4 w-4" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs text-xs font-body">
+                                    {t('generator.advancedFields.generation.temperatureHelp')}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-muted-foreground">{t('generator.advancedFields.generation.temperatureLow')}</span>
                                 <input
@@ -1231,13 +1250,29 @@ export default function GeneratorPage() {
                                 <span className="text-xs text-muted-foreground">{t('generator.advancedFields.generation.temperatureHigh')}</span>
                               </div>
                               <p className="text-xs text-muted-foreground font-body">
-                                {(generationParams.temperature ?? 0.8).toFixed(1)} — {t('generator.advancedFields.generation.temperatureHelp')}
+                                {(generationParams.temperature ?? 0.8).toFixed(1)}
                               </p>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="gen-tone" className="font-body text-sm font-semibold">
-                                {t('generator.advancedFields.generation.tone')}
-                              </Label>
+                              <div className="flex items-center gap-2">
+                                <Label htmlFor="gen-tone" className="font-body text-sm font-semibold">
+                                  {t('generator.advancedFields.generation.tone')}
+                                </Label>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="rounded-full p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                      aria-label={t('generator.advancedFields.generation.toneHelp')}
+                                    >
+                                      <Info className="h-4 w-4" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs text-xs font-body">
+                                    {t('generator.advancedFields.generation.toneHelp')}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
                               <select
                                 id="gen-tone"
                                 value={generationParams.tone || 'balanced'}
@@ -1251,14 +1286,27 @@ export default function GeneratorPage() {
                                 <option value="balanced">{t('generator.advancedFields.generation.toneBalanced')}</option>
                                 <option value="playful">{t('generator.advancedFields.generation.tonePlayful')}</option>
                               </select>
-                              <p className="text-xs text-muted-foreground font-body">
-                                {t('generator.advancedFields.generation.toneHelp')}
-                              </p>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="gen-complexity" className="font-body text-sm font-semibold">
-                                {t('generator.advancedFields.generation.complexity')}
-                              </Label>
+                              <div className="flex items-center gap-2">
+                                <Label htmlFor="gen-complexity" className="font-body text-sm font-semibold">
+                                  {t('generator.advancedFields.generation.complexity')}
+                                </Label>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="rounded-full p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                      aria-label={t('generator.advancedFields.generation.complexityHelp')}
+                                    >
+                                      <Info className="h-4 w-4" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs text-xs font-body">
+                                    {t('generator.advancedFields.generation.complexityHelp')}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
                               <select
                                 id="gen-complexity"
                                 value={generationParams.complexity || 'standard'}
@@ -1272,11 +1320,9 @@ export default function GeneratorPage() {
                                 <option value="standard">{t('generator.advancedFields.generation.complexityStandard')}</option>
                                 <option value="detailed">{t('generator.advancedFields.generation.complexityDetailed')}</option>
                               </select>
-                              <p className="text-xs text-muted-foreground font-body">
-                                {t('generator.advancedFields.generation.complexityHelp')}
-                              </p>
                             </div>
                           </div>
+                        </TooltipProvider>
                         </div>
 
                       </div>
