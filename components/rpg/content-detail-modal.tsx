@@ -161,6 +161,14 @@ interface ContentDetailModalProps {
   onDelete: (id: string) => void
   onUpdate?: (updatedItem: LibraryContentItem) => void
   onGenerateVariation?: (item: LibraryContentItem) => void
+  onCampaignsUpdated?: () => void
+}
+
+type CampaignSummary = {
+  id: string
+  name: string
+  description?: string | null
+  contentIds?: string[]
 }
 
 export function ContentDetailModal({
@@ -170,6 +178,7 @@ export function ContentDetailModal({
   onDelete,
   onUpdate,
   onGenerateVariation,
+  onCampaignsUpdated,
 }: ContentDetailModalProps) {
   const t = useTranslations()
   const [notes, setNotes] = useState(item.notes || "")
@@ -180,6 +189,11 @@ export function ContentDetailModal({
   const [tagsError, setTagsError] = useState<string | null>(null)
   const [newTagInput, setNewTagInput] = useState("")
   const [isGeneratingVariation, setIsGeneratingVariation] = useState(false)
+  const [campaigns, setCampaigns] = useState<CampaignSummary[]>([])
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false)
+  const [campaignsError, setCampaignsError] = useState<string | null>(null)
+  const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false)
+  const [addingCampaignId, setAddingCampaignId] = useState<string | null>(null)
   const [linkedContent, setLinkedContent] = useState<{
     outgoing: Array<{ id: string; contentId: string; linkType: string; content: any }>
     incoming: Array<{ id: string; contentId: string; linkType: string; content: any }>
@@ -208,6 +222,9 @@ export function ContentDetailModal({
     setDiffPreview(null)
     setRegenerateUndo(null)
     setIsSavingDiff(false)
+    setCampaignsError(null)
+    setAddingCampaignId(null)
+    setIsCampaignModalOpen(false)
   }, [item.id])
 
   // Load linked content when item changes
@@ -246,6 +263,38 @@ export function ContentDetailModal({
     }
   }
 
+  async function loadCampaigns() {
+    setIsLoadingCampaigns(true)
+    setCampaignsError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        throw new Error("Not authenticated")
+      }
+
+      const response = await fetch("/api/campaigns?includeContent=true", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to load campaigns")
+      }
+
+      const result = await response.json()
+      setCampaigns(result.data || [])
+    } catch (err) {
+      console.error("Failed to load campaigns:", err)
+      setCampaignsError(err instanceof Error ? err.message : "Failed to load campaigns")
+    } finally {
+      setIsLoadingCampaigns(false)
+    }
+  }
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden"
@@ -257,6 +306,12 @@ export function ContentDetailModal({
       document.body.style.overflow = "unset"
     }
   }, [isOpen])
+
+  useEffect(() => {
+    if (isCampaignModalOpen) {
+      loadCampaigns()
+    }
+  }, [isCampaignModalOpen])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -389,6 +444,52 @@ export function ContentDetailModal({
     setTags(newTags)
     // Auto-save tags
     setTimeout(() => handleSaveTags(), 100)
+  }
+
+  async function handleAddToCampaign(campaignId: string) {
+    try {
+      setAddingCampaignId(campaignId)
+      setCampaignsError(null)
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        throw new Error("Not authenticated")
+      }
+
+      const response = await fetch(`/api/campaigns/${campaignId}/content`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          contentId: item.id,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || errorData.message || "Failed to add to campaign")
+      }
+
+      setCampaigns((prev) =>
+        prev.map((campaign) =>
+          campaign.id === campaignId
+            ? {
+                ...campaign,
+                contentIds: campaign.contentIds ? [...campaign.contentIds, item.id] : [item.id],
+              }
+            : campaign
+        )
+      )
+      onCampaignsUpdated?.()
+    } catch (err) {
+      console.error("Add to campaign error:", err)
+      setCampaignsError(err instanceof Error ? err.message : "Failed to add to campaign")
+    } finally {
+      setAddingCampaignId(null)
+    }
   }
 
   async function handleDelete() {
@@ -588,6 +689,14 @@ export function ContentDetailModal({
                 {isGeneratingVariation ? "⏳" : "🔄"} {t('library.generateVariation')}
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCampaignModalOpen(true)}
+              className="font-body no-print"
+            >
+              🗺️ {t('library.addToCampaign')}
+            </Button>
             <Button 
               variant="outline" 
               size="sm" 
@@ -1043,6 +1152,85 @@ export function ContentDetailModal({
             <div className="shrink-0 px-4 py-3 border-t border-border flex justify-end gap-2">
               <Button variant="outline" onClick={handleDiffReject} disabled={isSavingDiff}>{t("library.diffReject")}</Button>
               <Button onClick={handleDiffAccept} disabled={isSavingDiff}>{isSavingDiff ? t("library.saving") : t("library.diffAcceptAndSave")}</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCampaignModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsCampaignModalOpen(false)
+            }
+          }}
+        >
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in slide-in-from-bottom-4 duration-300 parchment ornate-border">
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-6 flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-2xl font-bold">{t('library.addToCampaignTitle')}</h2>
+                <p className="font-body text-sm text-muted-foreground mt-1">
+                  {t('library.addToCampaignDescription')}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsCampaignModalOpen(false)}
+                className="font-body text-lg"
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="p-6 space-y-4">
+              {campaignsError && (
+                <Alert variant="destructive">
+                  <AlertDescription className="font-body">{campaignsError}</AlertDescription>
+                </Alert>
+              )}
+              {isLoadingCampaigns ? (
+                <p className="text-sm text-muted-foreground font-body">
+                  {t('library.loadingCampaigns')}
+                </p>
+              ) : campaigns.length === 0 ? (
+                <p className="text-sm text-muted-foreground font-body">
+                  {t('library.noCampaigns')}
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {campaigns.map((campaign) => {
+                    const alreadyAdded = campaign.contentIds?.includes(item.id) ?? false
+                    return (
+                      <div
+                        key={campaign.id}
+                        className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-primary/10 bg-background/80 p-4"
+                      >
+                        <div>
+                          <div className="font-body font-semibold text-foreground">
+                            {campaign.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground font-body mt-1">
+                            {campaign.description || t('campaigns.noDescription')}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="font-body"
+                          onClick={() => handleAddToCampaign(campaign.id)}
+                          disabled={alreadyAdded || addingCampaignId === campaign.id}
+                        >
+                          {alreadyAdded
+                            ? t('library.alreadyInCampaign')
+                            : addingCampaignId === campaign.id
+                              ? t('common.saving')
+                              : t('library.addToCampaign')}
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

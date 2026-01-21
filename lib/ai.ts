@@ -337,7 +337,8 @@ export async function generateRPGContent(
   scenario: string,
   contentType: ContentType,
   advancedInput?: AdvancedInput,
-  generationParams?: AdvancedGenerationParams
+  generationParams?: AdvancedGenerationParams,
+  campaignContext?: string
 ): Promise<GeneratedContent> {
   // Require OpenAI API key - no fallback to mock
   const rawKey = process.env.OPENAI_API_KEY?.trim()
@@ -357,6 +358,9 @@ export async function generateRPGContent(
     // Detect language from scenario text AND advanced inputs
     // Combine scenario with any text from advanced inputs for better detection
     let textForDetection = scenario
+    if (campaignContext && campaignContext.trim()) {
+      textForDetection += ' ' + campaignContext.trim()
+    }
     if (advancedInput && contentType === 'character') {
       const charInput = advancedInput as AdvancedCharacterInput
       if (charInput.class) textForDetection += ' ' + charInput.class
@@ -379,6 +383,13 @@ export async function generateRPGContent(
     let schema: z.ZodType<any>
     let systemPrompt: string
     let userPrompt: string
+    const normalizedCampaignContext = campaignContext?.trim()
+    const campaignInstruction = normalizedCampaignContext
+      ? '\nCAMPAIGN CONTEXT: The user provided campaign context. Ensure all generated content aligns with this campaign setting, themes, factions, and existing details. Do not contradict established facts.'
+      : ''
+    const campaignContextBlock = normalizedCampaignContext
+      ? `\n\nCampaign Context (use for consistency):\n${normalizedCampaignContext}\n`
+      : ''
 
     // Helper function to normalize class names (map common variations to D&D 5e standard names)
     const normalizeClassName = (className?: string): string | undefined => {
@@ -531,7 +542,7 @@ You are an expert D&D 5e game master and character creator. Create detailed, imm
 
 OUTPUT FORMAT: You MUST output a single valid JSON object with ALL required fields. Output them in this order: name, race, class, level, background, attributes, expertise, skills, traits, voiceDescription, history, personality, spells. CRITICAL: history = 2-5 sentences only. personality = 2-4 sentences only. Do NOT write long paragraphs, random words, code, or multiple languages in any field. Each spell: { name (string), level (number 0-9), description (string) }. Each skill: { name (string), proficiency (boolean), modifier (number) }. Do not output anything outside the JSON.
 
-FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every name, description, trait, and text field must be in ${detectedLanguage}.`
+FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every name, description, trait, and text field must be in ${detectedLanguage}.${campaignInstruction}`
         // Build name instruction with emphasis on unique names
         const nameInstruction = `CRITICAL: Generate a UNIQUE, CREATIVE character name appropriate for ${detectedLanguage} culture. DO NOT use generic names like "${charInput?.race || 'Race'} ${normalizedClass || 'Class'}" or literal translations. Create an authentic, memorable name that fits the character's background and culture (e.g., ${detectedLanguage === 'Portuguese' ? 'João, Maria, Carlos, Elena, Rafael' : detectedLanguage === 'Spanish' ? 'Juan, María, Carlos, Elena, Rafael' : 'John, Mary, Charles, Elena, Robert'}). The name field must contain ONLY the character's name, not their race and class.`
 
@@ -544,7 +555,7 @@ FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${d
 
         userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${detectedLanguage}. You MUST respond entirely in ${detectedLanguage}. Every word, name, description, and text must be in ${detectedLanguage}.
 
-Create a D&D 5e character based on this scenario: "${scenario}"${charLevel}${charClass}${charRace}${advancedConstraints}
+Create a D&D 5e character based on this scenario: "${scenario}"${charLevel}${charClass}${charRace}${advancedConstraints}${campaignContextBlock}
 
 IMPORTANT: The scenario above is written in ${detectedLanguage}. You MUST match this language exactly. All character names, descriptions, backstories, personality traits, and every single text field must be in ${detectedLanguage}. Use names appropriate for ${detectedLanguage} culture (e.g., ${detectedLanguage === 'Portuguese' ? 'João, Maria, Carlos' : detectedLanguage === 'Spanish' ? 'Juan, María, Carlos' : 'John, Mary, Charles'}).
 
@@ -589,10 +600,10 @@ Example: If the user writes in Portuguese like "uma torre de mago", you MUST res
 
 You are an expert D&D 5e game master and world builder. Create immersive, atmospheric locations that bring the game world to life.${toneInstruction}${complexityInstruction} Environments should have rich sensory details, mood, and interactive elements that engage players.
 
-FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every name, description, feature, and text field must be in ${detectedLanguage}.`
+FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every name, description, feature, and text field must be in ${detectedLanguage}.${campaignInstruction}`
         userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${detectedLanguage}. You MUST respond entirely in ${detectedLanguage}. Every word, name, description, and text must be in ${detectedLanguage}.
 
-Create a D&D 5e environment/location based on this scenario: "${scenario}"${envMood}${envLighting}${envNPCs}${advancedConstraints}
+Create a D&D 5e environment/location based on this scenario: "${scenario}"${envMood}${envLighting}${envNPCs}${advancedConstraints}${campaignContextBlock}
 
 IMPORTANT: The scenario above is written in ${detectedLanguage}. You MUST match this language exactly. All location names, descriptions, features, NPC names, and every single text field must be in ${detectedLanguage}. Use names appropriate for ${detectedLanguage} culture.
 
@@ -628,10 +639,10 @@ Example: If the user writes in Portuguese like "recuperar um artefato", you MUST
 
 You are an expert D&D 5e game master and quest designer. Create engaging missions and quests that provide clear objectives, appropriate challenges, and meaningful rewards.${toneInstruction}${complexityInstruction} Missions should fit naturally into a campaign and offer both primary and optional objectives. CRITICAL: Ensure difficulty matches stakes (world-altering content requires higher tier levels). Clarify artifact power and control mechanisms. Mark alternative objective paths clearly. Define concrete consequences for player choices.
 
-FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every title, description, objective, reward, and text field must be in ${detectedLanguage}.`
+FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every title, description, objective, reward, and text field must be in ${detectedLanguage}.${campaignInstruction}`
         userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${detectedLanguage}. You MUST respond entirely in ${detectedLanguage}. Every word, name, description, and text must be in ${detectedLanguage}.
 
-Create a D&D 5e mission/quest based on this scenario: "${scenario}"${missionDifficulty}${missionObjectives}${missionRewards}${advancedConstraints}
+Create a D&D 5e mission/quest based on this scenario: "${scenario}"${missionDifficulty}${missionObjectives}${missionRewards}${advancedConstraints}${campaignContextBlock}
 
 IMPORTANT: The scenario above is written in ${detectedLanguage}. You MUST match this language exactly. All mission titles, descriptions, objectives, rewards, NPC names, location names, and every single text field must be in ${detectedLanguage}. Use names appropriate for ${detectedLanguage} culture.
 

@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
   let generationParams: AdvancedGenerationParams | undefined
   let contentType: ContentType | undefined
   let scenario: string | undefined
+  let campaignContext: string | undefined
 
   try {
     // Authenticate user and require email verification
@@ -26,11 +27,13 @@ export async function POST(request: NextRequest) {
       contentType: ContentType
       advancedInput?: AdvancedInput
       generationParams?: AdvancedGenerationParams
+      campaignContext?: string
     }
     scenario = parsed.scenario
     contentType = parsed.contentType
     advancedInput = parsed.advancedInput
     generationParams = parsed.generationParams
+    campaignContext = typeof parsed.campaignContext === 'string' ? parsed.campaignContext : undefined
 
     if (!scenario || !contentType) {
       return new Response(
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate content using OpenAI (requires OPENAI_API_KEY to be configured)
-    const content = await generateRPGContent(scenario, contentType, advancedInput, generationParams)
+    const content = await generateRPGContent(scenario, contentType, advancedInput, generationParams, campaignContext)
     
     // Stream the response back
     const stream = new ReadableStream({

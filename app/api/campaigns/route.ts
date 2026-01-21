@@ -11,6 +11,8 @@ import { requireVerifiedEmail, createServerClient } from '@/lib/supabase-server'
 export async function GET(request: NextRequest) {
   try {
     const user = await requireVerifiedEmail(request)
+    const { searchParams } = new URL(request.url)
+    const includeContent = searchParams.get('includeContent') === 'true'
 
     const authHeader = request.headers.get('authorization')
     let supabase = await createServerClient()
@@ -43,6 +45,46 @@ export async function GET(request: NextRequest) {
           message: error.message,
         }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (includeContent && data && data.length > 0) {
+      const campaignIds = data.map((campaign) => campaign.id)
+      const { data: contentRows, error: contentError } = await supabase
+        .from('campaign_content')
+        .select('campaign_id, content_id')
+        .in('campaign_id', campaignIds)
+
+      if (contentError) {
+        console.error('Supabase query error:', contentError)
+        return new Response(
+          JSON.stringify({
+            error: 'Failed to fetch campaign content',
+            message: contentError.message,
+          }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const contentMap = (contentRows || []).reduce<Record<string, string[]>>((acc, row) => {
+        if (!acc[row.campaign_id]) {
+          acc[row.campaign_id] = []
+        }
+        acc[row.campaign_id].push(row.content_id)
+        return acc
+      }, {})
+
+      const campaignsWithContent = data.map((campaign) => ({
+        ...campaign,
+        contentIds: contentMap[campaign.id] || [],
+        contentCount: contentMap[campaign.id]?.length || 0,
+      }))
+
+      return new Response(
+        JSON.stringify({
+          data: campaignsWithContent,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
       )
     }
 
