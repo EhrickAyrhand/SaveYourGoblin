@@ -1,5 +1,5 @@
 import { Cinzel, Cinzel_Decorative, MedievalSharp } from "next/font/google";
-import "./globals.css";
+import "@/app/globals.css";
 import { ThemeLoader } from "@/components/theme-loader";
 import { ThemeSelector } from "@/components/ui/theme-selector";
 import { RecoverySessionGuard } from "@/components/recovery-session-guard";
