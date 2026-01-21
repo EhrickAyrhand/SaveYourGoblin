@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
+import { LanguageSelector } from "@/components/ui/language-selector";
 
 export const metadata: Metadata = {
   title: "SaveYourGoblin",
@@ -21,7 +24,14 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  return <>{children}</>;
+  const messages = await getMessages();
+
+  return (
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      {children}
+      <LanguageSelector />
+    </NextIntlClientProvider>
+  );
 }
 
 export function generateStaticParams() {
