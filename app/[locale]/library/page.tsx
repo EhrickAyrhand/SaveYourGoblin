@@ -675,7 +675,7 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-8">
+    <div className="min-h-screen bg-background/50 backdrop-blur-sm p-4">
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Header with decorative border */}
         <div className="relative">

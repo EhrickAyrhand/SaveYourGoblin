@@ -1,6 +1,3 @@
-"use client"
-
-import Image from "next/image"
 import { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
@@ -44,16 +41,13 @@ export function BackgroundImageWrapper({
   }
 
   return (
-    <div className={cn("relative w-full h-full", className)}>
+    <div className={cn("relative isolate w-full h-full", className)}>
       {/* Background Image */}
       <div className="absolute inset-0 -z-10">
-        <Image
-          src={imagePath}
-          alt="Background"
-          fill
-          className={cn("object-cover", imageClassName)}
-          priority={false}
-          quality={75}
+        <div
+          aria-hidden="true"
+          className={cn("absolute inset-0 bg-cover bg-center", imageClassName)}
+          style={{ backgroundImage: `url(${imagePath})` }}
         />
         {/* Overlay for text readability */}
         {overlay && (

@@ -9,7 +9,7 @@ function VerifyEmailFormWrapper() {
 
 export default function VerifyEmailPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen items-center justify-center bg-background/50 backdrop-blur-sm p-4">
       <Suspense fallback={<div>Loading...</div>}>
         <VerifyEmailFormWrapper />
       </Suspense>
