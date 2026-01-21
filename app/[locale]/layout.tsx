@@ -4,6 +4,7 @@ import { getMessages } from "next-intl/server";
 import { NextIntlClientProvider } from "next-intl";
 import { routing } from "@/i18n/routing";
 import { LanguageSelector } from "@/components/ui/language-selector";
+import { BackgroundImageWrapper } from "@/components/ui/background-image-wrapper";
 
 export const metadata: Metadata = {
   title: "SaveYourGoblin",
@@ -30,8 +31,14 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider messages={messages}>
-      {children}
-      <LanguageSelector />
+      <BackgroundImageWrapper
+        imagePath="/background.png"
+        overlayIntensity="medium"
+        className="min-h-screen"
+      >
+        {children}
+        <LanguageSelector />
+      </BackgroundImageWrapper>
     </NextIntlClientProvider>
   );
 }
