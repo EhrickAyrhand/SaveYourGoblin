@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { createPortal } from "react-dom"
 import type { DragEvent } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import { useRouter } from "@/i18n/routing"
@@ -291,6 +292,18 @@ export default function CampaignsPage() {
       fetchLibraryContent()
     }
   }, [isAddContentOpen, libraryContent.length, fetchLibraryContent])
+
+  useEffect(() => {
+    if (isAddContentOpen) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = "unset"
+    }
+
+    return () => {
+      document.body.style.overflow = "unset"
+    }
+  }, [isAddContentOpen])
 
   const formatDate = useCallback((value: string) => {
     if (!value) return ""
@@ -705,6 +718,122 @@ export default function CampaignsPage() {
     return null
   }
 
+  const addContentModal = isAddContentOpen ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={() => setIsAddContentOpen(false)}
+      />
+      <div className="relative z-10 w-full max-w-4xl">
+        <Card className="parchment ornate-border border-2 border-primary/30 shadow-xl">
+          <CardHeader className="border-b border-primary/10">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <CardTitle className="font-display text-2xl font-bold text-primary flex items-center gap-2">
+                  <span className="text-2xl">📚</span>
+                  {t("campaigns.addContentTitle")}
+                </CardTitle>
+                <CardDescription className="font-body text-sm text-muted-foreground">
+                  {t("campaigns.addContentDescription")}
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-body"
+                onClick={() => setIsAddContentOpen(false)}
+              >
+                {t("common.close")}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Input
+                value={librarySearch}
+                onChange={(event) => setLibrarySearch(event.target.value)}
+                placeholder={t("campaigns.searchPlaceholder")}
+                className="font-body flex-1 min-w-[220px]"
+              />
+              <select
+                value={libraryType}
+                onChange={(event) => setLibraryType(event.target.value as ContentType | "all")}
+                className="rounded-md border border-input bg-transparent px-3 py-2 text-sm font-body shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="all">{t("campaigns.allTypes")}</option>
+                <option value="character">{t("generator.contentType.character")}</option>
+                <option value="environment">{t("generator.contentType.environment")}</option>
+                <option value="mission">{t("generator.contentType.mission")}</option>
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-body"
+                onClick={fetchLibraryContent}
+                disabled={isLoadingLibrary}
+              >
+                {isLoadingLibrary ? t("common.loading") : t("campaigns.refreshLibrary")}
+              </Button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-auto pr-2 space-y-3">
+              {isLoadingLibrary ? (
+                <p className="text-sm text-muted-foreground font-body">
+                  {t("campaigns.loadingLibrary")}
+                </p>
+              ) : filteredLibraryContent.length === 0 ? (
+                <div className="text-center text-sm text-muted-foreground font-body py-8">
+                  {t("campaigns.noContentFound")}
+                </div>
+              ) : (
+                filteredLibraryContent.map((item) => {
+                  const name = getContentName({ type: item.type, content_data: item.content_data })
+                  const typeLabel =
+                    item.type === "character"
+                      ? t("generator.contentType.character")
+                      : item.type === "environment"
+                        ? t("generator.contentType.environment")
+                        : t("generator.contentType.mission")
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-primary/10 bg-background/80 p-3"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{CONTENT_TYPE_ICONS[item.type]}</span>
+                          <span className="font-body font-semibold text-foreground">{name}</span>
+                          <span className="text-xs text-muted-foreground">{typeLabel}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground font-body mt-1">
+                          {item.scenario_input}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="font-body"
+                        onClick={() => handleAddContent(item.id)}
+                        disabled={addingContentId === item.id}
+                      >
+                        {addingContentId === item.id ? t("common.saving") : t("campaigns.addContent")}
+                      </Button>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  ) : null
+
+  const addContentPortal =
+    addContentModal && typeof document !== "undefined"
+      ? createPortal(addContentModal, document.body)
+      : addContentModal
+
   return (
     <div className="min-h-screen bg-background/50 backdrop-blur-sm p-4">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -1086,116 +1215,7 @@ export default function CampaignsPage() {
         </div>
       </div>
 
-      {isAddContentOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setIsAddContentOpen(false)}
-          />
-          <div className="relative z-10 w-full max-w-4xl">
-            <Card className="parchment ornate-border border-2 border-primary/30 shadow-xl">
-              <CardHeader className="border-b border-primary/10">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <CardTitle className="font-display text-2xl font-bold text-primary flex items-center gap-2">
-                      <span className="text-2xl">📚</span>
-                      {t("campaigns.addContentTitle")}
-                    </CardTitle>
-                    <CardDescription className="font-body text-sm text-muted-foreground">
-                      {t("campaigns.addContentDescription")}
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="font-body"
-                    onClick={() => setIsAddContentOpen(false)}
-                  >
-                    {t("common.close")}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Input
-                    value={librarySearch}
-                    onChange={(event) => setLibrarySearch(event.target.value)}
-                    placeholder={t("campaigns.searchPlaceholder")}
-                    className="font-body flex-1 min-w-[220px]"
-                  />
-                  <select
-                    value={libraryType}
-                    onChange={(event) => setLibraryType(event.target.value as ContentType | "all")}
-                    className="rounded-md border border-input bg-transparent px-3 py-2 text-sm font-body shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    <option value="all">{t("campaigns.allTypes")}</option>
-                    <option value="character">{t("generator.contentType.character")}</option>
-                    <option value="environment">{t("generator.contentType.environment")}</option>
-                    <option value="mission">{t("generator.contentType.mission")}</option>
-                  </select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="font-body"
-                    onClick={fetchLibraryContent}
-                    disabled={isLoadingLibrary}
-                  >
-                    {isLoadingLibrary ? t("common.loading") : t("campaigns.refreshLibrary")}
-                  </Button>
-                </div>
-
-                <div className="max-h-[60vh] overflow-auto pr-2 space-y-3">
-                  {isLoadingLibrary ? (
-                    <p className="text-sm text-muted-foreground font-body">
-                      {t("campaigns.loadingLibrary")}
-                    </p>
-                  ) : filteredLibraryContent.length === 0 ? (
-                    <div className="text-center text-sm text-muted-foreground font-body py-8">
-                      {t("campaigns.noContentFound")}
-                    </div>
-                  ) : (
-                    filteredLibraryContent.map((item) => {
-                      const name = getContentName({ type: item.type, content_data: item.content_data })
-                      const typeLabel =
-                        item.type === "character"
-                          ? t("generator.contentType.character")
-                          : item.type === "environment"
-                            ? t("generator.contentType.environment")
-                            : t("generator.contentType.mission")
-
-                      return (
-                        <div
-                          key={item.id}
-                          className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-primary/10 bg-background/80 p-3"
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl">{CONTENT_TYPE_ICONS[item.type]}</span>
-                              <span className="font-body font-semibold text-foreground">{name}</span>
-                              <span className="text-xs text-muted-foreground">{typeLabel}</span>
-                            </div>
-                            <div className="text-xs text-muted-foreground font-body mt-1">
-                              {item.scenario_input}
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            className="font-body"
-                            onClick={() => handleAddContent(item.id)}
-                            disabled={addingContentId === item.id}
-                          >
-                            {addingContentId === item.id ? t("common.saving") : t("campaigns.addContent")}
-                          </Button>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
+      {addContentPortal}
     </div>
   )
 }
