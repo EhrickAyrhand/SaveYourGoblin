@@ -200,29 +200,28 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
 **Implementation Steps**:
 
 1. **Database Schema** (2-3 days)
-   - [ ] Create `campaigns` table:
-     - [ ] id, user_id, name, description
-     - [ ] created_at, updated_at
-     - [ ] settings (JSONB for flexible config)
-   - [ ] Create `campaign_content` junction table:
-     - [ ] campaign_id, content_id
-     - [ ] order/sequence
-     - [ ] notes (content-specific to campaign)
-   - [ ] Add RLS policies
-   - [ ] Create migration file
+   - [X ] Create `campaigns` table:
+     - [X ] id, user_id, name, description
+     - [ X] created_at, updated_at
+     - [ X] settings (JSONB for flexible config)
+   - [ X] Create `campaign_content` junction table:
+     - [ X] campaign_id, content_id
+     - [ X ] notes (content-specific to campaign)
+   - [X ] Add RLS policies
+   - [ X] Create migration file
 
 2. **API Routes** (3-4 days)
-   - [ ] `app/api/campaigns/route.ts`:
-     - [ ] GET: List user's campaigns
-     - [ ] POST: Create new campaign
-   - [ ] `app/api/campaigns/[id]/route.ts`:
-     - [ ] GET: Get campaign details with content
-     - [ ] PATCH: Update campaign
-     - [ ] DELETE: Delete campaign
-   - [ ] `app/api/campaigns/[id]/content/route.ts`:
-     - [ ] POST: Add content to campaign
-     - [ ] DELETE: Remove content from campaign
-     - [ ] PATCH: Update content order/notes
+   - [ X] `app/api/campaigns/route.ts`:
+     - [X ] GET: List user's campaigns
+     - [ X] POST: Create new campaign
+   - [X ] `app/api/campaigns/[id]/route.ts`:
+     - [X ] GET: Get campaign details with content
+     - [X ] PATCH: Update campaign
+     - [X ] DELETE: Delete campaign
+   - [X ] `app/api/campaigns/[id]/content/route.ts`:
+     - [X ] POST: Add content to campaign
+     - [ X] DELETE: Remove content from campaign
+     - [ X] PATCH: Update content order/notes
 
 3. **Campaign Management UI** (3-4 days)
    - [ ] Create campaigns page: `app/[locale]/campaigns/page.tsx`

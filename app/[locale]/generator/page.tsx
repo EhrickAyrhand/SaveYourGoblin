@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useMemo } from "react"
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from '@/i18n/routing'
 import { getCurrentUser, signOut } from "@/lib/auth"
@@ -45,6 +45,32 @@ interface GeneratorPreferences {
   advancedEnvironmentInput?: AdvancedEnvironmentInput
   advancedMissionInput?: AdvancedMissionInput
   generationParams?: AdvancedGenerationParams
+}
+
+type CampaignSummary = {
+  id: string
+  name: string
+  description?: string | null
+  settings?: Record<string, unknown> | null
+  contentIds?: string[]
+  contentCount?: number
+}
+
+type CampaignContentItem = {
+  contentId: string
+  sequence: number
+  notes: string
+  content: {
+    id: string
+    type: ContentType
+    scenario_input: string
+    content_data: GeneratedContent
+    created_at: string
+  } | null
+}
+
+type CampaignDetails = CampaignSummary & {
+  content?: CampaignContentItem[]
 }
 
 const DEFAULT_GENERATION_PARAMS: Required<AdvancedGenerationParams> = {
@@ -125,11 +151,57 @@ export default function GeneratorPage() {
   const [generationParams, setGenerationParams] = useState<AdvancedGenerationParams>(() => ({
     ...DEFAULT_GENERATION_PARAMS,
   }))
+  const [campaigns, setCampaigns] = useState<CampaignSummary[]>([])
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("")
+  const [selectedCampaignDetails, setSelectedCampaignDetails] = useState<CampaignDetails | null>(null)
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false)
+  const [isLoadingCampaignDetails, setIsLoadingCampaignDetails] = useState(false)
+  const [campaignError, setCampaignError] = useState<string | null>(null)
   const [advancedFieldErrors, setAdvancedFieldErrors] = useState<Record<string, string>>({})
   const [hasRestoredPreferences, setHasRestoredPreferences] = useState(false)
   const generatedContentRef = useRef<HTMLDivElement>(null)
   const hasRestoredState = useRef(false)
   const previousUserRef = useRef<User | null>(null)
+
+  const getCampaignContentName = (item: CampaignContentItem): string => {
+    if (!item.content) return t("campaigns.unknownContent")
+    if (item.content.type === "character") {
+      return (item.content.content_data as Character).name
+    }
+    if (item.content.type === "environment") {
+      return (item.content.content_data as Environment).name
+    }
+    return (item.content.content_data as Mission).title
+  }
+
+  const campaignContext = useMemo(() => {
+    if (!selectedCampaignDetails) return ""
+    const lines: string[] = []
+    lines.push(`Campaign: ${selectedCampaignDetails.name}`)
+    if (selectedCampaignDetails.description) {
+      lines.push(`Description: ${selectedCampaignDetails.description}`)
+    }
+    if (selectedCampaignDetails.settings && Object.keys(selectedCampaignDetails.settings).length > 0) {
+      const rawSettings = JSON.stringify(selectedCampaignDetails.settings)
+      const settingsText = rawSettings.length > 500 ? `${rawSettings.slice(0, 500)}...` : rawSettings
+      lines.push(`Settings: ${settingsText}`)
+    }
+    if (selectedCampaignDetails.content && selectedCampaignDetails.content.length > 0) {
+      const contentSummary = selectedCampaignDetails.content
+        .slice(0, 5)
+        .map((entry) => {
+          if (!entry.content) return "Unknown"
+          const name = getCampaignContentName(entry)
+          return `${entry.content.type}: ${name}`
+        })
+        .join("; ")
+      const extra = selectedCampaignDetails.content.length > 5
+        ? ` (and ${selectedCampaignDetails.content.length - 5} more)`
+        : ""
+      lines.push(`Linked content: ${contentSummary}${extra}`)
+    }
+    return lines.join("\n")
+  }, [selectedCampaignDetails, t])
 
   useEffect(() => {
     // SECURITY: Check recovery session SYNCHRONOUSLY before any async operations
@@ -269,6 +341,10 @@ export default function GeneratorPage() {
       setGenerationParams({ ...DEFAULT_GENERATION_PARAMS })
       setAdvancedFieldErrors({})
       setHasRestoredPreferences(false)
+      setCampaigns([])
+      setSelectedCampaignId("")
+      setSelectedCampaignDetails(null)
+      setCampaignError(null)
     }
     previousUserRef.current = user
   }, [user])
@@ -293,6 +369,19 @@ export default function GeneratorPage() {
     if (!user) return
     loadTemplates()
   }, [user, contentType])
+
+  useEffect(() => {
+    if (!user) return
+    loadCampaigns()
+  }, [user])
+
+  useEffect(() => {
+    if (!selectedCampaignId) {
+      setSelectedCampaignDetails(null)
+      return
+    }
+    loadCampaignDetails(selectedCampaignId)
+  }, [selectedCampaignId])
 
   async function loadTemplates() {
     if (!user) return
@@ -320,6 +409,77 @@ export default function GeneratorPage() {
       console.error("Failed to load templates:", err)
     } finally {
       setIsLoadingTemplates(false)
+    }
+  }
+
+  async function loadCampaigns() {
+    if (!user) return
+    setIsLoadingCampaigns(true)
+    setCampaignError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        return
+      }
+
+      const response = await fetch("/api/campaigns?includeContent=true", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to load campaigns")
+      }
+
+      const result = await response.json()
+      const list = (result.data || []) as CampaignSummary[]
+      setCampaigns(list)
+      setSelectedCampaignId((prev) => {
+        if (!prev) return ""
+        return list.some((campaign) => campaign.id === prev) ? prev : ""
+      })
+    } catch (err) {
+      console.error("Failed to load campaigns:", err)
+      setCampaignError(err instanceof Error ? err.message : "Failed to load campaigns")
+    } finally {
+      setIsLoadingCampaigns(false)
+    }
+  }
+
+  async function loadCampaignDetails(campaignId: string) {
+    if (!user) return
+    setIsLoadingCampaignDetails(true)
+    setCampaignError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        return
+      }
+
+      const response = await fetch(`/api/campaigns/${campaignId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to load campaign details")
+      }
+
+      const result = await response.json()
+      setSelectedCampaignDetails(result.data || null)
+    } catch (err) {
+      console.error("Failed to load campaign details:", err)
+      setCampaignError(err instanceof Error ? err.message : "Failed to load campaign details")
+    } finally {
+      setIsLoadingCampaignDetails(false)
     }
   }
 
@@ -558,6 +718,7 @@ export default function GeneratorPage() {
         body: JSON.stringify({
           scenario: scenario.trim(),
           contentType,
+          ...(campaignContext ? { campaignContext } : {}),
           ...(advancedMode && {
             advancedInput: contentType === 'character'
               ? advancedCharacterInput
@@ -952,6 +1113,82 @@ export default function GeneratorPage() {
                     <p className="text-sm text-muted-foreground font-body">
                       {t('generator.scenarioHelper')}
                     </p>
+                  </div>
+
+                  <div className="space-y-3 pt-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Label className="font-body text-lg font-semibold">
+                        {t('generator.campaignContextLabel')}
+                      </Label>
+                      {isLoadingCampaigns && (
+                        <span className="text-xs text-muted-foreground font-body">
+                          {t('generator.loadingCampaigns')}
+                        </span>
+                      )}
+                    </div>
+                    <select
+                      value={selectedCampaignId}
+                      onChange={(event) => setSelectedCampaignId(event.target.value)}
+                      disabled={isLoadingCampaigns || campaigns.length === 0}
+                      className="w-full rounded-lg border-2 border-primary/20 bg-background px-4 py-3 text-base font-body focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary shadow-sm disabled:opacity-50"
+                    >
+                      <option value="">
+                        {campaigns.length === 0
+                          ? t('campaigns.noCampaigns')
+                          : t('generator.campaignContextNone')}
+                      </option>
+                      {campaigns.map((campaign) => (
+                        <option key={campaign.id} value={campaign.id}>
+                          {campaign.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-sm text-muted-foreground font-body">
+                      {t('generator.campaignContextHelp')}
+                    </p>
+                    {campaignError && (
+                      <Alert variant="destructive">
+                        <AlertDescription className="font-body">{campaignError}</AlertDescription>
+                      </Alert>
+                    )}
+                    {selectedCampaignId && (
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
+                        {isLoadingCampaignDetails ? (
+                          <p className="text-sm text-muted-foreground font-body">
+                            {t('generator.loadingCampaignDetails')}
+                          </p>
+                        ) : selectedCampaignDetails ? (
+                          <>
+                            <div className="font-body font-semibold text-foreground">
+                              {selectedCampaignDetails.name}
+                            </div>
+                            {selectedCampaignDetails.description && (
+                              <p className="text-sm text-muted-foreground font-body">
+                                {selectedCampaignDetails.description}
+                              </p>
+                            )}
+                            {selectedCampaignDetails.content && selectedCampaignDetails.content.length > 0 && (
+                              <div>
+                                <p className="text-xs text-muted-foreground font-body mb-1">
+                                  {t('generator.campaignContentSummary', { count: selectedCampaignDetails.content.length })}
+                                </p>
+                                <ul className="text-xs text-muted-foreground font-body space-y-1 list-disc list-inside">
+                                  {selectedCampaignDetails.content.slice(0, 5).map((entry) => (
+                                    <li key={entry.contentId}>
+                                      {entry.content ? `${entry.content.type}: ${getCampaignContentName(entry)}` : t('campaigns.unknownContent')}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-sm text-muted-foreground font-body">
+                            {t('generator.campaignContextUnavailable')}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Advanced Mode Fields */}

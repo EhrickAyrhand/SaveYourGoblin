@@ -26,6 +26,14 @@ import { ContentComparisonModal } from "@/components/rpg/content-comparison-moda
 const SEARCH_HISTORY_KEY = "syg-library-search-history"
 const MAX_RECENT_SEARCHES = 10
 
+type CampaignSummary = {
+  id: string
+  name: string
+  description?: string | null
+  contentIds?: string[]
+  contentCount?: number
+}
+
 export default function LibraryPage() {
   const t = useTranslations()
   const locale = useLocale()
@@ -42,6 +50,9 @@ export default function LibraryPage() {
   const [isFetching, setIsFetching] = useState(false)
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "alphabetical">("newest")
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [campaigns, setCampaigns] = useState<CampaignSummary[]>([])
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false)
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("all")
   const [dateFrom, setDateFrom] = useState<string>("")
   const [dateTo, setDateTo] = useState<string>("")
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false)
@@ -185,6 +196,13 @@ export default function LibraryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, selectedType, debouncedSearch, showFavoritesOnly])
 
+  useEffect(() => {
+    if (user) {
+      fetchCampaigns()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
   // Get all unique tags from all content
   const allTags = Array.from(
     new Set(
@@ -193,6 +211,24 @@ export default function LibraryPage() {
         .filter(tag => tag && tag.trim().length > 0)
     )
   ).sort()
+
+  const sortedCampaigns = useMemo(() => {
+    return [...campaigns].sort((a, b) => a.name.localeCompare(b.name))
+  }, [campaigns])
+
+  const contentCampaignMap = useMemo(() => {
+    const map: Record<string, CampaignSummary[]> = {}
+    for (const campaign of sortedCampaigns) {
+      const ids = campaign.contentIds || []
+      for (const contentId of ids) {
+        if (!map[contentId]) {
+          map[contentId] = []
+        }
+        map[contentId].push(campaign)
+      }
+    }
+    return map
+  }, [sortedCampaigns])
 
   // Helper function to get content name for sorting
   function getContentName(item: LibraryContentItem): string {
@@ -255,6 +291,12 @@ export default function LibraryPage() {
       processed = [...processed, ...additionalMatches]
     }
 
+    if (selectedCampaignId !== "all") {
+      processed = processed.filter((item) =>
+        contentCampaignMap[item.id]?.some((campaign) => campaign.id === selectedCampaignId)
+      )
+    }
+
     // Tag filtering is now done in API, so this is just for display
     // Client-side tag filter removed since API handles it
 
@@ -273,7 +315,7 @@ export default function LibraryPage() {
     })
 
     setFilteredContent(processed)
-  }, [content, sortBy, debouncedSearch, allContent])
+  }, [content, sortBy, debouncedSearch, allContent, selectedCampaignId, contentCampaignMap])
 
   // Reset tag filter when type changes
   useEffect(() => {
@@ -305,6 +347,42 @@ export default function LibraryPage() {
     } catch (err) {
       // Silently fail - counts will just be based on filtered content
       console.error("Failed to fetch all content for counts:", err)
+    }
+  }
+
+  async function fetchCampaigns() {
+    if (!user) return
+    setIsLoadingCampaigns(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        return
+      }
+
+      const response = await fetch("/api/campaigns?includeContent=true", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to fetch campaigns")
+      }
+
+      const result = await response.json()
+      const list = (result.data || []) as CampaignSummary[]
+      setCampaigns(list)
+      setSelectedCampaignId((prev) => {
+        if (prev === "all") return prev
+        return list.some((campaign) => campaign.id === prev) ? prev : "all"
+      })
+    } catch (err) {
+      console.error("Failed to fetch campaigns:", err)
+    } finally {
+      setIsLoadingCampaigns(false)
     }
   }
 
@@ -942,6 +1020,43 @@ export default function LibraryPage() {
                     </div>
                   )}
 
+                  {/* Campaign Filter */}
+                  {sortedCampaigns.length > 0 && (
+                    <div className="flex items-center gap-3 flex-wrap bg-primary/5 rounded-lg px-4 py-2 border border-primary/10">
+                      <span className="text-sm font-semibold text-muted-foreground font-body">
+                        {t('library.filterByCampaign')}:
+                      </span>
+                      <select
+                        value={selectedCampaignId}
+                        onChange={(e) => setSelectedCampaignId(e.target.value)}
+                        className="rounded-lg border-2 border-primary/20 bg-background px-3 py-1 text-sm font-body font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary shadow-sm"
+                      >
+                        <option value="all">{t('library.allCampaigns')}</option>
+                        {sortedCampaigns.map((campaign) => (
+                          <option key={campaign.id} value={campaign.id}>
+                            {campaign.name}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedCampaignId !== "all" && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCampaignId("all")}
+                          className="text-sm text-muted-foreground hover:text-foreground font-body font-semibold px-2 py-1 rounded hover:bg-primary/10 transition-colors"
+                          title={t('library.clearCampaignFilter')}
+                        >
+                          {t('library.clearCampaignFilter')}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {isLoadingCampaigns && (
+                    <div className="text-xs text-muted-foreground font-body">
+                      {t('library.loadingCampaigns')}
+                    </div>
+                  )}
+
                   {/* Advanced Search Button */}
                   <Button
                     variant="outline"
@@ -1139,26 +1254,30 @@ export default function LibraryPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-stretch">
-            {filteredContent.map((item) => (
-              <div key={item.id} className="relative group flex flex-col">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(item.id)}
-                  onChange={() => handleToggleSelect(item.id)}
-                  className="absolute top-3 right-3 z-30 w-4 h-4 cursor-pointer bg-background/95 backdrop-blur-sm border-2 border-primary/60 rounded checked:bg-primary checked:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-md transition-all hover:border-primary hover:scale-110 opacity-0 group-hover:opacity-100"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <LibraryCard
-                  item={item}
-                  onView={handleView}
-                  onDelete={handleDelete}
-                  onDuplicate={handleDuplicate}
-                  onToggleFavorite={handleToggleFavorite}
-                  onGenerateVariation={handleGenerateVariation}
-                  searchHighlight={debouncedSearch.trim() || undefined}
-                />
-              </div>
-            ))}
+            {filteredContent.map((item) => {
+              const itemCampaigns = contentCampaignMap[item.id] || []
+              return (
+                <div key={item.id} className="relative group flex flex-col">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => handleToggleSelect(item.id)}
+                    className="absolute top-3 right-3 z-30 w-4 h-4 cursor-pointer bg-background/95 backdrop-blur-sm border-2 border-primary/60 rounded checked:bg-primary checked:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 shadow-md transition-all hover:border-primary hover:scale-110 opacity-0 group-hover:opacity-100"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <LibraryCard
+                    item={item}
+                    campaigns={itemCampaigns}
+                    onView={handleView}
+                    onDelete={handleDelete}
+                    onDuplicate={handleDuplicate}
+                    onToggleFavorite={handleToggleFavorite}
+                    onGenerateVariation={handleGenerateVariation}
+                    searchHighlight={debouncedSearch.trim() || undefined}
+                  />
+                </div>
+              )
+            })}
           </div>
         )}
 
@@ -1179,6 +1298,7 @@ export default function LibraryPage() {
               setSelectedItem(updatedItem)
             }}
             onGenerateVariation={handleGenerateVariation}
+            onCampaignsUpdated={fetchCampaigns}
           />
         )}
 

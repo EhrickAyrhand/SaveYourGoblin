@@ -28,8 +28,14 @@ export interface LibraryContentItem {
   notes?: string
 }
 
+type CampaignTag = {
+  id: string
+  name: string
+}
+
 interface LibraryCardProps {
   item: LibraryContentItem
+  campaigns?: CampaignTag[]
   onView: (item: LibraryContentItem) => void
   onDelete: (id: string) => void
   onDuplicate?: (item: LibraryContentItem) => void
@@ -39,7 +45,7 @@ interface LibraryCardProps {
   searchHighlight?: string
 }
 
-export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavorite, onGenerateVariation, searchHighlight }: LibraryCardProps) {
+export function LibraryCard({ item, campaigns = [], onView, onDelete, onDuplicate, onToggleFavorite, onGenerateVariation, searchHighlight }: LibraryCardProps) {
   const t = useTranslations()
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDuplicating, setIsDuplicating] = useState(false)
@@ -307,6 +313,25 @@ export function LibraryCard({ item, onView, onDelete, onDuplicate, onToggleFavor
           {item.type === "environment" && renderEnvironmentDescription()}
           {item.type === "mission" && renderMissionDescription()}
         </div>
+
+        {campaigns.length > 0 && (
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {campaigns.slice(0, 3).map((campaign) => (
+              <span
+                key={campaign.id}
+                className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-body font-semibold text-primary"
+                title={campaign.name}
+              >
+                🗺️ {campaign.name}
+              </span>
+            ))}
+            {campaigns.length > 3 && (
+              <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-body font-semibold text-muted-foreground">
+                +{campaigns.length - 3}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Action Buttons - visible on hover */}
         {!showConfirm && (

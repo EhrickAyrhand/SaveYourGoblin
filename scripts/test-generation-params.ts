@@ -31,7 +31,7 @@ if (!process.env.OPENAI_API_KEY) {
 const scenario = 'A brave human fighter in a busy tavern, nursing an ale after a long journey'
 
 // --- Temperature ---
-async function testTemperature(generateRPGContent: (scenario: string, contentType: 'character' | 'environment' | 'mission', advancedInput?: AdvancedInput, generationParams?: AdvancedGenerationParams) => Promise<unknown>) {
+async function testTemperature(generateRPGContent: (scenario: string, contentType: 'character' | 'environment' | 'mission', advancedInput?: AdvancedInput, generationParams?: AdvancedGenerationParams, campaignContext?: string) => Promise<unknown>) {
   console.log('\n--- Temperature ---')
   const low: string[] = []
   const high: string[] = []
@@ -54,7 +54,7 @@ async function testTemperature(generateRPGContent: (scenario: string, contentTyp
 }
 
 // --- Tone ---
-async function testTone(generateRPGContent: (scenario: string, contentType: 'character' | 'environment' | 'mission', advancedInput?: AdvancedInput, generationParams?: AdvancedGenerationParams) => Promise<unknown>) {
+async function testTone(generateRPGContent: (scenario: string, contentType: 'character' | 'environment' | 'mission', advancedInput?: AdvancedInput, generationParams?: AdvancedGenerationParams, campaignContext?: string) => Promise<unknown>) {
   console.log('\n--- Tone ---')
   const serious = await generateRPGContent(scenario, 'character', undefined, { tone: 'serious' }) as { personality?: string; history?: string }
   const playful = await generateRPGContent(scenario, 'character', undefined, { tone: 'playful' }) as { personality?: string; history?: string }
@@ -70,7 +70,7 @@ async function testTone(generateRPGContent: (scenario: string, contentType: 'cha
 }
 
 // --- Complexity ---
-async function testComplexity(generateRPGContent: (scenario: string, contentType: 'character' | 'environment' | 'mission', advancedInput?: AdvancedInput, generationParams?: AdvancedGenerationParams) => Promise<unknown>) {
+async function testComplexity(generateRPGContent: (scenario: string, contentType: 'character' | 'environment' | 'mission', advancedInput?: AdvancedInput, generationParams?: AdvancedGenerationParams, campaignContext?: string) => Promise<unknown>) {
   console.log('\n--- Complexity ---')
   const simple = await generateRPGContent(scenario, 'character', undefined, { complexity: 'simple' }) as { history?: string; personality?: string }
   const detailed = await generateRPGContent(scenario, 'character', undefined, { complexity: 'detailed' }) as { history?: string; personality?: string }

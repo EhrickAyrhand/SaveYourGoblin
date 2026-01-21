@@ -39,9 +39,7 @@ export default function RootLayout({
           className="min-h-screen"
         >
           <RecoverySessionGuard />
-          <ThemeLoader />
           {children}
-          <ThemeSelector />
         </BackgroundImageWrapper>
       </body>
     </html>
