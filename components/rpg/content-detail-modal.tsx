@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import { useTranslations } from 'next-intl'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -658,7 +659,7 @@ export function ContentDetailModal({
     }
   }
 
-  return (
+  const modal = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in"
       onClick={(e) => {
@@ -1302,6 +1303,12 @@ export function ContentDetailModal({
       )}
     </div>
   )
+
+  if (typeof document === "undefined") {
+    return modal
+  }
+
+  return createPortal(modal, document.body)
 }
 
 // Link Modal Component
