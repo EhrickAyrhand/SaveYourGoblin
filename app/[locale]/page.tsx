@@ -48,7 +48,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background/50 backdrop-blur-sm">
       <main className="flex w-full max-w-6xl mx-auto flex-col items-center text-center p-4 pt-8">
         {/* CTA Buttons at the top */}
         <div className="flex flex-col gap-4 sm:flex-row w-full justify-center">

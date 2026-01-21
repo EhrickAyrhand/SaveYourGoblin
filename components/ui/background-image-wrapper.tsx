@@ -41,9 +41,9 @@ export function BackgroundImageWrapper({
   }
 
   return (
-    <div className={cn("relative w-full h-full", className)}>
+    <div className={cn("relative isolate w-full h-full", className)}>
       {/* Background Image */}
-      <div className="absolute inset-0 -z-10">
+      <div className="absolute inset-0 z-0 pointer-events-none">
         <div
           aria-hidden="true"
           className={cn("absolute inset-0 bg-cover bg-center", imageClassName)}

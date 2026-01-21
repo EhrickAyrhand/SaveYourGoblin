@@ -735,7 +735,7 @@ export default function GeneratorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen bg-background/50 backdrop-blur-sm p-4">
       <div className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center gap-2 pt-4">
         {showSaveBanner && (
           <AnimatedBanner
