@@ -6,6 +6,7 @@ import { useRouter } from "@/i18n/routing"
 import { getCurrentUser, signOut } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
 import { isRecoverySessionActive, isResetPasswordRoute } from "@/lib/recovery-session"
+import { formatDateDayMonthYearShort, formatDateTimeMedium } from "@/lib/date"
 import type { User } from "@/types/auth"
 import type { ContentType, Character, Environment, Mission, GeneratedContent } from "@/types/rpg"
 import type { LibraryContentItem } from "@/components/rpg/library-card"
@@ -241,22 +242,13 @@ export default function SessionNotesPage() {
     return session?.access_token || null
   }, [])
 
-  const formatDate = useCallback(
-    (value: string) => {
-      if (!value) return ""
-      const date = new Date(value)
-      if (Number.isNaN(date.getTime())) return value
-      return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date)
-    },
-    [locale]
-  )
+  const formatDate = useCallback((value: string) => {
+    return formatDateDayMonthYearShort(value)
+  }, [])
 
   const formatDateTime = useCallback(
     (value: string) => {
-      if (!value) return ""
-      const date = new Date(value)
-      if (Number.isNaN(date.getTime())) return value
-      return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(date)
+      return formatDateTimeMedium(value, locale)
     },
     [locale]
   )
@@ -803,8 +795,8 @@ export default function SessionNotesPage() {
                                       {summarizeText(note.content) || t("sessionNotes.emptyNote")}
                                     </div>
                                   </div>
-                                  <div className="text-xs text-muted-foreground font-body whitespace-nowrap">
-                                    {t("sessionNotes.lastUpdated", { date: formatDateTime(note.updated_at) })}
+                                  <div className="text-xs text-muted-foreground font-body">
+                                    {formatDate(note.updated_at)}
                                   </div>
                                 </div>
                                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-body text-muted-foreground">
