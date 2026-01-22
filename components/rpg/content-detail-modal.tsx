@@ -172,6 +172,34 @@ type CampaignSummary = {
   contentIds?: string[]
 }
 
+type ContentVersionSummary = {
+  id: string
+  version_number: number
+  change_summary?: string | null
+  changed_by?: string | null
+  created_at: string
+}
+
+type ContentVersionDetail = ContentVersionSummary & {
+  content_id: string
+  content_data: Record<string, unknown>
+}
+
+type VersionDiffEntry = {
+  path: string
+  before: unknown
+  after: unknown
+}
+
+type VersionDiffState = {
+  baseVersionId: string
+  compareVersionId: string
+  baseVersionNumber: number
+  compareVersionNumber: number
+  differences: VersionDiffEntry[]
+  truncated: boolean
+}
+
 export function ContentDetailModal({
   item,
   isOpen,
@@ -182,6 +210,7 @@ export function ContentDetailModal({
   onCampaignsUpdated,
 }: ContentDetailModalProps) {
   const t = useTranslations()
+  const locale = useLocale()
   const [notes, setNotes] = useState(item.notes || "")
   const [isSavingNotes, setIsSavingNotes] = useState(false)
   const [notesError, setNotesError] = useState<string | null>(null)
@@ -213,6 +242,17 @@ export function ContentDetailModal({
   } | null>(null)
   const [regenerateUndo, setRegenerateUndo] = useState<{ previousContentData: Record<string, unknown> } | null>(null)
   const [isSavingDiff, setIsSavingDiff] = useState(false)
+  const [versions, setVersions] = useState<ContentVersionSummary[]>([])
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false)
+  const [versionsError, setVersionsError] = useState<string | null>(null)
+  const [selectedVersion, setSelectedVersion] = useState<ContentVersionDetail | null>(null)
+  const [isLoadingVersion, setIsLoadingVersion] = useState(false)
+  const [versionPreviewError, setVersionPreviewError] = useState<string | null>(null)
+  const [restoringVersionId, setRestoringVersionId] = useState<string | null>(null)
+  const [restoreNote, setRestoreNote] = useState("")
+  const [versionDiff, setVersionDiff] = useState<VersionDiffState | null>(null)
+  const [isLoadingVersionDiff, setIsLoadingVersionDiff] = useState(false)
+  const [versionDiffError, setVersionDiffError] = useState<string | null>(null)
 
   // Update notes and tags when item ID changes (user opens a different item)
   // This prevents overwriting local changes while saving
@@ -226,6 +266,14 @@ export function ContentDetailModal({
     setCampaignsError(null)
     setAddingCampaignId(null)
     setIsCampaignModalOpen(false)
+    setVersions([])
+    setVersionsError(null)
+    setSelectedVersion(null)
+    setVersionPreviewError(null)
+    setVersionDiff(null)
+    setVersionDiffError(null)
+    setRestoreNote("")
+    setRestoringVersionId(null)
   }, [item.id])
 
   // Load linked content when item changes
@@ -234,6 +282,12 @@ export function ContentDetailModal({
       // Clear linked content immediately when item changes to prevent stale data during render
       setLinkedContent({ outgoing: [], incoming: [] })
       loadLinkedContent(item.id)
+    }
+  }, [isOpen, item.id])
+
+  useEffect(() => {
+    if (isOpen && item.id) {
+      loadVersions(item.id)
     }
   }, [isOpen, item.id])
 
@@ -261,6 +315,180 @@ export function ContentDetailModal({
       console.error("Failed to load linked content:", err)
     } finally {
       setIsLoadingLinks(false)
+    }
+  }
+
+  async function loadVersions(contentId: string) {
+    setIsLoadingVersions(true)
+    setVersionsError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        setVersions([])
+        return
+      }
+
+      const response = await fetch(`/api/content/${contentId}/versions`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to load versions")
+      }
+
+      const result = await response.json()
+      setVersions(result.data || [])
+    } catch (err) {
+      console.error("Failed to load versions:", err)
+      setVersionsError(err instanceof Error ? err.message : "Failed to load versions")
+    } finally {
+      setIsLoadingVersions(false)
+    }
+  }
+
+  async function handleViewVersion(versionId: string) {
+    setIsLoadingVersion(true)
+    setVersionPreviewError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        throw new Error("Not authenticated")
+      }
+
+      const response = await fetch(`/api/content/${item.id}/versions/${versionId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to load version")
+      }
+
+      const result = await response.json()
+      setSelectedVersion(result.data as ContentVersionDetail)
+      setVersionDiff(null)
+      setVersionDiffError(null)
+    } catch (err) {
+      console.error("Failed to load version:", err)
+      setVersionPreviewError(err instanceof Error ? err.message : "Failed to load version")
+    } finally {
+      setIsLoadingVersion(false)
+    }
+  }
+
+  async function handleRestoreVersion(version: ContentVersionSummary) {
+    if (!confirm(t("library.restoreVersionConfirm"))) return
+    setRestoringVersionId(version.id)
+    setVersionsError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        throw new Error("Not authenticated")
+      }
+
+      const payload: { versionId: string; change_summary?: string } = {
+        versionId: version.id,
+      }
+      const note = restoreNote.trim()
+      if (note.length > 0) {
+        payload.change_summary = note
+      }
+
+      const response = await fetch(`/api/content/${item.id}/versions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to restore version")
+      }
+
+      const result = await response.json()
+      const updatedContent = result.data?.content as {
+        content_data?: GeneratedContent
+        is_favorite?: boolean
+        tags?: string[]
+        notes?: string
+        scenario_input?: string
+        created_at?: string
+        type?: ContentType
+      } | undefined
+
+      if (updatedContent && onUpdate) {
+        const updatedItem: LibraryContentItem = {
+          ...item,
+          content_data: (updatedContent.content_data ?? item.content_data) as GeneratedContent,
+          is_favorite: updatedContent.is_favorite ?? item.is_favorite,
+          tags: updatedContent.tags ?? item.tags,
+          notes: updatedContent.notes ?? item.notes,
+          scenario_input: updatedContent.scenario_input ?? item.scenario_input,
+          created_at: updatedContent.created_at ?? item.created_at,
+          type: updatedContent.type ?? item.type,
+        }
+        onUpdate(updatedItem)
+      }
+
+      setRestoreNote("")
+      await loadVersions(item.id)
+    } catch (err) {
+      console.error("Failed to restore version:", err)
+      setVersionsError(err instanceof Error ? err.message : "Failed to restore version")
+    } finally {
+      setRestoringVersionId(null)
+    }
+  }
+
+  async function handleCompareVersion(baseVersionId: string, compareVersionId: string) {
+    setIsLoadingVersionDiff(true)
+    setVersionDiffError(null)
+    setVersionDiff(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        throw new Error("Not authenticated")
+      }
+
+      const response = await fetch(
+        `/api/content/${item.id}/versions/compare?baseVersionId=${baseVersionId}&compareVersionId=${compareVersionId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to compare versions")
+      }
+
+      const result = await response.json()
+      setVersionDiff(result.data as VersionDiffState)
+      setVersionPreviewError(null)
+      setSelectedVersion(null)
+    } catch (err) {
+      console.error("Failed to compare versions:", err)
+      setVersionDiffError(err instanceof Error ? err.message : "Failed to compare versions")
+    } finally {
+      setIsLoadingVersionDiff(false)
     }
   }
 
@@ -329,7 +557,7 @@ export function ContentDetailModal({
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString(locale, {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -850,6 +1078,112 @@ export function ContentDetailModal({
             </CardContent>
           </Card>
 
+          {/* Version History Section */}
+          <Card className="parchment">
+            <CardHeader>
+              <CardTitle className="font-display text-lg">{t('library.versionHistory')}</CardTitle>
+              <CardDescription className="font-body text-sm">
+                {t('library.versionHistoryDescription')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="restore-note" className="font-body text-sm mb-2 block">
+                  {t('library.versionNoteLabel')}
+                </Label>
+                <textarea
+                  id="restore-note"
+                  value={restoreNote}
+                  onChange={(e) => setRestoreNote(e.target.value)}
+                  placeholder={t('library.versionNotePlaceholder')}
+                  className="w-full min-h-[80px] px-3 py-2 rounded-lg border-2 border-border bg-background text-foreground font-body text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground font-body mt-2">
+                  {t('library.versionNoteHelp')}
+                </p>
+              </div>
+              {versionsError && (
+                <Alert variant="destructive">
+                  <AlertDescription className="font-body text-sm">{versionsError}</AlertDescription>
+                </Alert>
+              )}
+              {versionPreviewError && (
+                <Alert variant="destructive">
+                  <AlertDescription className="font-body text-sm">{versionPreviewError}</AlertDescription>
+                </Alert>
+              )}
+              {versionDiffError && (
+                <Alert variant="destructive">
+                  <AlertDescription className="font-body text-sm">{versionDiffError}</AlertDescription>
+                </Alert>
+              )}
+              {isLoadingVersions ? (
+                <p className="text-sm text-muted-foreground font-body">{t('library.loadingVersions')}</p>
+              ) : versions.length === 0 ? (
+                <p className="text-sm text-muted-foreground font-body">{t('library.noVersions')}</p>
+              ) : (
+                <div className="space-y-4">
+                  {versions.map((version, index) => {
+                    const previousVersion = versions[index + 1]
+                    const isRestoring = restoringVersionId === version.id
+                    return (
+                      <div key={version.id} className="relative pl-6">
+                        <span className="absolute left-0 top-3 h-2 w-2 rounded-full bg-primary" />
+                        <div className="rounded-lg border border-border bg-background/70 p-4 space-y-3">
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="space-y-1">
+                              <div className="font-body font-semibold text-foreground">
+                                {t('library.versionLabel', { number: version.version_number })}
+                              </div>
+                              <div className="text-xs text-muted-foreground font-body">
+                                {formatDate(version.created_at)}
+                              </div>
+                              <div className="text-sm text-foreground">
+                                {version.change_summary || t('library.versionNoNotes')}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewVersion(version.id)}
+                                disabled={isLoadingVersion}
+                                className="font-body"
+                              >
+                                {isLoadingVersion ? t('library.loadingVersion') : t('library.viewVersion')}
+                              </Button>
+                              {previousVersion && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleCompareVersion(previousVersion.id, version.id)}
+                                  disabled={isLoadingVersionDiff}
+                                  className="font-body"
+                                >
+                                  {isLoadingVersionDiff ? t('library.comparingVersion') : t('library.compareVersion')}
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRestoreVersion(version)}
+                                disabled={isRestoring}
+                                className="font-body"
+                              >
+                                {isRestoring ? t('library.restoringVersion') : t('library.restoreVersion')}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Linked Content Section */}
           <Card className="parchment">
             <CardHeader>
@@ -1153,6 +1487,139 @@ export function ContentDetailModal({
             <div className="shrink-0 px-4 py-3 border-t border-border flex justify-end gap-2">
               <Button variant="outline" onClick={handleDiffReject} disabled={isSavingDiff}>{t("library.diffReject")}</Button>
               <Button onClick={handleDiffAccept} disabled={isSavingDiff}>{isSavingDiff ? t("library.saving") : t("library.diffAcceptAndSave")}</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Version preview modal */}
+      {selectedVersion && (
+        <div
+          className="fixed inset-0 z-[56] flex items-center justify-center p-4 bg-black/70"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedVersion(null)
+            }
+          }}
+        >
+          <div className="relative w-full max-w-6xl max-h-[95vh] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in slide-in-from-bottom-4 duration-300 parchment ornate-border">
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-6 flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-2xl font-bold">
+                  {t('library.versionPreviewTitle', { number: selectedVersion.version_number })}
+                </h2>
+                <p className="font-body text-sm text-muted-foreground mt-1">
+                  {formatDate(selectedVersion.created_at)}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedVersion(null)}
+                className="font-body text-lg"
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="rounded-lg border border-border bg-background/70 p-4">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {t('library.versionNotesLabel')}
+                </div>
+                <p className="text-sm font-body mt-2">
+                  {selectedVersion.change_summary || t('library.versionNoNotes')}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-background/70 p-4">
+                {item.type === "character" && (
+                  <CharacterCard character={selectedVersion.content_data as Character} />
+                )}
+                {item.type === "environment" && (
+                  <EnvironmentCard environment={selectedVersion.content_data as Environment} />
+                )}
+                {item.type === "mission" && (
+                  <MissionCard mission={selectedVersion.content_data as Mission} />
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setSelectedVersion(null)} className="font-body">
+                  {t('common.close')}
+                </Button>
+                <Button
+                  onClick={() => handleRestoreVersion(selectedVersion)}
+                  disabled={restoringVersionId === selectedVersion.id}
+                  className="font-body"
+                >
+                  {restoringVersionId === selectedVersion.id ? t('library.restoringVersion') : t('library.restoreVersion')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Version diff modal */}
+      {versionDiff && (
+        <div
+          className="fixed inset-0 z-[56] flex items-center justify-center p-4 bg-black/70"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setVersionDiff(null)
+            }
+          }}
+        >
+          <div className="relative w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col bg-background rounded-lg shadow-2xl border border-border">
+            <div className="shrink-0 px-4 py-3 border-b border-border">
+              <h3 className="font-display text-lg font-semibold">
+                {t('library.versionDiffTitle', {
+                  base: versionDiff.baseVersionNumber,
+                  compare: versionDiff.compareVersionNumber,
+                })}
+              </h3>
+            </div>
+            <div className="flex-1 overflow-auto p-4 space-y-4">
+              {versionDiff.differences.length === 0 ? (
+                <p className="text-sm text-muted-foreground font-body">{t('library.versionDiffEmpty')}</p>
+              ) : (
+                versionDiff.differences.map((diff, index) => (
+                  <div
+                    key={`${diff.path}-${index}`}
+                    className="rounded-lg border border-border bg-background/70 p-4 space-y-3"
+                  >
+                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      {diff.path}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                          {t('library.versionDiffBefore')}
+                        </div>
+                        <div className="max-h-60 overflow-auto bg-muted/50 dark:bg-muted/30 p-3 rounded-lg border border-border">
+                          <DiffValueBlock value={diff.before} />
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                          {t('library.versionDiffAfter')}
+                        </div>
+                        <div className="max-h-60 overflow-auto bg-primary/5 dark:bg-primary/10 p-3 rounded-lg border border-primary/20">
+                          <DiffValueBlock value={diff.after} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+              {versionDiff.truncated && (
+                <p className="text-xs text-muted-foreground font-body">
+                  {t('library.versionDiffTruncated')}
+                </p>
+              )}
+            </div>
+            <div className="shrink-0 px-4 py-3 border-t border-border flex justify-end">
+              <Button variant="outline" onClick={() => setVersionDiff(null)} className="font-body">
+                {t('common.close')}
+              </Button>
             </div>
           </div>
         </div>
