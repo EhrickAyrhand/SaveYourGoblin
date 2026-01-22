@@ -549,22 +549,42 @@ function drawAbilityScoreGrid(
   return y + boxHeight + 8
 }
 
+export type ContentLinkEntry = {
+  id: string
+  contentId: string
+  linkType: string
+  createdAt?: string
+  content?: LibraryContentItem | null
+}
+
+export type ContentLinks = {
+  outgoing: ContentLinkEntry[]
+  incoming: ContentLinkEntry[]
+}
+
+export type JsonExportOptions = {
+  pretty?: boolean
+  links?: ContentLinks
+}
+
 /**
  * Export content as JSON file
  */
-export function exportAsJSON(item: LibraryContentItem): void {
+export function exportAsJSON(item: LibraryContentItem, options: JsonExportOptions = {}): void {
+  const { pretty = true, links } = options
   const data = {
     id: item.id,
     type: item.type,
-    scenario: item.scenario_input,
-    content: item.content_data,
+    scenario_input: item.scenario_input,
+    content_data: item.content_data,
     tags: item.tags || [],
     notes: item.notes || '',
     created_at: item.created_at,
     is_favorite: item.is_favorite || false,
+    ...(links ? { links } : {}),
   }
 
-  const jsonString = JSON.stringify(data, null, 2)
+  const jsonString = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data)
   const blob = new Blob([jsonString], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
