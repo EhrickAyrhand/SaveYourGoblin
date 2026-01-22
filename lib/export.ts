@@ -7,6 +7,7 @@ import jsPDF from 'jspdf'
 import type { LibraryContentItem } from '@/components/rpg/library-card'
 import type { Character, Environment, Mission } from '@/types/rpg'
 
+
 // Color tuple type
 type RGBColor = [number, number, number]
 
@@ -1458,11 +1459,13 @@ export function exportAsPDF(item: LibraryContentItem, options: PdfExportOptions 
     exportMissionToPDF(layout, item.content_data as Mission, labels)
   }
 
-  const totalPages = doc.getNumberOfPages()
+  const totalPages = doc.internal.pages.length - 1
+
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page)
     addSimpleFooter(doc, page, totalPages, pageWidth, pageHeight, margin)
   }
+  
 
   doc.save(`${contentName}.pdf`)
 }
