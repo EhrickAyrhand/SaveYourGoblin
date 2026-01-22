@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useTranslations } from 'next-intl'
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase"
 import { Input } from "@/components/ui/input"
 import { useLocale } from 'next-intl'
 import { formatDateMedium, formatDateTimeMedium } from "@/lib/date"
+import { exportAsJSON, exportAsPDF, type ContentLinks, type PdfExportLabels } from "@/lib/export"
 
 /** Renders diff values as readable, formatted UI instead of raw JSON. */
 function DiffValueBlock({ value, className = "" }: { value: unknown; className?: string }) {
@@ -197,10 +198,7 @@ export function ContentDetailModal({
   const [campaignsError, setCampaignsError] = useState<string | null>(null)
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false)
   const [addingCampaignId, setAddingCampaignId] = useState<string | null>(null)
-  const [linkedContent, setLinkedContent] = useState<{
-    outgoing: Array<{ id: string; contentId: string; linkType: string; content: any }>
-    incoming: Array<{ id: string; contentId: string; linkType: string; content: any }>
-  }>({ outgoing: [], incoming: [] })
+  const [linkedContent, setLinkedContent] = useState<ContentLinks>({ outgoing: [], incoming: [] })
   const [isLoadingLinks, setIsLoadingLinks] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [linkedItemPopup, setLinkedItemPopup] = useState<LibraryContentItem | null>(null)
@@ -215,6 +213,12 @@ export function ContentDetailModal({
   } | null>(null)
   const [regenerateUndo, setRegenerateUndo] = useState<{ previousContentData: Record<string, unknown> } | null>(null)
   const [isSavingDiff, setIsSavingDiff] = useState(false)
+  const [isExportingPDF, setIsExportingPDF] = useState(false)
+  const [isExportingJSON, setIsExportingJSON] = useState(false)
+  const [jsonPrettyPrint, setJsonPrettyPrint] = useState(true)
+  const [isJsonExportModalOpen, setIsJsonExportModalOpen] = useState(false)
+  const [exportNotice, setExportNotice] = useState<{ type: "success" | "error"; message: string } | null>(null)
+  const exportNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Update notes and tags when item ID changes (user opens a different item)
   // This prevents overwriting local changes while saving
@@ -228,6 +232,10 @@ export function ContentDetailModal({
     setCampaignsError(null)
     setAddingCampaignId(null)
     setIsCampaignModalOpen(false)
+    setExportNotice(null)
+    setIsExportingPDF(false)
+    setIsExportingJSON(false)
+    setIsJsonExportModalOpen(false)
   }, [item.id])
 
   // Load linked content when item changes
@@ -326,6 +334,14 @@ export function ContentDetailModal({
     document.addEventListener("keydown", handleEscape)
     return () => document.removeEventListener("keydown", handleEscape)
   }, [isOpen, onClose])
+
+  useEffect(() => {
+    return () => {
+      if (exportNoticeTimeoutRef.current) {
+        clearTimeout(exportNoticeTimeoutRef.current)
+      }
+    }
+  }, [])
 
   if (!isOpen) return null
 
@@ -649,6 +665,122 @@ export function ContentDetailModal({
     }
   }
 
+  function showExportNotice(type: "success" | "error", message: string) {
+    setExportNotice({ type, message })
+    if (exportNoticeTimeoutRef.current) {
+      clearTimeout(exportNoticeTimeoutRef.current)
+    }
+    exportNoticeTimeoutRef.current = setTimeout(() => {
+      setExportNotice(null)
+      exportNoticeTimeoutRef.current = null
+    }, 4000)
+  }
+
+  async function handleExportPDF() {
+    if (isExportingPDF) return
+    try {
+      setIsExportingPDF(true)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      const pdfLabels = buildPdfLabels()
+      exportAsPDF(item, { labels: pdfLabels })
+      showExportNotice("success", t("library.exportSuccessPDF"))
+    } catch (err) {
+      console.error("Export PDF error:", err)
+      showExportNotice("error", `${t("library.exportError")}: ${err instanceof Error ? err.message : "Unknown error"}`)
+    } finally {
+      setIsExportingPDF(false)
+    }
+  }
+
+  async function handleExportJSON(pretty: boolean) {
+    if (isExportingJSON) return
+    try {
+      setIsExportingJSON(true)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      exportAsJSON(item, {
+        pretty,
+        links: linkedContent.outgoing.length > 0 || linkedContent.incoming.length > 0 ? linkedContent : undefined,
+      })
+      showExportNotice("success", t("library.exportSuccessJSON"))
+    } catch (err) {
+      console.error("Export JSON error:", err)
+      showExportNotice("error", `${t("library.exportError")}: ${err instanceof Error ? err.message : "Unknown error"}`)
+    } finally {
+      setIsExportingJSON(false)
+    }
+  }
+
+  function buildPdfLabels(): PdfExportLabels {
+    const character = item.type === "character" ? (item.content_data as Character) : null
+    const environment = item.type === "environment" ? (item.content_data as Environment) : null
+    const mission = item.type === "mission" ? (item.content_data as Mission) : null
+
+    return {
+      common: {
+        levelLabel: t("rpg.level"),
+      },
+      character: {
+        abilityScoresTitle: t("rpg.abilityScores"),
+        abilityScoresSubtitle: t("rpg.coreAttributes"),
+        skillsTitle: t("rpg.skills"),
+        skillsSubtitle: t("rpg.skillCount", { count: character?.skills?.length || 0 }),
+        proficiencyBonusTitle: t("rpg.proficiencyBonus"),
+        expertiseTitle: t("rpg.expertise"),
+        expertiseSubtitle: t("rpg.skillWithExpertise", { count: character?.expertise?.length || 0 }),
+        racialTraitsTitle: t("rpg.racialTraits"),
+        racialTraitsSubtitle: t("rpg.traitCount", { count: character?.racialTraits?.length || 0 }),
+        classFeaturesTitle: t("rpg.classFeatures"),
+        classFeaturesSubtitle: t("rpg.featureCount", { count: character?.classFeatures?.length || 0 }),
+        traitsTitle: t("rpg.traits"),
+        traitsSubtitle: t("rpg.traitCount", { count: character?.traits?.length || 0 }),
+        spellsTitle: t("rpg.spells"),
+        spellsSubtitle: t("rpg.spellCount", { count: character?.spells?.length || 0 }),
+        historyTitle: t("rpg.history"),
+        historySubtitle: t("rpg.characterBackstory"),
+        personalityTitle: t("rpg.personality"),
+        personalitySubtitle: t("rpg.characterDemeanor"),
+        voiceTitle: t("rpg.voice"),
+        voiceSubtitle: t("rpg.voiceCharacteristics"),
+      },
+      environment: {
+        descriptionTitle: t("rpg.environment.description"),
+        descriptionSubtitle: t("rpg.environment.locationDetails"),
+        moodTitle: t("rpg.environment.mood"),
+        lightingTitle: t("rpg.environment.lighting"),
+        ambientTitle: t("rpg.environment.ambientAtmosphere"),
+        ambientSubtitle: t("rpg.environment.soundsAndAtmosphere"),
+        notableFeaturesTitle: t("rpg.environment.notableFeatures"),
+        notableFeaturesSubtitle: t("rpg.environment.featureCount", { count: environment?.features?.length || 0 }),
+        currentConflictTitle: t("rpg.environment.currentConflict"),
+        currentConflictSubtitle: t("rpg.environment.activeIssues"),
+        presentNPCsTitle: t("rpg.environment.presentNPCs"),
+        presentNPCsSubtitle: t("rpg.environment.npcCount", { count: environment?.npcs?.length || 0 }),
+        adventureHooksTitle: t("rpg.environment.adventureHooks"),
+        adventureHooksSubtitle: t("rpg.environment.hookCount", { count: environment?.adventureHooks?.length || 0 }),
+      },
+      mission: {
+        missionDetailsTitle: t("rpg.mission.missionDetails"),
+        missionDetailsSubtitle: "",
+        missionBriefTitle: t("rpg.mission.missionBrief"),
+        missionBriefSubtitle: t("rpg.mission.missionDetails"),
+        contextTitle: t("rpg.mission.context"),
+        contextSubtitle: t("rpg.mission.contextSubtitle"),
+        objectivesTitle: t("rpg.mission.objectives"),
+        objectivesSubtitle: t("rpg.mission.objectiveCount", { count: mission?.objectives?.length || 0 }),
+        baseRewardsTitle: t("rpg.mission.baseRewards"),
+        baseRewardsSubtitle: t("rpg.mission.missionCompletionRewards"),
+        choiceBasedRewardsTitle: t("rpg.mission.choiceBasedRewards"),
+        choiceBasedRewardsSubtitle: t("rpg.mission.pathCount", { count: mission?.choiceBasedRewards?.length || 0 }),
+        relatedNPCsTitle: t("rpg.mission.relatedNPCs"),
+        relatedLocationsTitle: t("rpg.mission.relatedLocations"),
+        powerfulItemsTitle: t("rpg.mission.powerfulItems"),
+        possibleOutcomesTitle: t("rpg.mission.possibleOutcomes"),
+      },
+    }
+  }
+
+  const hasLinkedContent = linkedContent.outgoing.length > 0 || linkedContent.incoming.length > 0
+
   const modal = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in"
@@ -692,20 +824,22 @@ export function ContentDetailModal({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => alert('This feature is not done yet')} 
+              onClick={handleExportPDF} 
               className="font-body no-print"
               title={t('library.exportPDF')}
+              disabled={isExportingPDF || isExportingJSON}
             >
-              📄 {t('library.exportPDF')}
+              {isExportingPDF ? `⏳ ${t("library.exportPreparing")}` : `📄 ${t('library.exportPDF')}`}
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => alert('This feature is not done yet')} 
+              onClick={() => setIsJsonExportModalOpen(true)} 
               className="font-body no-print"
               title={t('library.exportJSON')}
+              disabled={isExportingPDF || isExportingJSON}
             >
-              📋 {t('library.exportJSON')}
+              {isExportingJSON ? `⏳ ${t("library.exportPreparing")}` : `📋 ${t('library.exportJSON')}`}
             </Button>
             <Button 
               variant="outline" 
@@ -727,6 +861,11 @@ export function ContentDetailModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {exportNotice && (
+            <Alert variant={exportNotice.type === "error" ? "destructive" : "default"} className="no-print">
+              <AlertDescription className="font-body text-sm">{exportNotice.message}</AlertDescription>
+            </Alert>
+          )}
           {/* Original Scenario */}
           <Card className="parchment">
             <CardHeader>
@@ -1226,6 +1365,90 @@ export function ContentDetailModal({
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {isJsonExportModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isExportingJSON) {
+              setIsJsonExportModalOpen(false)
+            }
+          }}
+        >
+          <Card className="w-full max-w-xl parchment ornate-border">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="font-display text-xl">{t('library.exportOptionsTitle')}</CardTitle>
+                  <CardDescription className="font-body text-sm">
+                    {t('library.exportOptionsDescription')}
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsJsonExportModalOpen(false)}
+                  className="font-body text-lg"
+                  disabled={isExportingJSON}
+                >
+                  ✕
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="font-body text-sm mb-2 block">{t('library.jsonFormatLabel')}</Label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-body">
+                    <input
+                      type="radio"
+                      name="json-format"
+                      checked={jsonPrettyPrint}
+                      onChange={() => setJsonPrettyPrint(true)}
+                      disabled={isExportingJSON}
+                    />
+                    {t('library.jsonFormatPretty')}
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-body">
+                    <input
+                      type="radio"
+                      name="json-format"
+                      checked={!jsonPrettyPrint}
+                      onChange={() => setJsonPrettyPrint(false)}
+                      disabled={isExportingJSON}
+                    />
+                    {t('library.jsonFormatCompact')}
+                  </label>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground font-body">
+                {hasLinkedContent ? t('library.exportLinksIncluded') : t('library.exportLinksNone')}
+              </p>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsJsonExportModalOpen(false)}
+                  className="font-body"
+                  disabled={isExportingJSON}
+                >
+                  {t('library.cancel')}
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={async () => {
+                    await handleExportJSON(jsonPrettyPrint)
+                    setIsJsonExportModalOpen(false)
+                  }}
+                  className="font-body"
+                  disabled={isExportingJSON}
+                >
+                  {isExportingJSON ? t('library.exportPreparing') : t('library.exportDownload')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
