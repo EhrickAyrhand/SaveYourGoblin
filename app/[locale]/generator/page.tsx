@@ -965,16 +965,21 @@ export default function GeneratorPage() {
         {(() => {
           const main = () => (
             <>
-              <Card className="parchment ornate-border">
-                <CardHeader>
-                  <CardTitle className="font-display text-3xl mb-2">{t('generator.cardTitle')}</CardTitle>
-                  <CardDescription className="font-body text-base">
+              <Card className="parchment ornate-border border-2 border-primary/20 shadow-lg">
+                <CardHeader className="border-b border-primary/10">
+                  <CardTitle className="font-display text-2xl font-bold text-primary flex items-center gap-2">
+                    <span className="text-2xl">🧭</span>
+                    {t('generator.cardTitle')}
+                  </CardTitle>
+                  <CardDescription className="font-body text-sm text-muted-foreground">
                     {t('generator.cardDescription')}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6 p-6">
+                <CardContent className="space-y-6 p-6 md:p-8">
                   <div className="space-y-4">
-                    <Label className="font-body text-lg font-semibold">{t('generator.contentTypeLabel')}</Label>
+                    <Label className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                      {t('generator.contentTypeLabel')}
+                    </Label>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                       {[
                         {
@@ -1007,10 +1012,11 @@ export default function GeneratorPage() {
                           type="button"
                           onClick={() => setContentType(type.value)}
                           disabled={isGenerating}
-                          className={`relative rounded-xl border-2 p-6 text-left transition-all transform ${contentType === type.value
-                              ? `${type.borderColor} bg-gradient-to-br ${type.color} shadow-lg scale-105`
-                              : "border-border hover:border-primary/50 hover:shadow-md"
-                            } ${isGenerating ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-102"}`}
+                          className={`relative rounded-xl border-2 p-5 text-left transition-all shadow-md hover:shadow-lg transform ${
+                            contentType === type.value
+                              ? `bg-gradient-to-br ${type.color} border-primary text-primary shadow-lg scale-105`
+                              : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+                          } ${isGenerating ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-[1.02]"}`}
                         >
                           <div className="text-5xl mb-3">{type.icon}</div>
                           <div className="font-display text-xl font-semibold mb-2">
