@@ -198,7 +198,6 @@ export default function SessionNotesPage() {
   const [draftLinkedContentIds, setDraftLinkedContentIds] = useState<string[]>([])
   const [isPreview, setIsPreview] = useState(false)
   const [contentSearch, setContentSearch] = useState("")
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const activeNoteIdRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -469,65 +468,6 @@ export default function SessionNotesPage() {
 
   const previewHtml = useMemo(() => renderMarkdownToHtml(draftContent), [draftContent])
 
-  const insertWrappedText = useCallback(
-    (prefix: string, suffix = prefix) => {
-      const textarea = textareaRef.current
-      if (!textarea) return
-      const start = textarea.selectionStart
-      const end = textarea.selectionEnd
-      const current = draftContent
-      const selection = current.slice(start, end) || t("sessionNotes.editorPlaceholder")
-      const next = `${current.slice(0, start)}${prefix}${selection}${suffix}${current.slice(end)}`
-      setDraftContent(next)
-
-      requestAnimationFrame(() => {
-        const cursorStart = start + prefix.length
-        const cursorEnd = cursorStart + selection.length
-        textarea.focus()
-        textarea.setSelectionRange(cursorStart, cursorEnd)
-      })
-    },
-    [draftContent, t]
-  )
-
-  const insertLinePrefix = useCallback(
-    (prefix: string) => {
-      const textarea = textareaRef.current
-      if (!textarea) return
-      const start = textarea.selectionStart
-      const end = textarea.selectionEnd
-      const current = draftContent
-      const selection = current.slice(start, end) || t("sessionNotes.editorPlaceholder")
-      const lines = selection.split("\n").map((line) => `${prefix}${line}`)
-      const nextSelection = lines.join("\n")
-      const next = `${current.slice(0, start)}${nextSelection}${current.slice(end)}`
-      setDraftContent(next)
-
-      requestAnimationFrame(() => {
-        textarea.focus()
-        textarea.setSelectionRange(start, start + nextSelection.length)
-      })
-    },
-    [draftContent, t]
-  )
-
-  const insertLink = useCallback(() => {
-    const textarea = textareaRef.current
-    if (!textarea) return
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const current = draftContent
-    const selection = current.slice(start, end) || t("sessionNotes.editorPlaceholder")
-    const next = `${current.slice(0, start)}[${selection}](https://)${current.slice(end)}`
-    setDraftContent(next)
-
-    requestAnimationFrame(() => {
-      const urlStart = start + selection.length + 3
-      textarea.focus()
-      textarea.setSelectionRange(urlStart, urlStart + "https://".length)
-    })
-  }, [draftContent, t])
-
   const toggleLinkedContent = useCallback((contentId: string) => {
     setDraftLinkedContentIds((prev) => {
       if (prev.includes(contentId)) {
@@ -722,7 +662,7 @@ export default function SessionNotesPage() {
                   <select
                     value={campaignFilter}
                     onChange={(event) => setCampaignFilter(event.target.value)}
-                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm font-body shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-body text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
                     <option value="all">{t("sessionNotes.campaignFilterAll")}</option>
                     {campaigns.map((campaign) => (
@@ -742,7 +682,7 @@ export default function SessionNotesPage() {
                   <select
                     value={contentFilter}
                     onChange={(event) => setContentFilter(event.target.value)}
-                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm font-body shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-body text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
                     <option value="all">{t("sessionNotes.contentFilterAll")}</option>
                     {contentItems.map((item) => (
@@ -927,7 +867,7 @@ export default function SessionNotesPage() {
                   onChange={(event) =>
                     setDraftCampaignId(event.target.value === "none" ? null : event.target.value)
                   }
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm font-body shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-body text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <option value="none">{t("sessionNotes.campaignNone")}</option>
                   {campaigns.map((campaign) => (
@@ -1039,58 +979,7 @@ export default function SessionNotesPage() {
 
                 {!isPreview && (
                   <>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="font-body"
-                        onClick={() => insertWrappedText("**")}
-                      >
-                        B
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="font-body"
-                        onClick={() => insertWrappedText("*")}
-                      >
-                        I
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="font-body"
-                        onClick={() => insertLinePrefix("# ")}
-                      >
-                        H1
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="font-body"
-                        onClick={() => insertLinePrefix("- ")}
-                      >
-                        List
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="font-body"
-                        onClick={() => insertWrappedText("`")}
-                      >
-                        Code
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="font-body"
-                        onClick={insertLink}
-                      >
-                        Link
-                      </Button>
-                    </div>
                     <textarea
-                      ref={textareaRef}
                       value={draftContent}
                       onChange={(event) => setDraftContent(event.target.value)}
                       placeholder={t("sessionNotes.contentPlaceholder")}
