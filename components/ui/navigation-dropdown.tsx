@@ -19,6 +19,7 @@ export function NavigationDropdown({ onSignOut }: NavigationDropdownProps) {
     { href: "/generator", label: t('navigation.generator'), icon: "⚡" },
     { href: "/library", label: t('navigation.library'), icon: "📚" },
     { href: "/campaigns", label: t('navigation.campaigns'), icon: "🗺️" },
+    { href: "/sessions", label: t('navigation.sessions'), icon: "📝" },
     { href: "/profile", label: t('navigation.profile'), icon: "👤" },
     { href: "/", label: t('navigation.home'), icon: "🏠" },
   ]
