@@ -796,7 +796,7 @@ export default function SessionNotesPage() {
                                     </div>
                                   </div>
                                   <div className="text-xs text-muted-foreground font-body">
-                                    {t("sessionNotes.lastUpdated", { date: formatDate(note.updated_at) })}
+                                    {formatDate(note.updated_at)}
                                   </div>
                                 </div>
                                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-body text-muted-foreground">
