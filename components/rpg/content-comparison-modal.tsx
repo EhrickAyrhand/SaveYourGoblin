@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CharacterCard } from "@/components/rpg/character-card"
@@ -9,6 +9,7 @@ import { EnvironmentCard } from "@/components/rpg/environment-card"
 import { MissionCard } from "@/components/rpg/mission-card"
 import type { LibraryContentItem } from "./library-card"
 import type { Character, Environment, Mission } from "@/types/rpg"
+import { formatDateWithLocale } from "@/lib/date"
 
 interface ContentComparisonModalProps {
   items: [LibraryContentItem, LibraryContentItem]
@@ -22,6 +23,7 @@ export function ContentComparisonModal({
   onClose,
 }: ContentComparisonModalProps) {
   const t = useTranslations()
+  const locale = useLocale()
   const [item1, item2] = items
 
   useEffect(() => {
@@ -54,8 +56,7 @@ export function ContentComparisonModal({
   if (!isOpen) return null
 
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", {
+    return formatDateWithLocale(dateString, locale, {
       year: "numeric",
       month: "short",
       day: "numeric",

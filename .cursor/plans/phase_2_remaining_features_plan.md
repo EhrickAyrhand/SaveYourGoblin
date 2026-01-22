@@ -224,23 +224,23 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
      - [ X] PATCH: Update content order/notes
 
 3. **Campaign Management UI** (3-4 days)
-   - [ ] Create campaigns page: `app/[locale]/campaigns/page.tsx`
-   - [ ] Campaign list view:
-     - [ ] Show all user campaigns
-     - [ ] Create new campaign button
-     - [ ] Edit/delete actions
-   - [ ] Campaign detail view:
-     - [ ] Campaign info and settings
-     - [ ] Linked content list (with drag-to-reorder)
-     - [ ] Add content button (opens library selector)
-     - [ ] Content notes per campaign
+   - [ X] Create campaigns page: `app/[locale]/campaigns/page.tsx`
+   - [ X] Campaign list view:
+     - [ X] Show all user campaigns
+     - [ X] Create new campaign button
+     - [ X] Edit/delete actions
+   - [ X] Campaign detail view:
+     - [ X] Campaign info and settings
+     - [ X] Linked content list (with drag-to-reorder)
+     - [ X] Add content button (opens library selector)
+     - [ X] Content notes per campaign
 
 4. **Integration** (2-3 days)
-   - [ ] Add "Add to Campaign" button in content detail modal
-   - [ ] Create campaign selector modal
-   - [ ] Show campaign tags on content cards
-   - [ ] Filter library by campaign
-   - [ ] Add campaign context to content generation
+   - [X ] Add "Add to Campaign" button in content detail modal
+   - [X ] Create campaign selector modal
+   - [X ] Show campaign tags on content cards
+   - [X] Filter library by campaign
+   - [ X] Add campaign context to content generation
 
 ---
 
@@ -253,32 +253,32 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
 **Implementation Steps**:
 
 1. **Database Schema** (1 day)
-   - [ ] Create `session_notes` table:
-     - [ ] id, user_id, campaign_id (optional)
-     - [ ] title, content, session_date
-     - [ ] created_at, updated_at
-     - [ ] linked_content_ids (array of UUIDs)
-   - [ ] Add RLS policies
-   - [ ] Create migration file
+   - [X ] Create `session_notes` table:
+     - [X ] id, user_id, campaign_id (optional)
+     - [X ] title, content, session_date
+     - [X ] created_at, updated_at
+     - [X ] linked_content_ids (array of UUIDs)
+   - [ X] Add RLS policies
+   - [ X] Create migration file
 
 2. **API Routes** (2 days)
-   - [ ] `app/api/sessions/route.ts`:
-     - [ ] GET: List user's session notes
-     - [ ] POST: Create new session note
-   - [ ] `app/api/sessions/[id]/route.ts`:
-     - [ ] GET: Get session note
-     - [ ] PATCH: Update session note
-     - [ ] DELETE: Delete session note
+   - [ X] `app/api/sessions/route.ts`:
+     - [X ] GET: List user's session notes
+     - [ X] POST: Create new session note
+   - [ X] `app/api/sessions/[id]/route.ts`:
+     - [X ] GET: Get session note
+     - [X ] PATCH: Update session note
+     - [X ] DELETE: Delete session note
 
 3. **Session Notes UI** (2 days)
-   - [ ] Create session notes page or section
-   - [ ] Session note editor:
-     - [ ] Rich text editor (Markdown support)
-     - [ ] Date picker
-     - [ ] Link to content items
-     - [ ] Link to campaigns
-   - [ ] Session notes list/timeline view
-   - [ ] Search and filter session notes
+   - [X ] Create session notes page or section
+   - [X ] Session note editor:
+     - [X ] Rich text editor (Markdown support)
+     - [X ] Date picker
+     - [ X] Link to content items
+     - [ X] Link to campaigns
+   - [ X] Session notes list/timeline view
+   - [ X] Search and filter session notes
 
 ---
 

@@ -89,26 +89,26 @@
 
 .light {
   /* Light Parchment Theme (Alternative) */
-  --background: oklch(0.95 0.02 85);
+  --background: oklch(0.90 0.025 82);
   /* Enhanced foreground contrast for light theme */
   --foreground: oklch(0.20 0.06 45);
-  --card: oklch(0.96 0.015 80);
+  --card: oklch(0.94 0.02 82);
   --card-foreground: oklch(0.20 0.06 45);
-  --popover: oklch(0.98 0.01 85);
+  --popover: oklch(0.95 0.015 84);
   --popover-foreground: oklch(0.20 0.06 45);
   /* Enhanced dark primary on light background with better saturation */
   --primary: oklch(0.22 0.06 45);
-  --primary-foreground: oklch(0.95 0.02 85);
-  --secondary: oklch(0.90 0.02 80);
+  --primary-foreground: oklch(0.93 0.02 82);
+  --secondary: oklch(0.86 0.02 80);
   --secondary-foreground: oklch(0.28 0.05 50);
-  --muted: oklch(0.92 0.015 82);
+  --muted: oklch(0.88 0.02 82);
   /* Improved muted foreground for light theme readability */
   --muted-foreground: oklch(0.40 0.04 55);
   --accent: oklch(0.28 0.05 50);
-  --accent-foreground: oklch(0.95 0.02 85);
+  --accent-foreground: oklch(0.93 0.02 82);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.85 0.025 70);
-  --input: oklch(0.88 0.02 75);
+  --border: oklch(0.80 0.025 70);
+  --input: oklch(0.84 0.02 75);
   --ring: oklch(0.22 0.06 45);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -161,6 +161,12 @@
     background-image: 
       radial-gradient(circle at 20% 50%, oklch(0.96 0.01 85 / 0.3) 0%, transparent 50%),
       radial-gradient(circle at 80% 80%, oklch(0.94 0.015 80 / 0.2) 0%, transparent 50%);
+  }
+
+  .light body {
+    background-image:
+      radial-gradient(circle at 20% 50%, oklch(0.93 0.02 85 / 0.22) 0%, transparent 55%),
+      radial-gradient(circle at 80% 80%, oklch(0.91 0.02 80 / 0.16) 0%, transparent 55%);
   }
   
   /* Fantasy heading styles with increased sizes */

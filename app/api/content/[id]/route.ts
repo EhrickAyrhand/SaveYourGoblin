@@ -8,6 +8,62 @@
 import { NextRequest } from 'next/server'
 import { requireVerifiedEmail, createServerClient } from '@/lib/supabase-server'
 
+const MAX_CONTENT_KEY_CHANGES = 6
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (typeof a !== typeof b) return false
+  if (a == null || b == null) return false
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false
+    return a.every((item, index) => deepEqual(item, b[index]))
+  }
+
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keysA = Object.keys(a)
+    const keysB = Object.keys(b)
+    if (keysA.length !== keysB.length) return false
+    return keysA.every((key) => deepEqual(a[key], b[key]))
+  }
+
+  return false
+}
+
+function normalizeTags(tags: string[]): string[] {
+  return [...tags]
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0)
+    .sort()
+}
+
+function areStringArraysEqual(a: string[] | null | undefined, b: string[] | null | undefined): boolean {
+  if (!a && !b) return true
+  if (!a || !b) return false
+  const normalizedA = normalizeTags(a)
+  const normalizedB = normalizeTags(b)
+  if (normalizedA.length !== normalizedB.length) return false
+  return normalizedA.every((tag, index) => tag === normalizedB[index])
+}
+
+function getTopLevelChanges(
+  previous: Record<string, unknown>,
+  next: Record<string, unknown>
+): string[] {
+  const keys = new Set([...Object.keys(previous), ...Object.keys(next)])
+  const changes: string[] = []
+  keys.forEach((key) => {
+    if (!deepEqual(previous[key], next[key])) {
+      changes.push(key)
+    }
+  })
+  return changes.sort()
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -27,11 +83,12 @@ export async function PATCH(
 
     // Parse request body
     const body = await request.json()
-    const { is_favorite, tags, notes, content_data } = body as {
+    const { is_favorite, tags, notes, content_data, change_summary } = body as {
       is_favorite?: boolean
       tags?: string[]
       notes?: string
       content_data?: Record<string, unknown>
+      change_summary?: string
     }
 
     // Build update object (only include provided fields)
@@ -80,6 +137,67 @@ export async function PATCH(
       })
     }
 
+    const { data: existingContent, error: existingError } = await supabase
+      .from('generated_content')
+      .select('id, content_data, is_favorite, tags, notes')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (existingError || !existingContent) {
+      if (existingError?.code === 'PGRST116') {
+        return new Response(
+          JSON.stringify({ error: 'Content not found' }),
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
+      console.error('Supabase fetch error:', existingError)
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to fetch content',
+          message: existingError?.message,
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const hasFavoriteUpdate = Object.prototype.hasOwnProperty.call(updates, 'is_favorite')
+    const hasTagsUpdate = Object.prototype.hasOwnProperty.call(updates, 'tags')
+    const hasNotesUpdate = Object.prototype.hasOwnProperty.call(updates, 'notes')
+    const hasContentDataUpdate = Object.prototype.hasOwnProperty.call(updates, 'content_data')
+
+    const favoriteChanged = hasFavoriteUpdate && existingContent.is_favorite !== updates.is_favorite
+    const existingTags = Array.isArray(existingContent.tags) ? existingContent.tags : []
+    const tagsChanged = hasTagsUpdate && !areStringArraysEqual(existingTags, updates.tags ?? [])
+    const notesChanged = hasNotesUpdate && existingContent.notes !== updates.notes
+    const contentDataChanged =
+      hasContentDataUpdate &&
+      !deepEqual(existingContent.content_data, updates.content_data)
+
+    const contentKeyChanges =
+      contentDataChanged && isPlainObject(existingContent.content_data) && isPlainObject(updates.content_data)
+        ? getTopLevelChanges(existingContent.content_data, updates.content_data)
+        : []
+
+    const summaryParts: string[] = []
+    if (contentDataChanged) {
+      if (contentKeyChanges.length > 0) {
+        const previewKeys = contentKeyChanges.slice(0, MAX_CONTENT_KEY_CHANGES).join(', ')
+        const suffix = contentKeyChanges.length > MAX_CONTENT_KEY_CHANGES ? ', ...' : ''
+        summaryParts.push(`content (${previewKeys}${suffix})`)
+      } else {
+        summaryParts.push('content')
+      }
+    }
+    if (notesChanged) summaryParts.push('notes')
+    if (tagsChanged) summaryParts.push('tags')
+    if (favoriteChanged) summaryParts.push('favorite')
+
+    const requestedSummary = typeof change_summary === 'string' ? change_summary.trim() : ''
+    const autoSummary = summaryParts.length > 0 ? `Updated ${summaryParts.join(', ')}` : 'Content updated'
+    const resolvedChangeSummary = requestedSummary || autoSummary
+
     // Update content (RLS ensures user can only update their own content)
     let { data, error } = await supabase
       .from('generated_content')
@@ -115,6 +233,38 @@ export async function PATCH(
         }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       )
+    }
+
+    const shouldCreateVersion = contentDataChanged
+    if (shouldCreateVersion && data?.content_data) {
+      const { data: versionRows, error: versionQueryError } = await supabase
+        .from('content_versions')
+        .select('version_number')
+        .eq('content_id', id)
+        .order('version_number', { ascending: false })
+        .limit(1)
+
+      if (versionQueryError) {
+        console.error('Supabase version query error:', versionQueryError)
+      } else {
+        const lastVersion = versionRows?.[0]?.version_number
+        const nextVersion = typeof lastVersion === 'number' ? lastVersion + 1 : 1
+
+        const { error: versionInsertError } = await supabase
+          .from('content_versions')
+          .insert({
+            content_id: id,
+            user_id: user.id,
+            version_number: nextVersion,
+            content_data: data.content_data,
+            change_summary: resolvedChangeSummary,
+            changed_by: user.id,
+          })
+
+        if (versionInsertError) {
+          console.error('Supabase version insert error:', versionInsertError)
+        }
+      }
     }
 
     return new Response(

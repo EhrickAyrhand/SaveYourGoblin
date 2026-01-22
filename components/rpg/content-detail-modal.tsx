@@ -15,6 +15,7 @@ import type { Character, Environment, Mission, ContentType, GeneratedContent } f
 import { supabase } from "@/lib/supabase"
 import { Input } from "@/components/ui/input"
 import { useLocale } from 'next-intl'
+import { formatDateMedium, formatDateTimeMedium } from "@/lib/date"
 
 /** Renders diff values as readable, formatted UI instead of raw JSON. */
 function DiffValueBlock({ value, className = "" }: { value: unknown; className?: string }) {
@@ -182,6 +183,7 @@ export function ContentDetailModal({
   onCampaignsUpdated,
 }: ContentDetailModalProps) {
   const t = useTranslations()
+  const locale = useLocale()
   const [notes, setNotes] = useState(item.notes || "")
   const [isSavingNotes, setIsSavingNotes] = useState(false)
   const [notesError, setNotesError] = useState<string | null>(null)
@@ -326,18 +328,6 @@ export function ContentDetailModal({
   }, [isOpen, onClose])
 
   if (!isOpen) return null
-
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
 
   async function handleSaveNotes() {
     try {
@@ -670,14 +660,15 @@ export function ContentDetailModal({
     >
       <div className="relative w-full max-w-6xl max-h-[95vh] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in slide-in-from-bottom-4 duration-300 parchment ornate-border">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-4 flex items-center justify-between">
-          <div>
-            <h2 className="font-display text-2xl font-bold">Content Details</h2>
-            <p className="font-body text-sm text-muted-foreground">
-              Created {formatDate(item.created_at)}
-            </p>
-          </div>
-          <div className="flex gap-2">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <h2 className="font-display text-2xl font-bold break-words">{t("library.contentDetails")}</h2>
+              <p className="font-body text-sm text-muted-foreground break-words">
+                {t("library.created")} {formatDateTimeMedium(item.created_at, locale)}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             {onGenerateVariation && (
               <Button 
                 variant="outline" 
@@ -730,6 +721,7 @@ export function ContentDetailModal({
             <Button variant="outline" size="sm" onClick={onClose} className="font-body no-print">
               ✕ {t('common.close')}
             </Button>
+            </div>
           </div>
         </div>
 
@@ -1271,7 +1263,7 @@ export function ContentDetailModal({
                     : (linkedItemPopup.content_data as Mission).title}
                 </h2>
                 <p className="font-body text-sm text-muted-foreground mt-1">
-                  {linkedItemPopup.type} • Created {new Date(linkedItemPopup.created_at).toLocaleDateString("en-US")}
+                  {linkedItemPopup.type} • {t("library.created")} {formatDateMedium(linkedItemPopup.created_at, locale)}
                 </p>
               </div>
               <Button

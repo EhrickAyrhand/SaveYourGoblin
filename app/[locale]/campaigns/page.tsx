@@ -23,6 +23,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
+import { formatDateNumericShort, formatDateWithLocale } from "@/lib/date"
 
 type Campaign = {
   id: string
@@ -306,10 +307,7 @@ export default function CampaignsPage() {
   }, [isAddContentOpen])
 
   const formatDate = useCallback((value: string) => {
-    if (!value) return ""
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
-    return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date)
+    return formatDateWithLocale(value, locale, { dateStyle: "medium" })
   }, [locale])
 
   const hasCampaignChanges = useMemo(() => {
@@ -922,7 +920,7 @@ export default function CampaignsPage() {
                               {campaign.description || t("campaigns.noDescription")}
                             </div>
                             <div className="text-xs text-muted-foreground mt-2">
-                              {t("campaigns.updatedAt", { date: formatDate(campaign.updated_at) })}
+                              {t("campaigns.updatedAt", { date: formatDateNumericShort(campaign.updated_at, locale) })}
                             </div>
                           </button>
                           <div className="flex gap-2 mt-3">
