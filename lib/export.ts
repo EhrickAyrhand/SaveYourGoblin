@@ -35,6 +35,46 @@ const COLORS: {
   black: [0, 0, 0],
 }
 
+type PdfLayoutContext = {
+  doc: jsPDF
+  pageWidth: number
+  pageHeight: number
+  margin: number
+  headerHeight: number
+  footerHeight: number
+  contentStartY: number
+  y: number
+  currentPage: number
+}
+
+function addNewPage(layout: PdfLayoutContext): void {
+  layout.doc.addPage()
+  layout.currentPage += 1
+  layout.y = layout.contentStartY
+}
+
+function ensureSpace(layout: PdfLayoutContext, requiredSpace: number): boolean {
+  if (layout.y + requiredSpace > layout.pageHeight - layout.footerHeight - layout.margin) {
+    addNewPage(layout)
+    return true
+  }
+  return false
+}
+
+function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) {
+    return text
+  }
+  return `${text.slice(0, Math.max(0, maxLength - 3))}...`
+}
+
+function getSafeText(text: string | undefined | null, fallback: string = '—'): string {
+  if (!text || text.trim().length === 0) {
+    return fallback
+  }
+  return text
+}
+
 /**
  * Helper function to draw a styled box/section with background and border
  */
@@ -100,42 +140,287 @@ function addSectionHeader(
   return headerY + headerHeight + 5
 }
 
-/**
- * Helper function to draw a horizontal separator line
- */
-function drawSeparator(
-  doc: jsPDF,
-  y: number,
-  pageWidth: number,
-  margin: number,
-  color: RGBColor = COLORS.border,
-  width: number = 0.5
-): void {
-  doc.setDrawColor(color[0], color[1], color[2])
-  doc.setLineWidth(width)
-  doc.line(margin, y, pageWidth - margin, y)
+type LinesBoxOptions = {
+  x: number
+  width: number
+  fontSize: number
+  lineHeight?: number
+  paddingX?: number
+  paddingY?: number
+  textColor?: RGBColor
+  bgColor?: RGBColor
+  borderColor?: RGBColor
+  spacingAfter?: number
+  fontStyle?: 'normal' | 'bold'
+  onPageBreak?: () => void
 }
 
-/**
- * Helper function to add styled text with optional background
- */
-function addStyledText(
+type TitledLinesBoxOptions = {
+  x: number
+  width: number
+  title: string
+  lines: string[]
+  titleFontSize?: number
+  titleColor?: RGBColor
+  bodyFontSize?: number
+  bodyColor?: RGBColor
+  lineHeight?: number
+  paddingX?: number
+  paddingY?: number
+  bgColor?: RGBColor
+  borderColor?: RGBColor
+  spacingAfter?: number
+  repeatTitle?: boolean
+  onPageBreak?: () => void
+}
+
+function buildWrappedLines(
   doc: jsPDF,
   text: string,
-  x: number,
-  y: number,
+  maxWidth: number,
   fontSize: number,
-  color: RGBColor = COLORS.textPrimary,
-  isBold: boolean = false
-): void {
+  fontStyle: 'normal' | 'bold' = 'normal'
+): string[] {
   doc.setFontSize(fontSize)
-  doc.setTextColor(color[0], color[1], color[2])
-  if (isBold) {
-    doc.setFont(undefined, 'bold')
-  } else {
-    doc.setFont(undefined, 'normal')
+  doc.setFont(undefined, fontStyle)
+  return doc.splitTextToSize(getSafeText(text), maxWidth) as string[]
+}
+
+function buildWrappedLinesFromList(
+  doc: jsPDF,
+  lines: string[],
+  maxWidth: number,
+  fontSize: number
+): string[] {
+  return lines.flatMap((line) => buildWrappedLines(doc, line, maxWidth, fontSize))
+}
+
+function buildBulletedLines(
+  doc: jsPDF,
+  items: string[],
+  maxWidth: number,
+  fontSize: number
+): string[] {
+  const safeItems = items.filter((item) => item && item.trim().length > 0)
+  if (safeItems.length === 0) {
+    return [getSafeText('', '—')]
   }
-  doc.text(text, x, y)
+  doc.setFontSize(fontSize)
+  doc.setFont(undefined, 'normal')
+  const bullet = '• '
+  const bulletWidth = doc.getTextWidth(bullet)
+  const availableWidth = Math.max(0, maxWidth - bulletWidth)
+  const lines: string[] = []
+  safeItems.forEach((item) => {
+    const wrapped = doc.splitTextToSize(item, availableWidth) as string[]
+    if (wrapped.length === 0) {
+      lines.push(bullet.trim())
+      return
+    }
+    wrapped.forEach((line, index) => {
+      lines.push(index === 0 ? `${bullet}${line}` : `${' '.repeat(bullet.length)}${line}`)
+    })
+  })
+  return lines
+}
+
+function renderLinesBox(layout: PdfLayoutContext, lines: string[], options: LinesBoxOptions): void {
+  const {
+    x,
+    width,
+    fontSize,
+    lineHeight = 1.3,
+    paddingX = 8,
+    paddingY = 8,
+    textColor = COLORS.textPrimary,
+    bgColor = COLORS.sectionBg,
+    borderColor = COLORS.border,
+    spacingAfter = 6,
+    fontStyle = 'normal',
+    onPageBreak,
+  } = options
+
+  const safeLines = lines.length > 0 ? lines : [getSafeText('', '—')]
+  const lineHeightPx = fontSize * lineHeight
+  let index = 0
+
+  while (index < safeLines.length) {
+    const availableHeight = layout.pageHeight - layout.footerHeight - layout.margin - layout.y
+    const maxLines = Math.floor((availableHeight - paddingY * 2) / lineHeightPx)
+
+    if (maxLines <= 0) {
+      addNewPage(layout)
+      onPageBreak?.()
+      continue
+    }
+
+    const chunkLines = safeLines.slice(index, index + maxLines)
+    const boxHeight = paddingY * 2 + chunkLines.length * lineHeightPx
+
+    drawSectionBox(layout.doc, x, layout.y, width, boxHeight, bgColor, borderColor, 1)
+    layout.doc.setFontSize(fontSize)
+    layout.doc.setFont(undefined, fontStyle)
+    layout.doc.setTextColor(textColor[0], textColor[1], textColor[2])
+
+    let textY = layout.y + paddingY + fontSize
+    chunkLines.forEach((line) => {
+      layout.doc.text(line, x + paddingX, textY)
+      textY += lineHeightPx
+    })
+
+    layout.y += boxHeight + spacingAfter
+    index += chunkLines.length
+
+    if (index < safeLines.length) {
+      addNewPage(layout)
+      onPageBreak?.()
+    }
+  }
+}
+
+function renderTitledLinesBox(layout: PdfLayoutContext, options: TitledLinesBoxOptions): void {
+  const {
+    x,
+    width,
+    title,
+    lines,
+    titleFontSize = 10,
+    titleColor = COLORS.textPrimary,
+    bodyFontSize = 9,
+    bodyColor = COLORS.textPrimary,
+    lineHeight = 1.3,
+    paddingX = 8,
+    paddingY = 8,
+    bgColor = COLORS.sectionBg,
+    borderColor = COLORS.border,
+    spacingAfter = 6,
+    repeatTitle = true,
+    onPageBreak,
+  } = options
+
+  const safeLines = lines.length > 0 ? lines : [getSafeText('', '—')]
+  const bodyLineHeightPx = bodyFontSize * lineHeight
+  const titleHeight = titleFontSize * 1.1 + 2
+  let index = 0
+  let isFirstChunk = true
+
+  while (index < safeLines.length) {
+    const availableHeight = layout.pageHeight - layout.footerHeight - layout.margin - layout.y
+    const titleSpace = title ? titleHeight : 0
+    const maxLines = Math.floor((availableHeight - paddingY * 2 - titleSpace) / bodyLineHeightPx)
+
+    if (maxLines <= 0) {
+      addNewPage(layout)
+      onPageBreak?.()
+      continue
+    }
+
+    const chunkLines = safeLines.slice(index, index + maxLines)
+    const showTitle = title && (isFirstChunk || repeatTitle)
+    const chunkTitle = showTitle && !isFirstChunk ? `${title} (continued)` : title
+    const chunkTitleHeight = showTitle ? titleHeight : 0
+    const boxHeight = paddingY * 2 + chunkTitleHeight + chunkLines.length * bodyLineHeightPx
+
+    drawSectionBox(layout.doc, x, layout.y, width, boxHeight, bgColor, borderColor, 1)
+
+    let textY = layout.y + paddingY
+    if (showTitle) {
+      layout.doc.setFontSize(titleFontSize)
+      layout.doc.setFont(undefined, 'bold')
+      layout.doc.setTextColor(titleColor[0], titleColor[1], titleColor[2])
+      layout.doc.text(chunkTitle, x + paddingX, textY + titleFontSize)
+      textY += chunkTitleHeight
+    }
+
+    layout.doc.setFontSize(bodyFontSize)
+    layout.doc.setFont(undefined, 'normal')
+    layout.doc.setTextColor(bodyColor[0], bodyColor[1], bodyColor[2])
+
+    chunkLines.forEach((line) => {
+      layout.doc.text(line, x + paddingX, textY + bodyFontSize)
+      textY += bodyLineHeightPx
+    })
+
+    layout.y += boxHeight + spacingAfter
+    index += chunkLines.length
+    isFirstChunk = false
+
+    if (index < safeLines.length) {
+      addNewPage(layout)
+      onPageBreak?.()
+    }
+  }
+}
+
+function startSection(layout: PdfLayoutContext, title: string, fontSize: number = 12): void {
+  ensureSpace(layout, fontSize + 12)
+  layout.y = addSectionHeader(layout.doc, title, layout.y, layout.pageWidth, layout.margin, fontSize)
+}
+
+function renderSectionText(
+  layout: PdfLayoutContext,
+  title: string,
+  text: string,
+  options?: { headerFontSize?: number; fontSize?: number; lineHeight?: number }
+): void {
+  const headerFontSize = options?.headerFontSize ?? 12
+  const fontSize = options?.fontSize ?? 10
+  const lineHeight = options?.lineHeight ?? 1.3
+  const width = layout.pageWidth - 2 * layout.margin
+  const textWidth = width - 16
+
+  startSection(layout, title, headerFontSize)
+
+  const lines = buildWrappedLines(layout.doc, text, textWidth, fontSize)
+  renderLinesBox(layout, lines, {
+    x: layout.margin,
+    width,
+    fontSize,
+    lineHeight,
+    onPageBreak: () => {
+      layout.y = addSectionHeader(
+        layout.doc,
+        `${title} (continued)`,
+        layout.y,
+        layout.pageWidth,
+        layout.margin,
+        headerFontSize
+      )
+    },
+  })
+}
+
+function renderSectionList(
+  layout: PdfLayoutContext,
+  title: string,
+  items: string[],
+  options?: { headerFontSize?: number; fontSize?: number; lineHeight?: number }
+): void {
+  const headerFontSize = options?.headerFontSize ?? 12
+  const fontSize = options?.fontSize ?? 10
+  const lineHeight = options?.lineHeight ?? 1.3
+  const width = layout.pageWidth - 2 * layout.margin
+  const textWidth = width - 16
+
+  startSection(layout, title, headerFontSize)
+
+  const lines = buildBulletedLines(layout.doc, items, textWidth, fontSize)
+  renderLinesBox(layout, lines, {
+    x: layout.margin,
+    width,
+    fontSize,
+    lineHeight,
+    onPageBreak: () => {
+      layout.y = addSectionHeader(
+        layout.doc,
+        `${title} (continued)`,
+        layout.y,
+        layout.pageWidth,
+        layout.margin,
+        headerFontSize
+      )
+    },
+  })
 }
 
 /**
@@ -146,8 +431,9 @@ function addHeader(
   contentName: string,
   type: string,
   pageNumber: number,
+  totalPages: number,
   pageWidth: number,
-  pageHeight: number
+  margin: number
 ): void {
   const headerHeight = 15
   const headerY = 0
@@ -158,12 +444,12 @@ function addHeader(
   doc.setLineWidth(0)
   doc.rect(0, headerY, pageWidth, headerHeight, 'FD')
   
-  // Add type indicator and page number
+  // Add content name and type indicator
   doc.setFontSize(10)
   doc.setFont(undefined, 'bold')
   doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
-  doc.text(getTypeLabel(type), 15, headerY + 8)
-  doc.text(`Page ${pageNumber}`, pageWidth - 15, headerY + 8, { align: 'right' })
+  doc.text(truncateText(contentName, 38), margin, headerY + 8)
+  doc.text(`${getTypeLabel(type)} • ${pageNumber}/${totalPages}`, pageWidth - margin, headerY + 8, { align: 'right' })
 }
 
 /**
@@ -174,7 +460,11 @@ function addFooter(
   pageNumber: number,
   totalPages: number,
   pageWidth: number,
-  pageHeight: number
+  pageHeight: number,
+  margin: number,
+  createdAt: string,
+  tags: string[] | undefined,
+  notes: string | undefined
 ): void {
   const footerHeight = 12
   const footerY = pageHeight - footerHeight
@@ -189,13 +479,15 @@ function addFooter(
   doc.setFontSize(8)
   doc.setFont(undefined, 'normal')
   doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
-  const exportDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-  doc.text('SaveYourGoblin', 15, footerY + 8)
-  doc.text(exportDate, pageWidth - 15, footerY + 8, { align: 'right' })
+  const createdDate = formatDate(createdAt)
+  const tagsSummary = tags && tags.length > 0 ? `Tags: ${tags.length}` : ''
+  const notesSummary = notes && notes.trim().length > 0 ? 'Notes: yes' : ''
+  const summaryText = [tagsSummary, notesSummary].filter(Boolean).join(' • ')
+  doc.text(`Created: ${createdDate}`, margin, footerY + 8)
+  if (summaryText) {
+    doc.text(summaryText, pageWidth / 2, footerY + 8, { align: 'center' })
+  }
+  doc.text(`Page ${pageNumber} of ${totalPages}`, pageWidth - margin, footerY + 8, { align: 'right' })
 }
 
 /**
@@ -258,43 +550,6 @@ function drawAbilityScoreGrid(
 }
 
 /**
- * Helper function to add text with word wrap and page break handling
- */
-function addTextWithWrap(
-  doc: jsPDF,
-  text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  fontSize: number,
-  color: RGBColor = COLORS.textPrimary,
-  isBold: boolean = false,
-  lineHeight: number = 1.3
-): number {
-  doc.setFontSize(fontSize)
-  doc.setTextColor(color[0], color[1], color[2])
-  if (isBold) {
-    doc.setFont(undefined, 'bold')
-  } else {
-    doc.setFont(undefined, 'normal')
-  }
-  
-  const lines = doc.splitTextToSize(text, maxWidth)
-  let currentY = y
-  
-  lines.forEach((line: string, index: number) => {
-    // Add small spacing for better readability
-    if (index > 0) {
-      currentY += 1
-    }
-    doc.text(line, x, currentY)
-    currentY += fontSize * lineHeight
-  })
-  
-  return currentY
-}
-
-/**
  * Export content as JSON file
  */
 export function exportAsJSON(item: LibraryContentItem): void {
@@ -326,77 +581,71 @@ export function exportAsJSON(item: LibraryContentItem): void {
  */
 export function exportAsPDF(item: LibraryContentItem): void {
   const doc = new jsPDF()
+  doc.setFont('times', 'normal')
+
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 15
   const headerHeight = 15
   const footerHeight = 12
   const contentStartY = margin + headerHeight + 5
-  let yPosition = contentStartY
-  let currentPage = 1
-  const totalPages = 1 // Will be updated after content is added
+  const contentName = getContentName(item)
 
-  // Helper function to add a new page if needed
-  const checkPageBreak = (requiredSpace: number): boolean => {
-    if (yPosition + requiredSpace > pageHeight - footerHeight - margin) {
-      // Add footer to current page
-      addFooter(doc, currentPage, totalPages, pageWidth, pageHeight)
-      
-      // Add new page
-      doc.addPage()
-      currentPage++
-      yPosition = contentStartY
-      
-      // Add header to new page
-      addHeader(doc, getContentName(item), item.type, currentPage, pageWidth, pageHeight)
-      
-      return true
-    }
-    return false
+  doc.setProperties({
+    title: contentName,
+    subject: getTypeLabel(item.type),
+    author: 'SaveYourGoblin',
+    creator: 'SaveYourGoblin',
+    keywords: (item.tags || []).join(', '),
+  })
+
+  const layout: PdfLayoutContext = {
+    doc,
+    pageWidth,
+    pageHeight,
+    margin,
+    headerHeight,
+    footerHeight,
+    contentStartY,
+    y: contentStartY,
+    currentPage: 1,
   }
 
-  // Add header to first page
-  addHeader(doc, getContentName(item), item.type, currentPage, pageWidth, pageHeight)
-
   // Title section with background
-  const contentName = getContentName(item)
   const titleHeight = 30
-  checkPageBreak(titleHeight + 15)
-  
-  // Draw title background box with gradient effect (darker bottom)
+  ensureSpace(layout, titleHeight + 10)
+
   drawSectionBox(
     doc,
     margin,
-    yPosition,
+    layout.y,
     pageWidth - 2 * margin,
     titleHeight,
     COLORS.secondary,
     COLORS.secondary,
     0
   )
-  
-  // Add subtle shadow line below title
+
   doc.setDrawColor(COLORS.secondary[0] * 0.7, COLORS.secondary[1] * 0.7, COLORS.secondary[2] * 0.7)
   doc.setLineWidth(1)
-  doc.line(margin, yPosition + titleHeight, pageWidth - margin, yPosition + titleHeight)
-  
-  // Add title text with better positioning
+  doc.line(margin, layout.y + titleHeight, pageWidth - margin, layout.y + titleHeight)
+
   doc.setFontSize(22)
   doc.setFont(undefined, 'bold')
   doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
   const titleWidth = doc.getTextWidth(contentName)
-  doc.text(contentName, margin + (pageWidth - 2 * margin - titleWidth) / 2, yPosition + 20)
-  
-  yPosition += titleHeight + 10
+  doc.text(contentName, margin + (pageWidth - 2 * margin - titleWidth) / 2, layout.y + 20)
 
-  // Metadata box with improved styling
+  layout.y += titleHeight + 10
+
+  // Metadata box
   const metadataText = `${getTypeLabel(item.type)} • Created: ${formatDate(item.created_at)}`
-  checkPageBreak(18)
   const metadataBoxHeight = 14
+  ensureSpace(layout, metadataBoxHeight + 10)
   drawSectionBox(
     doc,
     margin,
-    yPosition,
+    layout.y,
     pageWidth - 2 * margin,
     metadataBoxHeight,
     COLORS.sectionBg,
@@ -407,539 +656,395 @@ export function exportAsPDF(item: LibraryContentItem): void {
   doc.setFont(undefined, 'normal')
   doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
   const metaWidth = doc.getTextWidth(metadataText)
-  doc.text(metadataText, margin + (pageWidth - 2 * margin - metaWidth) / 2, yPosition + 10)
-  yPosition += metadataBoxHeight + 10
+  doc.text(metadataText, margin + (pageWidth - 2 * margin - metaWidth) / 2, layout.y + 10)
+  layout.y += metadataBoxHeight + 10
 
-  // Tags (if present) - styled as badges
   if (item.tags && item.tags.length > 0) {
-    checkPageBreak(20)
-    addStyledText(doc, 'Tags', margin, yPosition, 12, COLORS.textPrimary, true)
-    yPosition += 10
-    
-    let tagX = margin
-    const tagHeight = 10
-    const tagSpacing = 4
-    const tagPadding = 6
-    
-    item.tags.forEach((tag) => {
-      doc.setFontSize(8)
-      const tagWidth = doc.getTextWidth(tag) + tagPadding * 2
-      
-      // Check if tag fits on current line
-      if (tagX + tagWidth > pageWidth - margin) {
-        tagX = margin
-        yPosition += tagHeight + tagSpacing
-        checkPageBreak(tagHeight + tagSpacing)
-      }
-      
-      // Draw tag badge with rounded appearance
-      drawSectionBox(doc, tagX, yPosition, tagWidth, tagHeight, COLORS.secondary, COLORS.secondary, 0)
-      doc.setFontSize(8)
-      doc.setFont(undefined, 'normal')
-      doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
-      doc.text(tag, tagX + tagPadding, yPosition + 7)
-      
-      tagX += tagWidth + tagSpacing
-    })
-    
-    yPosition += tagHeight + 10
+    renderSectionList(layout, 'Tags', item.tags, { fontSize: 9 })
   }
 
-  // Original Scenario section
-  checkPageBreak(25)
-  yPosition = addSectionHeader(doc, 'Original Scenario', yPosition, pageWidth, margin, 12)
-  checkPageBreak(20)
-  const scenarioLines = doc.splitTextToSize(item.scenario_input, pageWidth - 2 * margin - 10)
-  const scenarioBoxHeight = Math.min(Math.max(scenarioLines.length * 5 + 15, 35), 60)
-  drawSectionBox(doc, margin, yPosition, pageWidth - 2 * margin, scenarioBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  yPosition = addTextWithWrap(doc, item.scenario_input, margin + 8, yPosition + 10, pageWidth - 2 * margin - 16, 10, COLORS.textPrimary, false, 1.3)
-  yPosition += 8
+  renderSectionText(layout, 'Original Scenario', item.scenario_input, { fontSize: 10 })
 
-  // Notes section (if present)
   if (item.notes && item.notes.trim().length > 0) {
-    checkPageBreak(25)
-    yPosition = addSectionHeader(doc, 'Notes', yPosition, pageWidth, margin, 12)
-    checkPageBreak(20)
-    const notesLines = doc.splitTextToSize(item.notes, pageWidth - 2 * margin - 10)
-    const notesBoxHeight = Math.min(Math.max(notesLines.length * 5 + 15, 35), 60)
-    drawSectionBox(doc, margin, yPosition, pageWidth - 2 * margin, notesBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-    yPosition = addTextWithWrap(doc, item.notes, margin + 8, yPosition + 10, pageWidth - 2 * margin - 16, 10, COLORS.textPrimary, false, 1.3)
-    yPosition += 8
+    renderSectionText(layout, 'Notes', item.notes, { fontSize: 10 })
   }
 
-  // Content based on type
-  yPosition += 5
+  layout.y += 5
   if (item.type === 'character') {
-    yPosition = exportCharacterToPDF(doc, item.content_data as Character, yPosition, pageWidth, pageHeight, margin, headerHeight, footerHeight, checkPageBreak)
+    exportCharacterToPDF(layout, item.content_data as Character)
   } else if (item.type === 'environment') {
-    yPosition = exportEnvironmentToPDF(doc, item.content_data as Environment, yPosition, pageWidth, pageHeight, margin, headerHeight, footerHeight, checkPageBreak)
+    exportEnvironmentToPDF(layout, item.content_data as Environment)
   } else if (item.type === 'mission') {
-    yPosition = exportMissionToPDF(doc, item.content_data as Mission, yPosition, pageWidth, pageHeight, margin, headerHeight, footerHeight, checkPageBreak)
+    exportMissionToPDF(layout, item.content_data as Mission)
   }
 
-  // Add footer to last page
-  addFooter(doc, currentPage, currentPage, pageWidth, pageHeight)
+  const totalPages = doc.getNumberOfPages()
+  for (let page = 1; page <= totalPages; page++) {
+    doc.setPage(page)
+    addHeader(doc, contentName, item.type, page, totalPages, pageWidth, margin)
+    addFooter(doc, page, totalPages, pageWidth, pageHeight, margin, item.created_at, item.tags, item.notes)
+  }
 
-  // Save PDF
   doc.save(`${contentName}.pdf`)
 }
 
-function exportCharacterToPDF(
-  doc: jsPDF,
-  character: Character,
-  startY: number,
-  pageWidth: number,
-  pageHeight: number,
-  margin: number,
-  headerHeight: number,
-  footerHeight: number,
-  checkPageBreak: (requiredSpace: number) => boolean
-): number {
-  let y = startY
+function exportCharacterToPDF(layout: PdfLayoutContext, character: Character): void {
+  const width = layout.pageWidth - 2 * layout.margin
+  const textWidth = width - 16
 
-  // Character Details Section
-  checkPageBreak(35)
-  y = addSectionHeader(doc, 'Character Details', y, pageWidth, margin, 14)
-  
-  checkPageBreak(45)
-  const detailsBoxHeight = 40
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, detailsBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  
-  let detailsY = y + 10
-  addStyledText(doc, `Name: ${character.name}`, margin + 8, detailsY, 12, COLORS.textPrimary, true)
-  detailsY += 8
-  addStyledText(doc, `Race: ${character.race}`, margin + 8, detailsY, 10, COLORS.textPrimary, false)
-  detailsY += 7
-  addStyledText(doc, `Class: ${character.class}`, margin + 8, detailsY, 10, COLORS.textPrimary, false)
-  detailsY += 7
-  addStyledText(doc, `Level: ${character.level}`, margin + 8, detailsY, 10, COLORS.textPrimary, false)
-  detailsY += 7
-  addStyledText(doc, `Background: ${character.background}`, margin + 8, detailsY, 10, COLORS.textPrimary, false)
-  
-  y += detailsBoxHeight + 10
+  startSection(layout, 'Character Details', 14)
+  const detailLines = [
+    `Race: ${character.race}`,
+    `Class: ${character.class}`,
+    `Level: ${character.level}`,
+    `Background: ${character.background}`,
+  ]
+  if (character.associatedMission) {
+    detailLines.push(`Associated Mission: ${character.associatedMission}`)
+  }
 
-  // Ability Scores Section with Grid
-  checkPageBreak(40)
-  y = addSectionHeader(doc, 'Ability Scores', y, pageWidth, margin, 14)
-  y = drawAbilityScoreGrid(doc, character, y, pageWidth, margin)
-  y += 5
+  renderTitledLinesBox(layout, {
+    x: layout.margin,
+    width,
+    title: `Name: ${character.name}`,
+    lines: buildWrappedLinesFromList(layout.doc, detailLines, textWidth, 10),
+    titleFontSize: 11,
+    bodyFontSize: 10,
+    onPageBreak: () => {
+      layout.y = addSectionHeader(
+        layout.doc,
+        'Character Details (continued)',
+        layout.y,
+        layout.pageWidth,
+        layout.margin,
+        14
+      )
+    },
+  })
 
-  // History Section
-  checkPageBreak(30)
-  y = addSectionHeader(doc, 'History', y, pageWidth, margin, 12)
-  checkPageBreak(30)
-  const historyLines = doc.splitTextToSize(character.history, pageWidth - 2 * margin - 16)
-  const historyBoxHeight = Math.min(Math.max(historyLines.length * 6 + 20, 40), 70)
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, historyBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  y = addTextWithWrap(doc, character.history, margin + 8, y + 12, pageWidth - 2 * margin - 16, 10, COLORS.textPrimary, false, 1.3)
-  y += 8
+  startSection(layout, 'Ability Scores', 14)
+  const abilityPageBreak = ensureSpace(layout, 40)
+  if (abilityPageBreak) {
+    layout.y = addSectionHeader(
+      layout.doc,
+      'Ability Scores (continued)',
+      layout.y,
+      layout.pageWidth,
+      layout.margin,
+      14
+    )
+  }
+  layout.y = drawAbilityScoreGrid(layout.doc, character, layout.y, layout.pageWidth, layout.margin)
+  layout.y += 5
 
-  // Personality Section
-  checkPageBreak(30)
-  y = addSectionHeader(doc, 'Personality', y, pageWidth, margin, 12)
-  checkPageBreak(30)
-  const personalityLines = doc.splitTextToSize(character.personality, pageWidth - 2 * margin - 16)
-  const personalityBoxHeight = Math.min(Math.max(personalityLines.length * 6 + 20, 40), 70)
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, personalityBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  y = addTextWithWrap(doc, character.personality, margin + 8, y + 12, pageWidth - 2 * margin - 16, 10, COLORS.textPrimary, false, 1.3)
-  y += 8
+  renderSectionText(layout, 'History', character.history, { fontSize: 10 })
+  renderSectionText(layout, 'Personality', character.personality, { fontSize: 10 })
+  renderSectionText(layout, 'Voice', character.voiceDescription, { fontSize: 10 })
 
-  // Voice Section
-  checkPageBreak(30)
-  y = addSectionHeader(doc, 'Voice', y, pageWidth, margin, 12)
-  checkPageBreak(30)
-  const voiceLines = doc.splitTextToSize(character.voiceDescription, pageWidth - 2 * margin - 16)
-  const voiceBoxHeight = Math.min(Math.max(voiceLines.length * 6 + 20, 35), 60)
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, voiceBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  y = addTextWithWrap(doc, character.voiceDescription, margin + 8, y + 12, pageWidth - 2 * margin - 16, 10, COLORS.textPrimary, false, 1.3)
-  y += 8
+  if (character.traits && character.traits.length > 0) {
+    renderSectionList(layout, 'Traits', character.traits, { fontSize: 10 })
+  }
 
-  // Racial Traits Section
   if (character.racialTraits && character.racialTraits.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Racial Traits', y, pageWidth, margin, 12)
-    checkPageBreak(25)
-    const traitsBoxHeight = Math.min(character.racialTraits.length * 9 + 15, 60)
-    drawSectionBox(doc, margin, y, pageWidth - 2 * margin, traitsBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-    let traitsY = y + 10
-    character.racialTraits.forEach(trait => {
-      addStyledText(doc, `• ${trait}`, margin + 8, traitsY, 10, COLORS.textPrimary, false)
-      traitsY += 8
-    })
-    y += traitsBoxHeight + 8
+    renderSectionList(layout, 'Racial Traits', character.racialTraits, { fontSize: 10 })
   }
 
-  // Class Features Section
+  if (character.expertise && character.expertise.length > 0) {
+    renderSectionList(layout, 'Expertise', character.expertise, { fontSize: 10 })
+  }
+
+  const equipment = (character as Character & { equipment?: string[] }).equipment
+  if (equipment && equipment.length > 0) {
+    renderSectionList(layout, 'Equipment', equipment, { fontSize: 10 })
+  }
+
   if (character.classFeatures && character.classFeatures.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Class Features', y, pageWidth, margin, 12)
-    
-    character.classFeatures.forEach(feature => {
-      checkPageBreak(35)
-      const featureLines = doc.splitTextToSize(feature.description, pageWidth - 2 * margin - 16)
-      const featureBoxHeight = Math.min(Math.max(featureLines.length * 5 + 25, 35), 60)
-      drawSectionBox(doc, margin, y, pageWidth - 2 * margin, featureBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-      
-      addStyledText(doc, `${feature.name} (Level ${feature.level})`, margin + 8, y + 10, 10, COLORS.textPrimary, true)
-      y = addTextWithWrap(doc, feature.description, margin + 8, y + 18, pageWidth - 2 * margin - 16, 9, COLORS.textPrimary, false, 1.3)
-      y += 8
-    })
-  }
-
-  // Skills Section
-  if (character.skills && character.skills.length > 0) {
-    const proficientSkills = character.skills.filter(s => s.proficiency)
-    if (proficientSkills.length > 0) {
-      checkPageBreak(30)
-      y = addSectionHeader(doc, 'Skills', y, pageWidth, margin, 12)
-      checkPageBreak(25)
-      const skillsLines = proficientSkills.map(s => `${s.name} (+${s.modifier})`)
-      const skillsBoxHeight = Math.min(Math.max(skillsLines.length * 8 + 15, 30), 50)
-      drawSectionBox(doc, margin, y, pageWidth - 2 * margin, skillsBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-      let skillsY = y + 10
-      skillsLines.forEach(skill => {
-        addStyledText(doc, `• ${skill}`, margin + 8, skillsY, 10, COLORS.textPrimary, false)
-        skillsY += 8
+    startSection(layout, 'Class Features', 12)
+    character.classFeatures.forEach((feature) => {
+      const lines = buildWrappedLines(layout.doc, feature.description, textWidth, 9)
+      renderTitledLinesBox(layout, {
+        x: layout.margin,
+        width,
+        title: `${feature.name} (Level ${feature.level})`,
+        lines,
+        titleFontSize: 10,
+        bodyFontSize: 9,
+        onPageBreak: () => {
+          layout.y = addSectionHeader(
+            layout.doc,
+            'Class Features (continued)',
+            layout.y,
+            layout.pageWidth,
+            layout.margin,
+            12
+          )
+        },
       })
-      y += skillsBoxHeight + 8
-    }
+    })
   }
 
-  // Spells Section
+  if (character.skills && character.skills.length > 0) {
+    const expertiseSet = new Set(character.expertise || [])
+    const skillLines = character.skills.map((skill) => {
+      const mod = skill.modifier >= 0 ? `+${skill.modifier}` : `${skill.modifier}`
+      const proficiencyLabel = expertiseSet.has(skill.name)
+        ? 'Expertise'
+        : skill.proficiency
+          ? 'Proficient'
+          : ''
+      const suffix = proficiencyLabel ? `, ${proficiencyLabel}` : ''
+      return `${skill.name} (${mod}${suffix})`
+    })
+    renderSectionList(layout, 'Skills', skillLines, { fontSize: 10 })
+  }
+
   if (character.spells && character.spells.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Spells', y, pageWidth, margin, 12)
-    
-    character.spells.forEach(spell => {
-      checkPageBreak(35)
-      const spellLines = doc.splitTextToSize(spell.description, pageWidth - 2 * margin - 16)
-      const spellBoxHeight = Math.min(Math.max(spellLines.length * 5 + 25, 35), 60)
-      drawSectionBox(doc, margin, y, pageWidth - 2 * margin, spellBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-      
-      addStyledText(doc, `${spell.name} (Level ${spell.level})`, margin + 8, y + 10, 10, COLORS.textPrimary, true)
-      y = addTextWithWrap(doc, spell.description, margin + 8, y + 18, pageWidth - 2 * margin - 16, 9, COLORS.textPrimary, false, 1.3)
-      y += 8
+    startSection(layout, 'Spells', 12)
+    character.spells.forEach((spell) => {
+      const lines = buildWrappedLines(layout.doc, spell.description, textWidth, 9)
+      renderTitledLinesBox(layout, {
+        x: layout.margin,
+        width,
+        title: `${spell.name} (Level ${spell.level})`,
+        lines,
+        titleFontSize: 10,
+        bodyFontSize: 9,
+        onPageBreak: () => {
+          layout.y = addSectionHeader(
+            layout.doc,
+            'Spells (continued)',
+            layout.y,
+            layout.pageWidth,
+            layout.margin,
+            12
+          )
+        },
+      })
     })
   }
-
-  return y
 }
 
-function exportEnvironmentToPDF(
-  doc: jsPDF,
-  environment: Environment,
-  startY: number,
-  pageWidth: number,
-  pageHeight: number,
-  margin: number,
-  headerHeight: number,
-  footerHeight: number,
-  checkPageBreak: (requiredSpace: number) => boolean
-): number {
-  let y = startY
+function exportEnvironmentToPDF(layout: PdfLayoutContext, environment: Environment): void {
+  const width = layout.pageWidth - 2 * layout.margin
+  const textWidth = width - 16
 
-  // Environment Details Section
-  checkPageBreak(30)
-  y = addSectionHeader(doc, 'Environment Details', y, pageWidth, margin, 14)
-  
-  checkPageBreak(25)
-  const detailsBoxHeight = 20
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, detailsBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  addStyledText(doc, `Name: ${environment.name}`, margin + 5, y + 13, 11, COLORS.textPrimary, true)
-  y += detailsBoxHeight + 8
+  startSection(layout, 'Environment Details', 14)
+  const detailLines = buildWrappedLinesFromList(
+    layout.doc,
+    [`Name: ${environment.name}`],
+    textWidth,
+    10
+  )
+  renderLinesBox(layout, detailLines, {
+    x: layout.margin,
+    width,
+    fontSize: 10,
+    onPageBreak: () => {
+      layout.y = addSectionHeader(
+        layout.doc,
+        'Environment Details (continued)',
+        layout.y,
+        layout.pageWidth,
+        layout.margin,
+        14
+      )
+    },
+  })
 
-  // Description Section
-  checkPageBreak(30)
-  y = addSectionHeader(doc, 'Description', y, pageWidth, margin, 12)
-  checkPageBreak(25)
-  const descBoxHeight = Math.min(50, environment.description.length > 150 ? 70 : 40)
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, descBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  y = addTextWithWrap(doc, environment.description, margin + 5, y + 8, pageWidth - 2 * margin - 10, 10, COLORS.textPrimary, false, 1.2)
-  y += 5
+  renderSectionText(layout, 'Description', environment.description, { fontSize: 10 })
+  renderSectionText(layout, 'Mood', environment.mood, { fontSize: 10 })
+  renderSectionText(layout, 'Lighting', environment.lighting, { fontSize: 10 })
+  renderSectionText(layout, 'Ambient Atmosphere', environment.ambient, { fontSize: 10 })
 
-  // Mood Section
-  checkPageBreak(30)
-  y = addSectionHeader(doc, 'Mood', y, pageWidth, margin, 12)
-  checkPageBreak(20)
-  const moodBoxHeight = Math.min(25, environment.mood.length > 100 ? 35 : 20)
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, moodBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  y = addTextWithWrap(doc, environment.mood, margin + 5, y + 8, pageWidth - 2 * margin - 10, 10, COLORS.textPrimary, false, 1.2)
-  y += 5
-
-  // Lighting Section
-  checkPageBreak(30)
-  y = addSectionHeader(doc, 'Lighting', y, pageWidth, margin, 12)
-  checkPageBreak(20)
-  const lightingBoxHeight = Math.min(25, environment.lighting.length > 100 ? 35 : 20)
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, lightingBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  y = addTextWithWrap(doc, environment.lighting, margin + 5, y + 8, pageWidth - 2 * margin - 10, 10, COLORS.textPrimary, false, 1.2)
-  y += 5
-
-  // Ambient Atmosphere Section
-  checkPageBreak(30)
-  y = addSectionHeader(doc, 'Ambient Atmosphere', y, pageWidth, margin, 12)
-  checkPageBreak(25)
-  const ambientBoxHeight = Math.min(30, environment.ambient.length > 100 ? 40 : 25)
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, ambientBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  y = addTextWithWrap(doc, environment.ambient, margin + 5, y + 8, pageWidth - 2 * margin - 10, 10, COLORS.textPrimary, false, 1.2)
-  y += 5
-
-  // Notable Features Section
   if (environment.features && environment.features.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Notable Features', y, pageWidth, margin, 12)
-    checkPageBreak(20)
-    const featuresBoxHeight = Math.min(environment.features.length * 8 + 10, 60)
-    drawSectionBox(doc, margin, y, pageWidth - 2 * margin, featuresBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-    let featuresY = y + 8
-    environment.features.forEach(feature => {
-      addStyledText(doc, `• ${feature}`, margin + 5, featuresY, 10, COLORS.textPrimary, false)
-      featuresY += 7
-    })
-    y += featuresBoxHeight + 5
+    renderSectionList(layout, 'Notable Features', environment.features, { fontSize: 10 })
   }
 
-  // Present NPCs Section
   if (environment.npcs && environment.npcs.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Present NPCs', y, pageWidth, margin, 12)
-    checkPageBreak(20)
-    const npcsBoxHeight = Math.min(environment.npcs.length * 8 + 10, 60)
-    drawSectionBox(doc, margin, y, pageWidth - 2 * margin, npcsBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-    let npcsY = y + 8
-    environment.npcs.forEach(npc => {
-      addStyledText(doc, `• ${npc}`, margin + 5, npcsY, 10, COLORS.textPrimary, false)
-      npcsY += 7
-    })
-    y += npcsBoxHeight + 5
+    renderSectionList(layout, 'Present NPCs', environment.npcs, { fontSize: 10 })
   }
 
-  // Current Conflict Section
   if (environment.currentConflict) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Current Conflict', y, pageWidth, margin, 12)
-    checkPageBreak(25)
-    const conflictBoxHeight = Math.min(40, environment.currentConflict.length > 150 ? 60 : 30)
-    drawSectionBox(doc, margin, y, pageWidth - 2 * margin, conflictBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-    y = addTextWithWrap(doc, environment.currentConflict, margin + 5, y + 8, pageWidth - 2 * margin - 10, 10, COLORS.textPrimary, false, 1.2)
-    y += 5
+    renderSectionText(layout, 'Current Conflict', environment.currentConflict, { fontSize: 10 })
   }
 
-  // Adventure Hooks Section
   if (environment.adventureHooks && environment.adventureHooks.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Adventure Hooks', y, pageWidth, margin, 12)
-    checkPageBreak(20)
-    const hooksBoxHeight = Math.min(environment.adventureHooks.length * 10 + 10, 70)
-    drawSectionBox(doc, margin, y, pageWidth - 2 * margin, hooksBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-    let hooksY = y + 8
-    environment.adventureHooks.forEach(hook => {
-      addStyledText(doc, `• ${hook}`, margin + 5, hooksY, 10, COLORS.textPrimary, false)
-      hooksY += 9
-    })
-    y += hooksBoxHeight + 5
+    renderSectionList(layout, 'Adventure Hooks', environment.adventureHooks, { fontSize: 10 })
   }
-  
-  return y
 }
 
-function exportMissionToPDF(
-  doc: jsPDF,
-  mission: Mission,
-  startY: number,
-  pageWidth: number,
-  pageHeight: number,
-  margin: number,
-  headerHeight: number,
-  footerHeight: number,
-  checkPageBreak: (requiredSpace: number) => boolean
-): number {
-  let y = startY
+function exportMissionToPDF(layout: PdfLayoutContext, mission: Mission): void {
+  const width = layout.pageWidth - 2 * layout.margin
+  const textWidth = width - 16
 
-  // Mission Details Section
-  checkPageBreak(30)
-  y = addSectionHeader(doc, 'Mission Details', y, pageWidth, margin, 14)
-  
-  checkPageBreak(35)
-  const detailsBoxHeight = 30
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, detailsBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  
-  let detailsY = y + 8
-  addStyledText(doc, `Title: ${mission.title}`, margin + 5, detailsY, 11, COLORS.textPrimary, true)
-  detailsY += 7
-  addStyledText(doc, `Difficulty: ${mission.difficulty}`, margin + 5, detailsY, 10, COLORS.textPrimary, false)
+  startSection(layout, 'Mission Details', 14)
+  const detailLines = [
+    `Difficulty: ${mission.difficulty}`,
+  ]
   if (mission.recommendedLevel) {
-    detailsY += 6
-    addStyledText(doc, `Recommended Level: ${mission.recommendedLevel}`, margin + 5, detailsY, 10, COLORS.textPrimary, false)
+    detailLines.push(`Recommended Level: ${mission.recommendedLevel}`)
   }
-  y += detailsBoxHeight + 8
+  renderTitledLinesBox(layout, {
+    x: layout.margin,
+    width,
+    title: `Title: ${mission.title}`,
+    lines: buildWrappedLinesFromList(layout.doc, detailLines, textWidth, 10),
+    titleFontSize: 11,
+    bodyFontSize: 10,
+    onPageBreak: () => {
+      layout.y = addSectionHeader(
+        layout.doc,
+        'Mission Details (continued)',
+        layout.y,
+        layout.pageWidth,
+        layout.margin,
+        14
+      )
+    },
+  })
 
-  // Description Section
-  checkPageBreak(30)
-  y = addSectionHeader(doc, 'Description', y, pageWidth, margin, 12)
-  checkPageBreak(25)
-  const descBoxHeight = Math.min(50, mission.description.length > 150 ? 70 : 40)
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, descBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  y = addTextWithWrap(doc, mission.description, margin + 5, y + 8, pageWidth - 2 * margin - 10, 10, COLORS.textPrimary, false, 1.2)
-  y += 5
+  renderSectionText(layout, 'Description', mission.description, { fontSize: 10 })
+  renderSectionText(layout, 'Context', mission.context, { fontSize: 10 })
 
-  // Context Section
-  checkPageBreak(30)
-  y = addSectionHeader(doc, 'Context', y, pageWidth, margin, 12)
-  checkPageBreak(25)
-  const contextBoxHeight = Math.min(40, mission.context.length > 150 ? 60 : 30)
-  drawSectionBox(doc, margin, y, pageWidth - 2 * margin, contextBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-  y = addTextWithWrap(doc, mission.context, margin + 5, y + 8, pageWidth - 2 * margin - 10, 10, COLORS.textPrimary, false, 1.2)
-  y += 5
-
-  // Objectives Section
   if (mission.objectives && mission.objectives.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Objectives', y, pageWidth, margin, 12)
-    
-    mission.objectives.forEach(obj => {
-      checkPageBreak(25)
-      const objBoxHeight = Math.min(30, obj.description.length > 100 ? 40 : 25)
-      // Use different background color for primary objectives
-      const objBgColor = obj.primary ? COLORS.success : COLORS.sectionBg
-      const objBorderColor = obj.primary ? COLORS.success : COLORS.border
-      
-      drawSectionBox(doc, margin, y, pageWidth - 2 * margin, objBoxHeight, objBgColor, objBorderColor, 1)
-      
-      const prefix = obj.primary ? '★ Primary' : '○ Optional'
-      const prefixColor = obj.primary ? COLORS.white : COLORS.textPrimary
-      addStyledText(doc, prefix, margin + 5, y + 8, 9, prefixColor, true)
-      
-      y = addTextWithWrap(doc, obj.description, margin + 5, y + 15, pageWidth - 2 * margin - 10, 10, COLORS.textPrimary, false, 1.2)
-      
-      if (obj.pathType) {
-        y += 3
-        addStyledText(doc, `Approach: ${obj.pathType}`, margin + 5, y, 9, COLORS.textSecondary, false)
+    startSection(layout, 'Objectives', 12)
+    mission.objectives.forEach((objective) => {
+      const objectiveLines = [objective.description]
+      if (objective.pathType) {
+        objectiveLines.push(`Approach: ${objective.pathType}`)
       }
-      y += 5
+      const lines = buildWrappedLinesFromList(layout.doc, objectiveLines, textWidth, 9)
+      const titlePrefix = objective.primary ? '★ Primary Objective' : '○ Optional Objective'
+      renderTitledLinesBox(layout, {
+        x: layout.margin,
+        width,
+        title: titlePrefix,
+        lines,
+        titleFontSize: 10,
+        bodyFontSize: 9,
+        titleColor: objective.primary ? COLORS.success : COLORS.textPrimary,
+        borderColor: objective.primary ? COLORS.success : COLORS.border,
+        onPageBreak: () => {
+          layout.y = addSectionHeader(
+            layout.doc,
+            'Objectives (continued)',
+            layout.y,
+            layout.pageWidth,
+            layout.margin,
+            12
+          )
+        },
+      })
     })
   }
 
-  // Rewards Section
   if (mission.rewards) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Rewards', y, pageWidth, margin, 12)
-    checkPageBreak(25)
-    const rewardsBoxHeight = 30 + (mission.rewards.items && mission.rewards.items.length > 0 ? mission.rewards.items.length * 7 : 0)
-    drawSectionBox(doc, margin, y, pageWidth - 2 * margin, rewardsBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-    
-    let rewardsY = y + 8
+    const rewardLines: string[] = []
     if (mission.rewards.xp) {
-      addStyledText(doc, `XP: ${mission.rewards.xp}`, margin + 5, rewardsY, 10, COLORS.success, true)
-      rewardsY += 7
+      rewardLines.push(`XP: ${mission.rewards.xp}`)
     }
     if (mission.rewards.gold) {
-      addStyledText(doc, `Gold: ${mission.rewards.gold}`, margin + 5, rewardsY, 10, COLORS.secondary, true)
-      rewardsY += 7
+      rewardLines.push(`Gold: ${mission.rewards.gold}`)
     }
     if (mission.rewards.items && mission.rewards.items.length > 0) {
-      addStyledText(doc, 'Items:', margin + 5, rewardsY, 10, COLORS.textPrimary, true)
-      rewardsY += 7
-      mission.rewards.items.forEach(item => {
-        addStyledText(doc, `  • ${item}`, margin + 5, rewardsY, 9, COLORS.textPrimary, false)
-        rewardsY += 6
-      })
+      rewardLines.push('Items:')
+      mission.rewards.items.forEach((item) => rewardLines.push(`• ${item}`))
     }
-    y += rewardsBoxHeight + 5
+    startSection(layout, 'Rewards', 12)
+    const lines = buildWrappedLinesFromList(
+      layout.doc,
+      rewardLines.length > 0 ? rewardLines : ['—'],
+      textWidth,
+      10
+    )
+    renderLinesBox(layout, lines, {
+      x: layout.margin,
+      width,
+      fontSize: 10,
+      onPageBreak: () => {
+        layout.y = addSectionHeader(
+          layout.doc,
+          'Rewards (continued)',
+          layout.y,
+          layout.pageWidth,
+          layout.margin,
+          12
+        )
+      },
+    })
   }
 
-  // Choice-Based Rewards Section
   if (mission.choiceBasedRewards && mission.choiceBasedRewards.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Choice-Based Rewards', y, pageWidth, margin, 12)
-    
-    mission.choiceBasedRewards.forEach(cbr => {
-      checkPageBreak(30)
-      const cbrBoxHeight = 20 + (cbr.rewards.items.length > 0 ? cbr.rewards.items.length * 6 : 0) + (cbr.rewards.xp ? 6 : 0) + (cbr.rewards.gold ? 6 : 0)
-      drawSectionBox(doc, margin, y, pageWidth - 2 * margin, cbrBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-      
-      addStyledText(doc, `If ${cbr.condition}:`, margin + 5, y + 8, 10, COLORS.textPrimary, true)
-      let cbrY = y + 15
-      
+    startSection(layout, 'Choice-Based Rewards', 12)
+    mission.choiceBasedRewards.forEach((cbr) => {
+      const lines: string[] = []
       if (cbr.rewards.xp) {
-        addStyledText(doc, `  XP: ${cbr.rewards.xp}`, margin + 5, cbrY, 9, COLORS.success, false)
-        cbrY += 6
+        lines.push(`XP: ${cbr.rewards.xp}`)
       }
       if (cbr.rewards.gold) {
-        addStyledText(doc, `  Gold: ${cbr.rewards.gold}`, margin + 5, cbrY, 9, COLORS.secondary, false)
-        cbrY += 6
+        lines.push(`Gold: ${cbr.rewards.gold}`)
       }
-      if (cbr.rewards.items.length > 0) {
-        cbr.rewards.items.forEach(item => {
-          addStyledText(doc, `  • ${item}`, margin + 5, cbrY, 9, COLORS.textPrimary, false)
-          cbrY += 6
-        })
+      if (cbr.rewards.items && cbr.rewards.items.length > 0) {
+        lines.push('Items:')
+        cbr.rewards.items.forEach((item) => lines.push(`• ${item}`))
       }
-      y += cbrBoxHeight + 5
+      renderTitledLinesBox(layout, {
+        x: layout.margin,
+        width,
+        title: `If ${cbr.condition}`,
+        lines: buildWrappedLinesFromList(layout.doc, lines, textWidth, 9),
+        titleFontSize: 10,
+        bodyFontSize: 9,
+        onPageBreak: () => {
+          layout.y = addSectionHeader(
+            layout.doc,
+            'Choice-Based Rewards (continued)',
+            layout.y,
+            layout.pageWidth,
+            layout.margin,
+            12
+          )
+        },
+      })
     })
   }
 
-  // Related NPCs Section
   if (mission.relatedNPCs && mission.relatedNPCs.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Related NPCs', y, pageWidth, margin, 12)
-    checkPageBreak(20)
-    const npcsBoxHeight = Math.min(mission.relatedNPCs.length * 8 + 10, 60)
-    drawSectionBox(doc, margin, y, pageWidth - 2 * margin, npcsBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-    let npcsY = y + 8
-    mission.relatedNPCs.forEach(npc => {
-      addStyledText(doc, `• ${npc}`, margin + 5, npcsY, 10, COLORS.textPrimary, false)
-      npcsY += 7
-    })
-    y += npcsBoxHeight + 5
+    renderSectionList(layout, 'Related NPCs', mission.relatedNPCs, { fontSize: 10 })
   }
 
-  // Related Locations Section
   if (mission.relatedLocations && mission.relatedLocations.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Related Locations', y, pageWidth, margin, 12)
-    checkPageBreak(20)
-    const locsBoxHeight = Math.min(mission.relatedLocations.length * 8 + 10, 60)
-    drawSectionBox(doc, margin, y, pageWidth - 2 * margin, locsBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-    let locsY = y + 8
-    mission.relatedLocations.forEach(loc => {
-      addStyledText(doc, `• ${loc}`, margin + 5, locsY, 10, COLORS.textPrimary, false)
-      locsY += 7
-    })
-    y += locsBoxHeight + 5
+    renderSectionList(layout, 'Related Locations', mission.relatedLocations, { fontSize: 10 })
   }
 
-  // Powerful Items Section
   if (mission.powerfulItems && mission.powerfulItems.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Powerful Items', y, pageWidth, margin, 12)
-    
-    mission.powerfulItems.forEach(item => {
-      checkPageBreak(25)
-      const itemBoxHeight = 25
-      drawSectionBox(doc, margin, y, pageWidth - 2 * margin, itemBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-      addStyledText(doc, item.name, margin + 5, y + 8, 10, COLORS.textPrimary, true)
-      addStyledText(doc, `Status: ${item.status}`, margin + 5, y + 16, 9, COLORS.textSecondary, false)
-      y += itemBoxHeight + 5
+    startSection(layout, 'Powerful Items', 12)
+    mission.powerfulItems.forEach((item) => {
+      const lines = buildWrappedLinesFromList(layout.doc, [`Status: ${item.status}`], textWidth, 9)
+      renderTitledLinesBox(layout, {
+        x: layout.margin,
+        width,
+        title: item.name,
+        lines,
+        titleFontSize: 10,
+        bodyFontSize: 9,
+        onPageBreak: () => {
+          layout.y = addSectionHeader(
+            layout.doc,
+            'Powerful Items (continued)',
+            layout.y,
+            layout.pageWidth,
+            layout.margin,
+            12
+          )
+        },
+      })
     })
   }
 
-  // Possible Outcomes Section
   if (mission.possibleOutcomes && mission.possibleOutcomes.length > 0) {
-    checkPageBreak(30)
-    y = addSectionHeader(doc, 'Possible Outcomes', y, pageWidth, margin, 12)
-    checkPageBreak(20)
-    const outcomesBoxHeight = Math.min(mission.possibleOutcomes.length * 8 + 10, 70)
-    drawSectionBox(doc, margin, y, pageWidth - 2 * margin, outcomesBoxHeight, COLORS.sectionBg, COLORS.border, 1)
-    let outcomesY = y + 8
-    mission.possibleOutcomes.forEach(outcome => {
-      addStyledText(doc, `• ${outcome}`, margin + 5, outcomesY, 10, COLORS.textPrimary, false)
-      outcomesY += 7
-    })
-    y += outcomesBoxHeight + 5
+    renderSectionList(layout, 'Possible Outcomes', mission.possibleOutcomes, { fontSize: 10 })
   }
-  
-  return y
 }
 
 /**

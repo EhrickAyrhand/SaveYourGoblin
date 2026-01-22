@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase"
 import { Input } from "@/components/ui/input"
 import { useLocale } from 'next-intl'
 import { formatDateMedium, formatDateTimeMedium } from "@/lib/date"
+import { exportAsJSON, exportAsPDF } from "@/lib/export"
 
 /** Renders diff values as readable, formatted UI instead of raw JSON. */
 function DiffValueBlock({ value, className = "" }: { value: unknown; className?: string }) {
@@ -649,6 +650,22 @@ export function ContentDetailModal({
     }
   }
 
+  function handleExportPDF() {
+    try {
+      exportAsPDF(item)
+    } catch (err) {
+      console.error("Export PDF error:", err)
+    }
+  }
+
+  function handleExportJSON() {
+    try {
+      exportAsJSON(item)
+    } catch (err) {
+      console.error("Export JSON error:", err)
+    }
+  }
+
   const modal = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in"
@@ -692,7 +709,7 @@ export function ContentDetailModal({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => alert('This feature is not done yet')} 
+              onClick={handleExportPDF} 
               className="font-body no-print"
               title={t('library.exportPDF')}
             >
@@ -701,7 +718,7 @@ export function ContentDetailModal({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => alert('This feature is not done yet')} 
+              onClick={handleExportJSON} 
               className="font-body no-print"
               title={t('library.exportJSON')}
             >
