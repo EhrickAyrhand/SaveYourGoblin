@@ -913,19 +913,19 @@ export default function CampaignsPage() {
                           <button
                             type="button"
                             onClick={() => setSelectedCampaignId(campaign.id)}
-                            className="w-full text-left"
+                            className="w-full text-left min-w-0"
                           >
-                            <div className="font-body text-sm font-semibold text-foreground">
+                            <div className="font-body text-sm font-semibold text-foreground break-words">
                               {campaign.name}
                             </div>
-                            <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            <div className="text-xs text-muted-foreground mt-1 line-clamp-2 break-words">
                               {campaign.description || t("campaigns.noDescription")}
                             </div>
-                            <div className="text-xs text-muted-foreground mt-2">
+                            <div className="text-xs text-muted-foreground mt-2 break-words">
                               {t("campaigns.updatedAt", { date: formatDate(campaign.updated_at) })}
                             </div>
                           </button>
-                          <div className="flex gap-2 mt-3">
+                          <div className="flex flex-wrap gap-2 mt-3">
                             <Button
                               variant="outline"
                               size="sm"
