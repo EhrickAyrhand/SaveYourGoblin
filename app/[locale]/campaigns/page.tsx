@@ -23,7 +23,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
-import { formatDateWithLocale } from "@/lib/date"
+import { formatDateTimeCompact, formatDateWithLocale } from "@/lib/date"
 
 type Campaign = {
   id: string
@@ -919,8 +919,8 @@ export default function CampaignsPage() {
                             <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
                               {campaign.description || t("campaigns.noDescription")}
                             </div>
-                            <div className="text-xs text-muted-foreground mt-2">
-                              {t("campaigns.updatedAt", { date: formatDate(campaign.updated_at) })}
+                            <div className="text-xs text-muted-foreground mt-2 whitespace-nowrap">
+                              {t("campaigns.updatedAt", { date: formatDateTimeCompact(campaign.updated_at, locale) })}
                             </div>
                           </button>
                           <div className="flex gap-2 mt-3">

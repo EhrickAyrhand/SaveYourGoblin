@@ -41,3 +41,26 @@ export function formatDateMedium(value: DateInput, locale: string): string {
 export function formatDateTimeMedium(value: DateInput, locale: string): string {
   return formatDateWithLocale(value, locale, { dateStyle: "medium", timeStyle: "short" })
 }
+
+export function formatDateTimeCompact(value: DateInput, locale: string): string {
+  const date = parseDateInput(value)
+  if (!date) return typeof value === "string" ? value : ""
+
+  const now = new Date()
+  const includeYear = date.getFullYear() !== now.getFullYear()
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "2-digit",
+  }
+  if (includeYear) {
+    dateOptions.year = "2-digit"
+  }
+
+  const datePart = new Intl.DateTimeFormat(locale, dateOptions).format(date)
+  const timePart = new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date)
+
+  return `${datePart} ${timePart}`
+}
