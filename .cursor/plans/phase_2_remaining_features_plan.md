@@ -24,7 +24,7 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
 **Status**: UI ready, functionality missing  
 **Complexity**: Medium  
 **Dependencies**: None  
-**Estimated Time**: 3-5 days
+**Estimated Time**:
 
 **Why First**: 
 - UI buttons already exist showing "not done yet" alerts
@@ -33,39 +33,39 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
 
 **Implementation Steps**:
 
-1. **PDF Export** (2-3 days)
-   - [ ] Review existing `lib/export.ts` file structure
-   - [ ] Enhance PDF generation for all content types:
-     - [ ] Character sheets with stats, abilities, equipment
-     - [ ] Environment descriptions with features, NPCs
-     - [ ] Mission briefs with objectives, rewards
-   - [ ] Add proper formatting:
-     - [ ] Fonts (maintain theme fonts)
-     - [ ] Layout (print-friendly margins, spacing)
-     - [ ] Headers/footers with metadata
-     - [ ] Page breaks where appropriate
-   - [ ] Handle long content (multi-page support)
-   - [ ] Add metadata (creation date, tags, notes)
-   - [ ] Replace alert in `content-detail-modal.tsx` with actual PDF generation
-   - [ ] Test with different content lengths and types
+1. **PDF Export**
+   - [ X] Review existing `lib/export.ts` file structure
+   - [X ] Enhance PDF generation for all content types:
+     - [X ] Character sheets with stats, abilities, equipment
+     - [X ] Environment descriptions with features, NPCs
+     - [X ] Mission briefs with objectives, rewards
+   - [X ] Add proper formatting:
+     - [ X] Fonts (maintain theme fonts)
+     - [ X] Layout (print-friendly margins, spacing)
+     - [ X] Headers/footers with metadata
+     - [X ] Page breaks where appropriate
+   - [ X] Handle long content (multi-page support)
+   - [ X] Add metadata (creation date, tags, notes)
+   - [ X] Replace alert in `content-detail-modal.tsx` with actual PDF generation
+   - [ X] Test with different content lengths and types
 
 2. **JSON Export** (1-2 days)
-   - [ ] Create JSON export function in `lib/export.ts`
-   - [ ] Export full content data structure:
-     - [ ] Include all metadata (id, type, created_at, tags, notes)
-     - [ ] Include complete content_data object
-     - [ ] Include scenario_input
-     - [ ] Include links if present
-   - [ ] Format as clean, readable JSON
-   - [ ] Add option for "pretty print" (formatted) vs compact
-   - [ ] Replace alert in `content-detail-modal.tsx` with actual JSON export
-   - [ ] Test export and re-import scenarios
+   - [ X] Create JSON export function in `lib/export.ts`
+   - [X ] Export full content data structure:
+     - [ X] Include all metadata (id, type, created_at, tags, notes)
+     - [ X] Include complete content_data object
+     - [X ] Include scenario_input
+     - [X ] Include links if present
+   - [ X] Format as clean, readable JSON
+   - [ X] Add option for "pretty print" (formatted) vs compact
+   - [ X] Replace alert in `content-detail-modal.tsx` with actual JSON export
+   - [ X] Test export and re-import scenarios
 
 3. **UI Enhancements** (1 day)
-   - [ ] Add loading states during export generation
-   - [ ] Add success notifications
-   - [ ] Handle errors gracefully
-   - [ ] Consider adding export options modal (PDF settings, JSON format)
+   - [ X] Add loading states during export generation
+   - [ X] Add success notifications
+   - [ X] Handle errors gracefully
+   - [X ] Consider adding export options modal (PDF settings, JSON format)
 
 ---
 
@@ -291,33 +291,32 @@ This plan outlines the implementation strategy for the remaining Phase 2 Core En
 **Implementation Steps**:
 
 1. **Database Schema** (2-3 days)
-   - [ ] Create `content_versions` table:
-     - [ ] id, content_id, user_id
-     - [ ] version_number, content_data (snapshot)
-     - [ ] change_summary, changed_by
-     - [ ] created_at
-   - [ ] Modify content update flow to create versions
-   - [ ] Add RLS policies
-   - [ ] Create migration file
+   - [X ] Create `content_versions` table:
+     - [X ] id, content_id, user_id
+     - [ X] version_number, content_data (snapshot)
+     - [ X] change_summary, changed_by
+     - [ X] created_at
+   - [X ] Modify content update flow to create versions
+   - [ X] Add RLS policies
+   - [ X] Create migration file
 
 2. **Version Management API** (3-4 days)
-   - [ ] Auto-create versions on content updates:
-     - [ ] Detect what changed
-     - [ ] Create snapshot
-     - [ ] Store change summary
-   - [ ] `app/api/content/[id]/versions/route.ts`:
-     - [ ] GET: List all versions for content
-     - [ ] GET `/[versionId]`: Get specific version
-     - [ ] POST: Restore to version (create new version)
-   - [ ] Add version comparison endpoint
+   - [X ] Auto-create versions on content updates:
+     - [X ] Detect what changed
+     - [X ] Create snapshot
+     - [X ] Store change summary
+   - [X ] `app/api/content/[id]/versions/route.ts`:
+     - [X ] GET: List all versions for content
+     - [X ] GET `/[versionId]`: Get specific version
+     - [X ] POST: Restore to version (create new version)
+   - [X ] Add version comparison endpoint
 
 3. **Version History UI** (3 days)
-   - [ ] Add "Version History" section in content detail modal
-   - [ ] Show version timeline with changes
-   - [ ] Add "View Version" button
-   - [ ] Add "Restore Version" with confirmation
-   - [ ] Show diff view (optional, advanced)
-   - [ ] Add version notes/comments
+   - [X ] Add "Version History" section in content detail modal
+   - [X ] Show version timeline with changes
+   - [ X] Add "View Version" button
+   - [X ] Add "Restore Version" with confirmation
+   - [ X] Add version notes/comments
 
 ---
 
