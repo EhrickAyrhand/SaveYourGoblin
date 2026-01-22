@@ -27,11 +27,12 @@ export async function PATCH(
 
     // Parse request body
     const body = await request.json()
-    const { is_favorite, tags, notes, content_data } = body as {
+    const { is_favorite, tags, notes, content_data, change_summary } = body as {
       is_favorite?: boolean
       tags?: string[]
       notes?: string
       content_data?: Record<string, unknown>
+      change_summary?: string
     }
 
     // Build update object (only include provided fields)
@@ -115,6 +116,40 @@ export async function PATCH(
         }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       )
+    }
+
+    const shouldCreateVersion = Object.prototype.hasOwnProperty.call(updates, 'content_data')
+    if (shouldCreateVersion && data?.content_data) {
+      const changeSummary = typeof change_summary === 'string' ? change_summary.trim() : ''
+
+      const { data: versionRows, error: versionQueryError } = await supabase
+        .from('content_versions')
+        .select('version_number')
+        .eq('content_id', id)
+        .order('version_number', { ascending: false })
+        .limit(1)
+
+      if (versionQueryError) {
+        console.error('Supabase version query error:', versionQueryError)
+      } else {
+        const lastVersion = versionRows?.[0]?.version_number
+        const nextVersion = typeof lastVersion === 'number' ? lastVersion + 1 : 1
+
+        const { error: versionInsertError } = await supabase
+          .from('content_versions')
+          .insert({
+            content_id: id,
+            user_id: user.id,
+            version_number: nextVersion,
+            content_data: data.content_data,
+            change_summary: changeSummary || 'Content updated',
+            changed_by: user.id,
+          })
+
+        if (versionInsertError) {
+          console.error('Supabase version insert error:', versionInsertError)
+        }
+      }
     }
 
     return new Response(
