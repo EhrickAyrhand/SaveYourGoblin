@@ -150,7 +150,7 @@ function drawPageBorder(doc: jsPDF, pageWidth: number, pageHeight: number, margi
 }
 
 function drawCornerOrnament(doc: jsPDF, x: number, y: number, size: number): void {
-  doc.setDrawColor(COLORS.parchmentBorder[0], COLORS.parchmentBorder[1], COLORS.parchmentBorder[2])
+  doc.setDrawColor(COLORS.border[0], COLORS.border[1], COLORS.border[2])
   doc.setLineWidth(0.8)
   doc.line(x, y, x + size, y)
   doc.line(x, y, x, y + size)
