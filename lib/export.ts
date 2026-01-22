@@ -20,23 +20,45 @@ const COLORS: {
   textSecondary: RGBColor
   success: RGBColor
   warning: RGBColor
-  parchmentBg: RGBColor
-  parchmentBorder: RGBColor
   accent: RGBColor
+  background: RGBColor
+  cardBorder: RGBColor
+  rose: RGBColor
+  cyan: RGBColor
+  purple: RGBColor
+  indigo: RGBColor
+  emerald: RGBColor
+  amber: RGBColor
+  blue: RGBColor
+  green: RGBColor
+  orange: RGBColor
+  yellow: RGBColor
+  pink: RGBColor
   white: RGBColor
   black: RGBColor
 } = {
-  primaryHeader: [92, 64, 40],       // deep brown
-  secondary: [176, 118, 63],         // warm amber
-  sectionBg: [253, 246, 232],        // parchment light
-  border: [201, 176, 130],           // parchment border
-  textPrimary: [61, 45, 32],         // ink brown
-  textSecondary: [118, 93, 67],      // muted ink
-  success: [55, 120, 84],            // muted green
-  warning: [153, 63, 46],            // muted red
-  parchmentBg: [250, 242, 224],
-  parchmentBorder: [191, 161, 115],
-  accent: [120, 82, 49],
+  primaryHeader: [12, 18, 32],
+  secondary: [59, 130, 246],
+  sectionBg: [17, 24, 39],
+  border: [30, 41, 59],
+  textPrimary: [226, 232, 240],
+  textSecondary: [148, 163, 184],
+  success: [34, 197, 94],
+  warning: [248, 113, 113],
+  accent: [167, 139, 250],
+  background: [10, 16, 28],
+  cardBorder: [35, 45, 68],
+  rose: [244, 63, 94],
+  cyan: [34, 211, 238],
+  purple: [192, 132, 252],
+  indigo: [129, 140, 248],
+  emerald: [52, 211, 153],
+  amber: [251, 191, 36],
+  blue: [96, 165, 250],
+  green: [74, 222, 128],
+  orange: [251, 146, 60],
+  yellow: [250, 204, 21],
+  pink: [244, 114, 182],
   white: [255, 255, 255],
   black: [0, 0, 0],
 }
@@ -51,6 +73,7 @@ type PdfLayoutContext = {
   contentStartY: number
   y: number
   currentPage: number
+  renderPageHeader?: (layout: PdfLayoutContext) => void
 }
 
 function addNewPage(layout: PdfLayoutContext): void {
@@ -58,6 +81,7 @@ function addNewPage(layout: PdfLayoutContext): void {
   drawPageBackground(layout.doc, layout.pageWidth, layout.pageHeight)
   drawPageBorder(layout.doc, layout.pageWidth, layout.pageHeight, layout.margin)
   layout.currentPage += 1
+  layout.renderPageHeader?.(layout)
   layout.y = layout.contentStartY
 }
 
@@ -115,14 +139,14 @@ function drawSectionBox(
 }
 
 function drawPageBackground(doc: jsPDF, pageWidth: number, pageHeight: number): void {
-  doc.setFillColor(COLORS.parchmentBg[0], COLORS.parchmentBg[1], COLORS.parchmentBg[2])
+  doc.setFillColor(COLORS.background[0], COLORS.background[1], COLORS.background[2])
   doc.rect(0, 0, pageWidth, pageHeight, 'F')
 }
 
 function drawPageBorder(doc: jsPDF, pageWidth: number, pageHeight: number, margin: number): void {
-  doc.setDrawColor(COLORS.parchmentBorder[0], COLORS.parchmentBorder[1], COLORS.parchmentBorder[2])
-  doc.setLineWidth(0.6)
-  doc.rect(margin - 4, margin - 4, pageWidth - (margin - 4) * 2, pageHeight - (margin - 4) * 2, 'D')
+  doc.setDrawColor(COLORS.cardBorder[0], COLORS.cardBorder[1], COLORS.cardBorder[2])
+  doc.setLineWidth(0.5)
+  doc.rect(margin - 3, margin - 3, pageWidth - (margin - 3) * 2, pageHeight - (margin - 3) * 2, 'D')
 }
 
 function drawCornerOrnament(doc: jsPDF, x: number, y: number, size: number): void {
@@ -202,6 +226,247 @@ function renderBadgeGroup(
     maxY = Math.max(maxY, cursorY + 12)
   })
   return maxY + rowSpacing
+}
+
+function measureBadgeGroupHeight(
+  doc: jsPDF,
+  maxWidth: number,
+  badges: Array<{ text: string }>,
+  rowSpacing: number = 4
+): number {
+  if (badges.length === 0) {
+    return 0
+  }
+  const badgeHeight = 12
+  let rows = 1
+  let cursorX = 0
+  badges.forEach((badge) => {
+    const width = measureBadgeWidth(doc, badge.text)
+    if (cursorX + width > maxWidth) {
+      rows += 1
+      cursorX = 0
+    }
+    cursorX += width + 6
+  })
+  return rows * badgeHeight + (rows - 1) * rowSpacing
+}
+
+type HeaderBadge = { text: string; style?: BadgeStyle }
+
+function renderHeaderBlock(
+  layout: PdfLayoutContext,
+  title: string,
+  badges: HeaderBadge[],
+  iconText: string
+): void {
+  const { doc, pageWidth, margin } = layout
+  const width = pageWidth - 2 * margin
+  const titleFontSize = 16
+  const titleY = margin + 11
+  const badgeMaxWidth = width - 40
+  const badgeHeight = measureBadgeGroupHeight(doc, badgeMaxWidth, badges, 4)
+  const headerHeight = Math.max(26, 16 + badgeHeight + 6)
+
+  doc.setFillColor(COLORS.primaryHeader[0], COLORS.primaryHeader[1], COLORS.primaryHeader[2])
+  doc.setDrawColor(COLORS.cardBorder[0], COLORS.cardBorder[1], COLORS.cardBorder[2])
+  doc.setLineWidth(0.8)
+  doc.rect(margin, margin, width, headerHeight, 'FD')
+
+  doc.setFontSize(titleFontSize)
+  doc.setFont(undefined, 'bold')
+  doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
+  doc.text(truncateText(title, 40), margin + 6, titleY)
+
+  const circleX = pageWidth - margin - 12
+  const circleY = margin + 10
+  doc.setFillColor(COLORS.sectionBg[0], COLORS.sectionBg[1], COLORS.sectionBg[2])
+  doc.setDrawColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2])
+  doc.setLineWidth(1)
+  doc.circle(circleX, circleY, 7, 'FD')
+  doc.setFontSize(10)
+  doc.setFont(undefined, 'bold')
+  doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
+  doc.text(iconText, circleX, circleY + 3, { align: 'center' })
+
+  if (badges.length > 0) {
+    renderBadgeGroup(doc, margin + 6, margin + 18, badgeMaxWidth, badges, 4)
+  }
+
+  layout.contentStartY = margin + headerHeight + 8
+  layout.y = layout.contentStartY
+}
+
+type CardHeaderOptions = {
+  title: string
+  subtitle?: string
+  icon?: string
+  count?: number
+  accentColor?: RGBColor
+}
+
+function getCardHeaderHeight(subtitle?: string): number {
+  return subtitle ? 18 : 14
+}
+
+function drawCardContainer(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  borderColor: RGBColor
+): void {
+  drawSectionBox(doc, x, y, width, height, COLORS.sectionBg, borderColor, 1)
+}
+
+function drawCardHeader(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  options: CardHeaderOptions
+): number {
+  const headerHeight = getCardHeaderHeight(options.subtitle)
+  const accent = options.accentColor ?? COLORS.secondary
+
+  doc.setFillColor(COLORS.primaryHeader[0], COLORS.primaryHeader[1], COLORS.primaryHeader[2])
+  doc.rect(x, y, width, headerHeight, 'F')
+
+  doc.setDrawColor(accent[0], accent[1], accent[2])
+  doc.setLineWidth(0.8)
+  doc.line(x, y + headerHeight, x + width, y + headerHeight)
+
+  if (options.icon) {
+    doc.setFillColor(accent[0], accent[1], accent[2])
+    doc.roundedRect(x + 5, y + 3, 8, 8, 2, 2, 'F')
+    doc.setFontSize(8)
+    doc.setFont(undefined, 'bold')
+    doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
+    doc.text(options.icon, x + 9, y + 9, { align: 'center' })
+  }
+
+  doc.setFontSize(9.5)
+  doc.setFont(undefined, 'bold')
+  doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
+  doc.text(options.title, x + (options.icon ? 18 : 8), y + 10)
+
+  if (options.subtitle) {
+    doc.setFontSize(6.8)
+    doc.setFont(undefined, 'normal')
+    doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
+    doc.text(options.subtitle, x + (options.icon ? 18 : 8), y + 15)
+  }
+
+  if (typeof options.count === 'number') {
+    const badgeText = options.count.toString()
+    doc.setFontSize(7)
+    doc.setFont(undefined, 'bold')
+    const badgeWidth = doc.getTextWidth(badgeText) + 6
+    const badgeX = x + width - badgeWidth - 6
+    doc.setFillColor(accent[0], accent[1], accent[2])
+    doc.roundedRect(badgeX, y + 3, badgeWidth, 8, 2, 2, 'F')
+    doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
+    doc.text(badgeText, badgeX + badgeWidth / 2, y + 9, { align: 'center' })
+  }
+
+  return headerHeight
+}
+
+function renderCardLines(
+  layout: PdfLayoutContext,
+  options: CardHeaderOptions & {
+    x: number
+    width: number
+    lines: string[]
+    fontSize: number
+    lineHeight: number
+    gapAfter?: number
+  }
+): void {
+  const {
+    x,
+    width,
+    lines,
+    fontSize,
+    lineHeight,
+    gapAfter = 8,
+    ...headerOptions
+  } = options
+
+  let remaining = lines.length > 0 ? lines : [getSafeText('', '—')]
+  while (remaining.length > 0) {
+    const headerTitle = headerOptions.title
+    const headerHeight = getCardHeaderHeight(headerOptions.subtitle)
+    const availableHeight = layout.pageHeight - layout.footerHeight - layout.margin - layout.y
+    const maxLines = Math.floor((availableHeight - headerHeight - 10) / (fontSize * lineHeight))
+
+    if (maxLines <= 0) {
+      addNewPage(layout)
+      continue
+    }
+
+    const chunk = remaining.slice(0, maxLines)
+    const bodyHeight = chunk.length * fontSize * lineHeight + 8
+    const cardHeight = headerHeight + bodyHeight
+    drawCardContainer(layout.doc, x, layout.y, width, cardHeight, headerOptions.accentColor ?? COLORS.border)
+    drawCardHeader(layout.doc, x, layout.y, width, { ...headerOptions, title: headerTitle })
+
+    layout.doc.setFontSize(fontSize)
+    layout.doc.setFont(undefined, 'normal')
+    layout.doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
+    let textY = layout.y + headerHeight + 6
+    chunk.forEach((line) => {
+      layout.doc.text(line, x + 6, textY + fontSize)
+      textY += fontSize * lineHeight
+    })
+
+    layout.y += cardHeight + gapAfter
+    remaining = remaining.slice(maxLines)
+  }
+}
+
+function renderCardLinesInColumn(options: CardHeaderOptions & {
+  doc: jsPDF
+  x: number
+  y: number
+  width: number
+  maxHeight: number
+  lines: string[]
+  fontSize: number
+  lineHeight: number
+}): { usedHeight: number; remainingLines: string[] } {
+  const {
+    doc,
+    x,
+    y,
+    width,
+    maxHeight,
+    lines,
+    fontSize,
+    lineHeight,
+    ...headerOptions
+  } = options
+
+  const headerHeight = getCardHeaderHeight(headerOptions.subtitle)
+  const maxLines = Math.floor((maxHeight - headerHeight - 10) / (fontSize * lineHeight))
+  const chunk = maxLines > 0 ? lines.slice(0, maxLines) : []
+  const remainingLines = maxLines > 0 ? lines.slice(maxLines) : lines
+  const bodyHeight = chunk.length * fontSize * lineHeight + 8
+  const cardHeight = headerHeight + bodyHeight
+
+  drawCardContainer(doc, x, y, width, cardHeight, headerOptions.accentColor ?? COLORS.border)
+  drawCardHeader(doc, x, y, width, headerOptions)
+
+  doc.setFontSize(fontSize)
+  doc.setFont(undefined, 'normal')
+  doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
+  let textY = y + headerHeight + 6
+  chunk.forEach((line) => {
+    doc.text(line, x + 6, textY + fontSize)
+    textY += fontSize * lineHeight
+  })
+
+  return { usedHeight: cardHeight + 6, remainingLines }
 }
 
 /**
@@ -729,6 +994,22 @@ function addFooter(
   doc.text(`Page ${pageNumber} of ${totalPages}`, pageWidth - margin, footerY + 8, { align: 'right' })
 }
 
+function addSimpleFooter(
+  doc: jsPDF,
+  pageNumber: number,
+  totalPages: number,
+  pageWidth: number,
+  pageHeight: number,
+  margin: number
+): void {
+  const footerY = pageHeight - 8
+  doc.setFontSize(8)
+  doc.setFont(undefined, 'normal')
+  doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
+  doc.text('SaveYourGoblin', margin, footerY)
+  doc.text(`Page ${pageNumber} / ${totalPages}`, pageWidth - margin, footerY, { align: 'right' })
+}
+
 function addCoverFooter(
   doc: jsPDF,
   pageWidth: number,
@@ -890,6 +1171,213 @@ export type JsonExportOptions = {
   links?: ContentLinks
 }
 
+export type PdfExportLabels = {
+  common: {
+    levelLabel: string
+  }
+  character: {
+    abilityScoresTitle: string
+    abilityScoresSubtitle: string
+    skillsTitle: string
+    skillsSubtitle: string
+    proficiencyBonusTitle: string
+    expertiseTitle: string
+    expertiseSubtitle: string
+    racialTraitsTitle: string
+    racialTraitsSubtitle: string
+    classFeaturesTitle: string
+    classFeaturesSubtitle: string
+    traitsTitle: string
+    traitsSubtitle: string
+    spellsTitle: string
+    spellsSubtitle: string
+    historyTitle: string
+    historySubtitle: string
+    personalityTitle: string
+    personalitySubtitle: string
+    voiceTitle: string
+    voiceSubtitle: string
+  }
+  environment: {
+    descriptionTitle: string
+    descriptionSubtitle: string
+    moodTitle: string
+    lightingTitle: string
+    ambientTitle: string
+    ambientSubtitle: string
+    notableFeaturesTitle: string
+    notableFeaturesSubtitle: string
+    currentConflictTitle: string
+    currentConflictSubtitle: string
+    presentNPCsTitle: string
+    presentNPCsSubtitle: string
+    adventureHooksTitle: string
+    adventureHooksSubtitle: string
+  }
+  mission: {
+    missionDetailsTitle: string
+    missionDetailsSubtitle: string
+    missionBriefTitle: string
+    missionBriefSubtitle: string
+    contextTitle: string
+    contextSubtitle: string
+    objectivesTitle: string
+    objectivesSubtitle: string
+    baseRewardsTitle: string
+    baseRewardsSubtitle: string
+    choiceBasedRewardsTitle: string
+    choiceBasedRewardsSubtitle: string
+    relatedNPCsTitle: string
+    relatedLocationsTitle: string
+    powerfulItemsTitle: string
+    possibleOutcomesTitle: string
+  }
+}
+
+export type PdfExportOptions = {
+  labels?: PdfExportLabels
+}
+
+function pluralize(count: number, singular: string, plural: string): string {
+  return count === 1 ? singular : plural
+}
+
+function buildDefaultPdfLabels(item: LibraryContentItem): PdfExportLabels {
+  const character = item.type === 'character' ? (item.content_data as Character) : undefined
+  const environment = item.type === 'environment' ? (item.content_data as Environment) : undefined
+  const mission = item.type === 'mission' ? (item.content_data as Mission) : undefined
+
+  const skillCount = character?.skills?.length ?? 0
+  const expertiseCount = character?.expertise?.length ?? 0
+  const racialTraitCount = character?.racialTraits?.length ?? 0
+  const classFeatureCount = character?.classFeatures?.length ?? 0
+  const traitCount = character?.traits?.length ?? 0
+  const spellCount = character?.spells?.length ?? 0
+
+  const featureCount = environment?.features?.length ?? 0
+  const npcCount = environment?.npcs?.length ?? 0
+  const hookCount = environment?.adventureHooks?.length ?? 0
+
+  const objectiveCount = mission?.objectives?.length ?? 0
+  const powerfulItemCount = mission?.powerfulItems?.length ?? 0
+  const outcomeCount = mission?.possibleOutcomes?.length ?? 0
+
+  return {
+    common: {
+      levelLabel: 'Level',
+    },
+    character: {
+      abilityScoresTitle: 'Attributes',
+      abilityScoresSubtitle: 'Core attributes',
+      skillsTitle: 'Skills',
+      skillsSubtitle: `${skillCount} ${pluralize(skillCount, 'skill', 'skills')}`,
+      proficiencyBonusTitle: 'Proficiency Bonus',
+      expertiseTitle: 'Expertise',
+      expertiseSubtitle: `${expertiseCount} ${pluralize(expertiseCount, 'skill', 'skills')}`,
+      racialTraitsTitle: 'Racial Traits',
+      racialTraitsSubtitle: `${racialTraitCount} ${pluralize(racialTraitCount, 'trait', 'traits')}`,
+      classFeaturesTitle: 'Class Features',
+      classFeaturesSubtitle: `${classFeatureCount} ${pluralize(classFeatureCount, 'feature', 'features')}`,
+      traitsTitle: 'Traits',
+      traitsSubtitle: `${traitCount} ${pluralize(traitCount, 'trait', 'traits')}`,
+      spellsTitle: 'Spells',
+      spellsSubtitle: `${spellCount} ${pluralize(spellCount, 'spell', 'spells')}`,
+      historyTitle: 'History',
+      historySubtitle: 'Character backstory',
+      personalityTitle: 'Personality',
+      personalitySubtitle: 'Character demeanor',
+      voiceTitle: 'Voice',
+      voiceSubtitle: 'Voice characteristics',
+    },
+    environment: {
+      descriptionTitle: 'Description',
+      descriptionSubtitle: 'Location details',
+      moodTitle: 'Mood',
+      lightingTitle: 'Lighting',
+      ambientTitle: 'Ambient Atmosphere',
+      ambientSubtitle: 'Sounds and atmosphere',
+      notableFeaturesTitle: 'Notable Features',
+      notableFeaturesSubtitle: `${featureCount} ${pluralize(featureCount, 'feature', 'features')}`,
+      currentConflictTitle: 'Current Conflict',
+      currentConflictSubtitle: 'Active issues',
+      presentNPCsTitle: 'Present NPCs',
+      presentNPCsSubtitle: `${npcCount} ${pluralize(npcCount, 'NPC', 'NPCs')}`,
+      adventureHooksTitle: 'Adventure Hooks',
+      adventureHooksSubtitle: `${hookCount} ${pluralize(hookCount, 'hook', 'hooks')}`,
+    },
+    mission: {
+      missionDetailsTitle: 'Mission Details',
+      missionDetailsSubtitle: 'Mission details',
+      missionBriefTitle: 'Mission Brief',
+      missionBriefSubtitle: 'Mission overview',
+      contextTitle: 'Context',
+      contextSubtitle: 'Situation details',
+      objectivesTitle: 'Objectives',
+      objectivesSubtitle: `${objectiveCount} ${pluralize(objectiveCount, 'objective', 'objectives')}`,
+      baseRewardsTitle: 'Base Rewards',
+      baseRewardsSubtitle: 'Mission completion rewards',
+      choiceBasedRewardsTitle: 'Choice-Based Rewards',
+      choiceBasedRewardsSubtitle: '',
+      relatedNPCsTitle: 'Related NPCs',
+      relatedLocationsTitle: 'Related Locations',
+      powerfulItemsTitle: 'Powerful Items',
+      possibleOutcomesTitle: 'Possible Outcomes',
+    },
+  }
+}
+
+function buildHeaderBadges(item: LibraryContentItem, labels: PdfExportLabels): { badges: HeaderBadge[]; iconText: string } {
+  if (item.type === 'character') {
+    const character = item.content_data as Character
+    const badges: HeaderBadge[] = [
+      { text: truncateText(character.race, 18), style: { bgColor: COLORS.emerald, textColor: COLORS.black } },
+      { text: truncateText(character.class, 18), style: { bgColor: COLORS.indigo, textColor: COLORS.white } },
+      { text: `${labels.common.levelLabel} ${character.level}`, style: { bgColor: COLORS.amber, textColor: COLORS.black } },
+      { text: truncateText(character.background, 22), style: { bgColor: COLORS.sectionBg, textColor: COLORS.textPrimary, borderColor: COLORS.cardBorder } },
+    ]
+    if (character.voiceDescription) {
+      badges.push({ text: truncateText(character.voiceDescription, 22), style: { bgColor: COLORS.sectionBg, textColor: COLORS.textSecondary, borderColor: COLORS.cardBorder } })
+    }
+    return {
+      badges,
+      iconText: character.class ? character.class.charAt(0).toUpperCase() : 'C',
+    }
+  }
+
+  if (item.type === 'environment') {
+    const environment = item.content_data as Environment
+    const badges: HeaderBadge[] = [
+      { text: getTypeLabel(item.type), style: { bgColor: COLORS.secondary, textColor: COLORS.white } },
+    ]
+    if (environment.mood) {
+      badges.push({ text: `${labels.environment.moodTitle}: ${truncateText(environment.mood, 18)}`, style: { bgColor: COLORS.purple, textColor: COLORS.white } })
+    }
+    if (environment.lighting) {
+      badges.push({ text: `${labels.environment.lightingTitle}: ${truncateText(environment.lighting, 18)}`, style: { bgColor: COLORS.yellow, textColor: COLORS.black } })
+    }
+    return { badges, iconText: '🗺️' }
+  }
+
+  const mission = item.content_data as Mission
+  const badges: HeaderBadge[] = [
+    { text: getTypeLabel(item.type), style: { bgColor: COLORS.secondary, textColor: COLORS.white } },
+  ]
+  if (mission.difficulty) {
+    const diffColor = mission.difficulty === 'easy'
+      ? COLORS.green
+      : mission.difficulty === 'hard'
+        ? COLORS.orange
+        : mission.difficulty === 'deadly'
+          ? COLORS.warning
+          : COLORS.yellow
+    badges.push({ text: mission.difficulty, style: { bgColor: diffColor, textColor: COLORS.black } })
+  }
+  if (mission.recommendedLevel) {
+    badges.push({ text: truncateText(mission.recommendedLevel, 18), style: { bgColor: COLORS.sectionBg, textColor: COLORS.textPrimary, borderColor: COLORS.cardBorder } })
+  }
+  return { badges, iconText: '⚔️' }
+}
+
 /**
  * Export content as JSON file
  */
@@ -922,17 +1410,16 @@ export function exportAsJSON(item: LibraryContentItem, options: JsonExportOption
 /**
  * Export content as PDF file
  */
-export function exportAsPDF(item: LibraryContentItem): void {
+export function exportAsPDF(item: LibraryContentItem, options: PdfExportOptions = {}): void {
   const doc = new jsPDF()
   doc.setFont('times', 'normal')
 
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
-  const margin = 15
-  const headerHeight = 15
-  const footerHeight = 12
-  const contentStartY = margin + headerHeight + 5
+  const margin = 12
+  const footerHeight = 10
   const contentName = getContentName(item)
+  const labels = options.labels ?? buildDefaultPdfLabels(item)
 
   doc.setProperties({
     title: contentName,
@@ -942,414 +1429,615 @@ export function exportAsPDF(item: LibraryContentItem): void {
     keywords: (item.tags || []).join(', '),
   })
 
-  renderCoverPage(doc, item, pageWidth, pageHeight, margin)
-
-  doc.addPage()
-  drawPageBackground(doc, pageWidth, pageHeight)
-  drawPageBorder(doc, pageWidth, pageHeight, margin)
-
   const layout: PdfLayoutContext = {
     doc,
     pageWidth,
     pageHeight,
     margin,
-    headerHeight,
+    headerHeight: 0,
     footerHeight,
-    contentStartY,
-    y: contentStartY,
-    currentPage: 2,
+    contentStartY: margin,
+    y: margin,
+    currentPage: 1,
   }
 
-  if (item.tags && item.tags.length > 0) {
-    startSection(layout, 'Tags', 12, { iconText: 'T', accentColor: COLORS.secondary })
-    const badges = item.tags.map((tag) => ({
-      text: tag,
-      style: { bgColor: COLORS.sectionBg, borderColor: COLORS.border, textColor: COLORS.textPrimary },
-    }))
-    const badgesHeight = renderBadgeGroup(doc, margin + 8, layout.y + 4, pageWidth - 2 * margin - 16, badges, 4)
-    layout.y = badgesHeight + 6
+  const headerBadges = buildHeaderBadges(item, labels)
+  layout.renderPageHeader = (ctx) => {
+    renderHeaderBlock(ctx, contentName, headerBadges.badges, headerBadges.iconText)
   }
 
-  renderSectionText(layout, 'Original Scenario', item.scenario_input, {
-    fontSize: 10,
-    iconText: 'S',
-    accentColor: COLORS.secondary,
-  })
+  drawPageBackground(doc, pageWidth, pageHeight)
+  drawPageBorder(doc, pageWidth, pageHeight, margin)
+  layout.renderPageHeader(layout)
 
-  if (item.notes && item.notes.trim().length > 0) {
-    renderSectionText(layout, 'Notes', item.notes, {
-      fontSize: 10,
-      iconText: 'N',
-      accentColor: COLORS.accent,
-    })
-  }
-
-  layout.y += 5
   if (item.type === 'character') {
-    exportCharacterToPDF(layout, item.content_data as Character)
+    renderCharacterToPDF(layout, item.content_data as Character, labels)
   } else if (item.type === 'environment') {
-    exportEnvironmentToPDF(layout, item.content_data as Environment)
+    exportEnvironmentToPDF(layout, item.content_data as Environment, labels)
   } else if (item.type === 'mission') {
-    exportMissionToPDF(layout, item.content_data as Mission)
+    exportMissionToPDF(layout, item.content_data as Mission, labels)
   }
 
   const totalPages = doc.getNumberOfPages()
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page)
-    if (page === 1) {
-      addCoverFooter(doc, pageWidth, pageHeight, margin, item.created_at)
-    } else {
-      const contentPage = page - 1
-      const contentTotalPages = totalPages - 1
-      addHeader(doc, contentName, item.type, contentPage, contentTotalPages, pageWidth, margin)
-      addFooter(doc, contentPage, contentTotalPages, pageWidth, pageHeight, margin, item.created_at, item.tags, item.notes)
-    }
+    addSimpleFooter(doc, page, totalPages, pageWidth, pageHeight, margin)
   }
 
   doc.save(`${contentName}.pdf`)
 }
 
-function exportCharacterToPDF(layout: PdfLayoutContext, character: Character): void {
-  const width = layout.pageWidth - 2 * layout.margin
-  const textWidth = width - 16
+const SKILL_ABILITY_MAP: Record<string, string> = {
+  Acrobatics: 'DEX',
+  'Animal Handling': 'WIS',
+  Arcana: 'INT',
+  Athletics: 'STR',
+  Deception: 'CHA',
+  History: 'INT',
+  Insight: 'WIS',
+  Intimidation: 'CHA',
+  Investigation: 'INT',
+  Medicine: 'WIS',
+  Nature: 'INT',
+  Perception: 'WIS',
+  Performance: 'CHA',
+  Persuasion: 'CHA',
+  Religion: 'INT',
+  'Sleight of Hand': 'DEX',
+  Stealth: 'DEX',
+  Survival: 'WIS',
+}
 
-  startSection(layout, 'Character Details', 14, { iconText: 'C', accentColor: COLORS.secondary })
-  ensureSpace(layout, 42)
-  const detailCardHeight = 36
-  drawSectionBox(layout.doc, layout.margin, layout.y, width, detailCardHeight, COLORS.sectionBg, COLORS.border, 1)
+function getModifier(score: number): number {
+  return Math.floor((score - 10) / 2)
+}
+
+function formatModifier(mod: number): string {
+  return mod >= 0 ? `+${mod}` : `${mod}`
+}
+
+function renderAttributeCard(
+  layout: PdfLayoutContext,
+  x: number,
+  y: number,
+  width: number,
+  character: Character,
+  labels: PdfExportLabels
+): number {
+  const abilities = [
+    { name: 'STR', value: character.attributes.strength, color: COLORS.rose },
+    { name: 'DEX', value: character.attributes.dexterity, color: COLORS.green },
+    { name: 'CON', value: character.attributes.constitution, color: COLORS.orange },
+    { name: 'INT', value: character.attributes.intelligence, color: COLORS.blue },
+    { name: 'WIS', value: character.attributes.wisdom, color: COLORS.purple },
+    { name: 'CHA', value: character.attributes.charisma, color: COLORS.yellow },
+  ]
+  const headerHeight = getCardHeaderHeight(labels.character.abilityScoresSubtitle)
+  const rowHeight = 8
+  const contentHeight = abilities.length * rowHeight + 18
+  const cardHeight = headerHeight + contentHeight + 6
+
+  drawCardContainer(layout.doc, x, y, width, cardHeight, COLORS.rose)
+  drawCardHeader(layout.doc, x, y, width, {
+    title: labels.character.abilityScoresTitle,
+    subtitle: labels.character.abilityScoresSubtitle,
+    icon: '📊',
+    count: abilities.length,
+    accentColor: COLORS.rose,
+  })
+
+  let rowY = y + headerHeight + 6
+  const barMaxWidth = width - 22
+  abilities.forEach((ability) => {
+    const modifier = getModifier(ability.value)
+    layout.doc.setFontSize(8)
+    layout.doc.setFont(undefined, 'bold')
+    layout.doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
+    layout.doc.text(ability.name, x + 6, rowY + 6)
+    layout.doc.setFont(undefined, 'normal')
+    layout.doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
+    layout.doc.text(`${ability.value} ${formatModifier(modifier)}`, x + width - 12, rowY + 6, { align: 'right' })
+
+    const barWidth = Math.max(8, (ability.value / 20) * barMaxWidth)
+    layout.doc.setFillColor(COLORS.border[0], COLORS.border[1], COLORS.border[2])
+    layout.doc.rect(x + 6, rowY + 7, barMaxWidth, 1.6, 'F')
+    layout.doc.setFillColor(ability.color[0], ability.color[1], ability.color[2])
+    layout.doc.rect(x + 6, rowY + 7, barWidth, 1.6, 'F')
+
+    rowY += rowHeight
+  })
+
+  const proficiencyBonus = Math.floor((character.level + 7) / 4)
+  layout.doc.setFillColor(COLORS.primaryHeader[0], COLORS.primaryHeader[1], COLORS.primaryHeader[2])
+  layout.doc.roundedRect(x + 6, rowY + 2, width - 12, 12, 2, 2, 'F')
+  layout.doc.setFontSize(7)
+  layout.doc.setFont(undefined, 'normal')
+  layout.doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
+  layout.doc.text(labels.character.proficiencyBonusTitle, x + 10, rowY + 9)
   layout.doc.setFontSize(12)
   layout.doc.setFont(undefined, 'bold')
   layout.doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
-  layout.doc.text(character.name, layout.margin + 10, layout.y + 14)
+  layout.doc.text(formatModifier(proficiencyBonus), x + width - 10, rowY + 11, { align: 'right' })
 
-  const badgeItems = [
-    { text: character.race, style: { bgColor: COLORS.secondary, textColor: COLORS.white } },
-    { text: character.class, style: { bgColor: COLORS.primaryHeader, textColor: COLORS.white } },
-    { text: `Level ${character.level}`, style: { bgColor: COLORS.sectionBg, textColor: COLORS.textPrimary, borderColor: COLORS.border } },
-    { text: character.background, style: { bgColor: COLORS.sectionBg, textColor: COLORS.textPrimary, borderColor: COLORS.border } },
-  ]
-  renderBadgeGroup(layout.doc, layout.margin + 10, layout.y + 18, width - 20, badgeItems, 2)
-  layout.y += detailCardHeight + 8
+  return cardHeight
+}
 
-  startSection(layout, 'Ability Scores', 14, { iconText: 'A', accentColor: COLORS.secondary })
-  const abilityPageBreak = ensureSpace(layout, 40)
-  if (abilityPageBreak) {
-    layout.y = addSectionHeader(
-      layout.doc,
-      'Ability Scores (continued)',
-      layout.y,
-      layout.pageWidth,
-      layout.margin,
-      14,
-      { iconText: 'A', accentColor: COLORS.secondary }
-    )
-  }
-  layout.y = drawAbilityScoreGrid(layout.doc, character, layout.y, layout.pageWidth, layout.margin)
-  layout.y += 5
+function buildSkillLines(character: Character): string[] {
+  const expertiseSet = new Set(character.expertise || [])
+  return (character.skills || []).map((skill) => {
+    const marker = expertiseSet.has(skill.name) ? '★' : skill.proficiency ? '•' : '○'
+    const ability = SKILL_ABILITY_MAP[skill.name] ?? ''
+    const mod = formatModifier(skill.modifier)
+    return `${marker} ${skill.name} ${ability ? `(${ability})` : ''} ${mod}`.trim()
+  })
+}
 
-  renderSectionText(layout, 'History', character.history, { fontSize: 10, iconText: 'H', accentColor: COLORS.accent })
-  renderSectionText(layout, 'Personality', character.personality, { fontSize: 10, iconText: 'P', accentColor: COLORS.accent })
-  renderSectionText(layout, 'Voice', character.voiceDescription, { fontSize: 10, iconText: 'V', accentColor: COLORS.accent })
+function renderCharacterToPDF(layout: PdfLayoutContext, character: Character, labels: PdfExportLabels): void {
+  const gap = 6
+  const width = layout.pageWidth - 2 * layout.margin
+  const columnWidth = (width - gap * 2) / 3
+  const columnTopY = layout.y
+  const columnHeight = layout.pageHeight - layout.footerHeight - layout.margin - columnTopY
 
-  if (character.traits && character.traits.length > 0) {
-    renderSectionListTwoColumn(layout, 'Traits', character.traits, { fontSize: 10, iconText: 'T', accentColor: COLORS.secondary })
+  const leftX = layout.margin
+  const middleX = layout.margin + columnWidth + gap
+  const rightX = layout.margin + (columnWidth + gap) * 2
+
+  renderAttributeCard(layout, leftX, columnTopY, columnWidth, character, labels)
+
+  const skillLines = buildSkillLines(character)
+  const skillResult = renderCardLinesInColumn({
+    doc: layout.doc,
+    x: middleX,
+    y: columnTopY,
+    width: columnWidth,
+    maxHeight: columnHeight,
+    title: labels.character.skillsTitle,
+    subtitle: labels.character.skillsSubtitle,
+    icon: '⚡',
+    count: skillLines.length,
+    accentColor: COLORS.cyan,
+    lines: buildWrappedLinesFromList(layout.doc, skillLines, columnWidth - 14, 8),
+    fontSize: 8,
+    lineHeight: 1.2,
+  })
+
+  const overflowSections: Array<CardHeaderOptions & { lines: string[] }> = []
+  let rightY = columnTopY
+  const rightAvailable = columnHeight
+  const rightSections: Array<CardHeaderOptions & { lines: string[] }> = []
+
+  if (character.expertise && character.expertise.length > 0) {
+    rightSections.push({
+      title: labels.character.expertiseTitle,
+      subtitle: labels.character.expertiseSubtitle,
+      icon: '⭐',
+      count: character.expertise.length,
+      accentColor: COLORS.blue,
+      lines: buildBulletedLines(layout.doc, character.expertise, columnWidth - 14, 8),
+    })
   }
 
   if (character.racialTraits && character.racialTraits.length > 0) {
-    renderSectionListTwoColumn(layout, 'Racial Traits', character.racialTraits, { fontSize: 10, iconText: 'R', accentColor: COLORS.secondary })
-  }
-
-  if (character.expertise && character.expertise.length > 0) {
-    renderSectionListTwoColumn(layout, 'Expertise', character.expertise, { fontSize: 10, iconText: 'E', accentColor: COLORS.secondary })
-  }
-
-  const equipment = (character as Character & { equipment?: string[] }).equipment
-  if (equipment && equipment.length > 0) {
-    renderSectionListTwoColumn(layout, 'Equipment', equipment, { fontSize: 10, iconText: 'Q', accentColor: COLORS.secondary })
+    rightSections.push({
+      title: labels.character.racialTraitsTitle,
+      subtitle: labels.character.racialTraitsSubtitle,
+      icon: '🧬',
+      count: character.racialTraits.length,
+      accentColor: COLORS.purple,
+      lines: buildBulletedLines(layout.doc, character.racialTraits, columnWidth - 14, 8),
+    })
   }
 
   if (character.classFeatures && character.classFeatures.length > 0) {
-    startSection(layout, 'Class Features', 12, { iconText: 'F', accentColor: COLORS.secondary })
-    character.classFeatures.forEach((feature) => {
-      const lines = buildWrappedLines(layout.doc, feature.description, textWidth, 9)
-      renderTitledLinesBox(layout, {
-        x: layout.margin,
-        width,
-        title: `${feature.name} (Level ${feature.level})`,
-        lines,
-        titleFontSize: 10,
-        bodyFontSize: 9,
-        onPageBreak: () => {
-          layout.y = addSectionHeader(
-            layout.doc,
-            'Class Features (continued)',
-            layout.y,
-            layout.pageWidth,
-            layout.margin,
-            12,
-            { iconText: 'F', accentColor: COLORS.secondary }
-          )
-        },
-      })
+    const featureLines = character.classFeatures.map(
+      (feature) => `${feature.name} (${labels.common.levelLabel} ${feature.level}) - ${feature.description}`
+    )
+    rightSections.push({
+      title: labels.character.classFeaturesTitle,
+      subtitle: labels.character.classFeaturesSubtitle,
+      icon: '🎯',
+      count: character.classFeatures.length,
+      accentColor: COLORS.indigo,
+      lines: buildWrappedLinesFromList(layout.doc, featureLines, columnWidth - 14, 8),
     })
   }
 
-  if (character.skills && character.skills.length > 0) {
-    const expertiseSet = new Set(character.expertise || [])
-    const skillLines = character.skills.map((skill) => {
-      const mod = skill.modifier >= 0 ? `+${skill.modifier}` : `${skill.modifier}`
-      const proficiencyLabel = expertiseSet.has(skill.name)
-        ? 'Expertise'
-        : skill.proficiency
-          ? 'Proficient'
-          : ''
-      const suffix = proficiencyLabel ? `, ${proficiencyLabel}` : ''
-      return `${skill.name} (${mod}${suffix})`
+  if (character.traits && character.traits.length > 0) {
+    rightSections.push({
+      title: labels.character.traitsTitle,
+      subtitle: labels.character.traitsSubtitle,
+      icon: '💫',
+      count: character.traits.length,
+      accentColor: COLORS.emerald,
+      lines: buildBulletedLines(layout.doc, character.traits, columnWidth - 14, 8),
     })
-    renderSectionListTwoColumn(layout, 'Skills', skillLines, { fontSize: 10, iconText: 'S', accentColor: COLORS.secondary })
   }
+
+  rightSections.forEach((section) => {
+    const remainingHeight = rightAvailable - (rightY - columnTopY)
+    const minHeight = getCardHeaderHeight(section.subtitle) + 12
+    if (remainingHeight < minHeight) {
+      overflowSections.push(section)
+      return
+    }
+    const result = renderCardLinesInColumn({
+      doc: layout.doc,
+      x: rightX,
+      y: rightY,
+      width: columnWidth,
+      maxHeight: remainingHeight,
+      title: section.title,
+      subtitle: section.subtitle,
+      icon: section.icon,
+      count: section.count,
+      accentColor: section.accentColor,
+      lines: section.lines,
+      fontSize: 8,
+      lineHeight: 1.2,
+    })
+    rightY += result.usedHeight
+    if (result.remainingLines.length > 0) {
+      overflowSections.push({ ...section, lines: result.remainingLines })
+    }
+  })
+
+  if (skillResult.remainingLines.length > 0) {
+    overflowSections.push({
+      title: labels.character.skillsTitle,
+      subtitle: labels.character.skillsSubtitle,
+      icon: '⚡',
+      count: skillLines.length,
+      accentColor: COLORS.cyan,
+      lines: skillResult.remainingLines,
+    })
+  }
+
+  addNewPage(layout)
+
+  overflowSections.forEach((section) => {
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: section.title,
+      subtitle: section.subtitle,
+      icon: section.icon,
+      count: section.count,
+      accentColor: section.accentColor,
+      lines: section.lines,
+      fontSize: 8.5,
+      lineHeight: 1.25,
+    })
+  })
 
   if (character.spells && character.spells.length > 0) {
-    startSection(layout, 'Spells', 12, { iconText: 'M', accentColor: COLORS.secondary })
-    character.spells.forEach((spell) => {
-      const lines = buildWrappedLines(layout.doc, spell.description, textWidth, 9)
-      renderTitledLinesBox(layout, {
-        x: layout.margin,
-        width,
-        title: `${spell.name} (Level ${spell.level})`,
-        lines,
-        titleFontSize: 10,
-        bodyFontSize: 9,
-        onPageBreak: () => {
-          layout.y = addSectionHeader(
-            layout.doc,
-            'Spells (continued)',
-            layout.y,
-            layout.pageWidth,
-            layout.margin,
-            12,
-            { iconText: 'M', accentColor: COLORS.secondary }
-          )
-        },
-      })
+    const spellLines = character.spells.map(
+      (spell) => `${spell.name} (${labels.common.levelLabel} ${spell.level}) — ${spell.description}`
+    )
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.character.spellsTitle,
+      subtitle: labels.character.spellsSubtitle,
+      icon: '✨',
+      count: character.spells.length,
+      accentColor: COLORS.indigo,
+      lines: buildWrappedLinesFromList(layout.doc, spellLines, width - 14, 8.5),
+      fontSize: 8.5,
+      lineHeight: 1.25,
+    })
+  }
+
+  renderCardLines(layout, {
+    x: layout.margin,
+    width,
+    title: labels.character.historyTitle,
+    subtitle: labels.character.historySubtitle,
+    icon: '📜',
+    accentColor: COLORS.amber,
+    lines: buildWrappedLines(layout.doc, character.history, width - 14, 9),
+    fontSize: 9,
+    lineHeight: 1.3,
+  })
+
+  renderCardLines(layout, {
+    x: layout.margin,
+    width,
+    title: labels.character.personalityTitle,
+    subtitle: labels.character.personalitySubtitle,
+    icon: '🎭',
+    accentColor: COLORS.pink,
+    lines: buildWrappedLines(layout.doc, character.personality, width - 14, 9),
+    fontSize: 9,
+    lineHeight: 1.3,
+  })
+
+  if (character.voiceDescription) {
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.character.voiceTitle,
+      subtitle: labels.character.voiceSubtitle,
+      icon: '🎤',
+      accentColor: COLORS.cyan,
+      lines: buildWrappedLines(layout.doc, character.voiceDescription, width - 14, 9),
+      fontSize: 9,
+      lineHeight: 1.3,
     })
   }
 }
 
-function exportEnvironmentToPDF(layout: PdfLayoutContext, environment: Environment): void {
+function exportEnvironmentToPDF(layout: PdfLayoutContext, environment: Environment, labels: PdfExportLabels): void {
   const width = layout.pageWidth - 2 * layout.margin
-  const textWidth = width - 16
 
-  startSection(layout, 'Environment Details', 14, { iconText: 'E', accentColor: COLORS.secondary })
-  ensureSpace(layout, 34)
-  const detailCardHeight = 28
-  drawSectionBox(layout.doc, layout.margin, layout.y, width, detailCardHeight, COLORS.sectionBg, COLORS.border, 1)
-  layout.doc.setFontSize(12)
-  layout.doc.setFont(undefined, 'bold')
-  layout.doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
-  layout.doc.text(environment.name, layout.margin + 10, layout.y + 16)
-  layout.y += detailCardHeight + 8
+  renderCardLines(layout, {
+    x: layout.margin,
+    width,
+    title: labels.environment.descriptionTitle,
+    subtitle: labels.environment.descriptionSubtitle,
+    icon: '🗺️',
+    accentColor: COLORS.blue,
+    lines: buildWrappedLines(layout.doc, environment.description, width - 14, 9),
+    fontSize: 9,
+    lineHeight: 1.3,
+  })
 
-  renderSectionText(layout, 'Description', environment.description, { fontSize: 10, iconText: 'D', accentColor: COLORS.accent })
-  renderSectionText(layout, 'Mood', environment.mood, { fontSize: 10, iconText: 'M', accentColor: COLORS.accent })
-  renderSectionText(layout, 'Lighting', environment.lighting, { fontSize: 10, iconText: 'L', accentColor: COLORS.accent })
-  renderSectionText(layout, 'Ambient Atmosphere', environment.ambient, { fontSize: 10, iconText: 'A', accentColor: COLORS.accent })
+  renderCardLines(layout, {
+    x: layout.margin,
+    width,
+    title: labels.environment.moodTitle,
+    icon: '🌙',
+    accentColor: COLORS.purple,
+    lines: buildWrappedLines(layout.doc, environment.mood, width - 14, 9),
+    fontSize: 9,
+    lineHeight: 1.3,
+  })
+
+  renderCardLines(layout, {
+    x: layout.margin,
+    width,
+    title: labels.environment.lightingTitle,
+    icon: '💡',
+    accentColor: COLORS.yellow,
+    lines: buildWrappedLines(layout.doc, environment.lighting, width - 14, 9),
+    fontSize: 9,
+    lineHeight: 1.3,
+  })
+
+  renderCardLines(layout, {
+    x: layout.margin,
+    width,
+    title: labels.environment.ambientTitle,
+    subtitle: labels.environment.ambientSubtitle,
+    icon: '🌫️',
+    accentColor: COLORS.cyan,
+    lines: buildWrappedLines(layout.doc, environment.ambient, width - 14, 9),
+    fontSize: 9,
+    lineHeight: 1.3,
+  })
 
   if (environment.features && environment.features.length > 0) {
-    renderSectionListTwoColumn(layout, 'Notable Features', environment.features, { fontSize: 10, iconText: 'F', accentColor: COLORS.secondary })
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.environment.notableFeaturesTitle,
+      subtitle: labels.environment.notableFeaturesSubtitle,
+      icon: '✨',
+      count: environment.features.length,
+      accentColor: COLORS.emerald,
+      lines: buildBulletedLines(layout.doc, environment.features, width - 14, 8.5),
+      fontSize: 8.5,
+      lineHeight: 1.25,
+    })
   }
 
   if (environment.npcs && environment.npcs.length > 0) {
-    renderSectionListTwoColumn(layout, 'Present NPCs', environment.npcs, { fontSize: 10, iconText: 'N', accentColor: COLORS.secondary })
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.environment.presentNPCsTitle,
+      subtitle: labels.environment.presentNPCsSubtitle,
+      icon: '🧑‍🤝‍🧑',
+      count: environment.npcs.length,
+      accentColor: COLORS.blue,
+      lines: buildBulletedLines(layout.doc, environment.npcs, width - 14, 8.5),
+      fontSize: 8.5,
+      lineHeight: 1.25,
+    })
   }
 
   if (environment.currentConflict) {
-    renderSectionText(layout, 'Current Conflict', environment.currentConflict, { fontSize: 10, iconText: 'C', accentColor: COLORS.warning })
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.environment.currentConflictTitle,
+      subtitle: labels.environment.currentConflictSubtitle,
+      icon: '⚠️',
+      accentColor: COLORS.warning,
+      lines: buildWrappedLines(layout.doc, environment.currentConflict, width - 14, 9),
+      fontSize: 9,
+      lineHeight: 1.3,
+    })
   }
 
   if (environment.adventureHooks && environment.adventureHooks.length > 0) {
-    renderSectionListTwoColumn(layout, 'Adventure Hooks', environment.adventureHooks, { fontSize: 10, iconText: 'H', accentColor: COLORS.secondary })
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.environment.adventureHooksTitle,
+      subtitle: labels.environment.adventureHooksSubtitle,
+      icon: '🪝',
+      count: environment.adventureHooks.length,
+      accentColor: COLORS.secondary,
+      lines: buildBulletedLines(layout.doc, environment.adventureHooks, width - 14, 8.5),
+      fontSize: 8.5,
+      lineHeight: 1.25,
+    })
   }
 }
 
-function exportMissionToPDF(layout: PdfLayoutContext, mission: Mission): void {
+function exportMissionToPDF(layout: PdfLayoutContext, mission: Mission, labels: PdfExportLabels): void {
   const width = layout.pageWidth - 2 * layout.margin
-  const textWidth = width - 16
 
-  startSection(layout, 'Mission Details', 14, { iconText: 'M', accentColor: COLORS.secondary })
-  ensureSpace(layout, 40)
-  const detailCardHeight = 34
-  drawSectionBox(layout.doc, layout.margin, layout.y, width, detailCardHeight, COLORS.sectionBg, COLORS.border, 1)
-  layout.doc.setFontSize(12)
-  layout.doc.setFont(undefined, 'bold')
-  layout.doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
-  layout.doc.text(mission.title, layout.margin + 10, layout.y + 14)
-
-  const difficultyBadgeStyle = {
-    bgColor: mission.difficulty === 'easy'
-      ? COLORS.success
-      : mission.difficulty === 'deadly'
-        ? COLORS.warning
-        : COLORS.secondary,
-    textColor: COLORS.white,
-  }
-  const missionBadges = [
-    { text: `Difficulty: ${mission.difficulty}`, style: difficultyBadgeStyle },
+  const detailLines = [
+    `${labels.common.levelLabel}: ${mission.recommendedLevel || '—'}`,
+    `Difficulty: ${mission.difficulty}`,
   ]
-  if (mission.recommendedLevel) {
-    missionBadges.push({
-      text: `Recommended: ${mission.recommendedLevel}`,
-      style: { bgColor: COLORS.sectionBg, textColor: COLORS.textPrimary, borderColor: COLORS.border },
-    })
-  }
-  renderBadgeGroup(layout.doc, layout.margin + 10, layout.y + 18, width - 20, missionBadges, 2)
-  layout.y += detailCardHeight + 8
+  renderCardLines(layout, {
+    x: layout.margin,
+    width,
+    title: labels.mission.missionDetailsTitle,
+    subtitle: labels.mission.missionDetailsSubtitle,
+    icon: '⚔️',
+    accentColor: COLORS.secondary,
+    lines: buildWrappedLinesFromList(layout.doc, detailLines, width - 14, 9),
+    fontSize: 9,
+    lineHeight: 1.3,
+  })
 
-  renderSectionText(layout, 'Description', mission.description, { fontSize: 10, iconText: 'D', accentColor: COLORS.accent })
-  renderSectionText(layout, 'Context', mission.context, { fontSize: 10, iconText: 'C', accentColor: COLORS.accent })
+  renderCardLines(layout, {
+    x: layout.margin,
+    width,
+    title: labels.mission.missionBriefTitle,
+    subtitle: labels.mission.missionBriefSubtitle,
+    icon: '📜',
+    accentColor: COLORS.blue,
+    lines: buildWrappedLines(layout.doc, mission.description, width - 14, 9),
+    fontSize: 9,
+    lineHeight: 1.3,
+  })
+
+  renderCardLines(layout, {
+    x: layout.margin,
+    width,
+    title: labels.mission.contextTitle,
+    subtitle: labels.mission.contextSubtitle,
+    icon: '🧭',
+    accentColor: COLORS.cyan,
+    lines: buildWrappedLines(layout.doc, mission.context, width - 14, 9),
+    fontSize: 9,
+    lineHeight: 1.3,
+  })
 
   if (mission.objectives && mission.objectives.length > 0) {
-    startSection(layout, 'Objectives', 12, { iconText: 'O', accentColor: COLORS.secondary })
-    mission.objectives.forEach((objective) => {
-      const objectiveLines = [objective.description]
-      if (objective.pathType) {
-        objectiveLines.push(`Approach: ${objective.pathType}`)
-      }
-      const lines = buildWrappedLinesFromList(layout.doc, objectiveLines, textWidth, 9)
-      const titlePrefix = objective.primary ? '★ Primary Objective' : '○ Optional Objective'
-      renderTitledLinesBox(layout, {
-        x: layout.margin,
-        width,
-        title: titlePrefix,
-        lines,
-        titleFontSize: 10,
-        bodyFontSize: 9,
-        titleColor: objective.primary ? COLORS.success : COLORS.textPrimary,
-        borderColor: objective.primary ? COLORS.success : COLORS.border,
-        onPageBreak: () => {
-          layout.y = addSectionHeader(
-            layout.doc,
-            'Objectives (continued)',
-            layout.y,
-            layout.pageWidth,
-            layout.margin,
-            12,
-            { iconText: 'O', accentColor: COLORS.secondary }
-          )
-        },
-      })
+    const objectiveLines = mission.objectives.map((obj) => {
+      const prefix = obj.primary ? '★' : '○'
+      const path = obj.pathType ? ` (${obj.pathType})` : ''
+      return `${prefix} ${obj.description}${path}`
+    })
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.mission.objectivesTitle,
+      subtitle: labels.mission.objectivesSubtitle,
+      icon: '🎯',
+      count: mission.objectives.length,
+      accentColor: COLORS.orange,
+      lines: buildWrappedLinesFromList(layout.doc, objectiveLines, width - 14, 8.5),
+      fontSize: 8.5,
+      lineHeight: 1.25,
     })
   }
 
   if (mission.rewards) {
     const rewardLines: string[] = []
-    if (mission.rewards.xp) {
-      rewardLines.push(`XP: ${mission.rewards.xp}`)
-    }
-    if (mission.rewards.gold) {
-      rewardLines.push(`Gold: ${mission.rewards.gold}`)
-    }
+    if (mission.rewards.xp) rewardLines.push(`XP: ${mission.rewards.xp}`)
+    if (mission.rewards.gold) rewardLines.push(`Gold: ${mission.rewards.gold}`)
     if (mission.rewards.items && mission.rewards.items.length > 0) {
-      rewardLines.push('Items:')
-      mission.rewards.items.forEach((item) => rewardLines.push(`• ${item}`))
+      rewardLines.push(...mission.rewards.items.map((item) => `• ${item}`))
     }
-    startSection(layout, 'Rewards', 12, { iconText: 'R', accentColor: COLORS.secondary })
-    const lines = buildWrappedLinesFromList(
-      layout.doc,
-      rewardLines.length > 0 ? rewardLines : ['—'],
-      textWidth,
-      10
-    )
-    renderLinesBox(layout, lines, {
+    renderCardLines(layout, {
       x: layout.margin,
       width,
-      fontSize: 10,
-      onPageBreak: () => {
-        layout.y = addSectionHeader(
-          layout.doc,
-          'Rewards (continued)',
-          layout.y,
-          layout.pageWidth,
-          layout.margin,
-          12,
-          { iconText: 'R', accentColor: COLORS.secondary }
-        )
-      },
+      title: labels.mission.baseRewardsTitle,
+      subtitle: labels.mission.baseRewardsSubtitle,
+      icon: '💰',
+      accentColor: COLORS.green,
+      lines: buildWrappedLinesFromList(layout.doc, rewardLines, width - 14, 8.5),
+      fontSize: 8.5,
+      lineHeight: 1.25,
     })
   }
 
   if (mission.choiceBasedRewards && mission.choiceBasedRewards.length > 0) {
-    startSection(layout, 'Choice-Based Rewards', 12, { iconText: 'B', accentColor: COLORS.secondary })
-    mission.choiceBasedRewards.forEach((cbr) => {
-      const lines: string[] = []
-      if (cbr.rewards.xp) {
-        lines.push(`XP: ${cbr.rewards.xp}`)
+    const rewardLines = mission.choiceBasedRewards.flatMap((choice) => {
+      const lines = [`If ${choice.condition}:`]
+      if (choice.rewards.xp) lines.push(`XP: ${choice.rewards.xp}`)
+      if (choice.rewards.gold) lines.push(`Gold: ${choice.rewards.gold}`)
+      if (choice.rewards.items && choice.rewards.items.length > 0) {
+        choice.rewards.items.forEach((item) => lines.push(`• ${item}`))
       }
-      if (cbr.rewards.gold) {
-        lines.push(`Gold: ${cbr.rewards.gold}`)
-      }
-      if (cbr.rewards.items && cbr.rewards.items.length > 0) {
-        lines.push('Items:')
-        cbr.rewards.items.forEach((item) => lines.push(`• ${item}`))
-      }
-      renderTitledLinesBox(layout, {
-        x: layout.margin,
-        width,
-        title: `If ${cbr.condition}`,
-        lines: buildWrappedLinesFromList(layout.doc, lines, textWidth, 9),
-        titleFontSize: 10,
-        bodyFontSize: 9,
-        onPageBreak: () => {
-          layout.y = addSectionHeader(
-            layout.doc,
-            'Choice-Based Rewards (continued)',
-            layout.y,
-            layout.pageWidth,
-            layout.margin,
-            12,
-            { iconText: 'B', accentColor: COLORS.secondary }
-          )
-        },
-      })
+      return lines
+    })
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.mission.choiceBasedRewardsTitle,
+      subtitle: labels.mission.choiceBasedRewardsSubtitle,
+      icon: '🧩',
+      count: mission.choiceBasedRewards.length,
+      accentColor: COLORS.indigo,
+      lines: buildWrappedLinesFromList(layout.doc, rewardLines, width - 14, 8.5),
+      fontSize: 8.5,
+      lineHeight: 1.25,
     })
   }
 
   if (mission.relatedNPCs && mission.relatedNPCs.length > 0) {
-    renderSectionListTwoColumn(layout, 'Related NPCs', mission.relatedNPCs, { fontSize: 10, iconText: 'N', accentColor: COLORS.secondary })
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.mission.relatedNPCsTitle,
+      icon: '🧑‍🤝‍🧑',
+      count: mission.relatedNPCs.length,
+      accentColor: COLORS.blue,
+      lines: buildBulletedLines(layout.doc, mission.relatedNPCs, width - 14, 8.5),
+      fontSize: 8.5,
+      lineHeight: 1.25,
+    })
   }
 
   if (mission.relatedLocations && mission.relatedLocations.length > 0) {
-    renderSectionListTwoColumn(layout, 'Related Locations', mission.relatedLocations, { fontSize: 10, iconText: 'L', accentColor: COLORS.secondary })
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.mission.relatedLocationsTitle,
+      icon: '📍',
+      count: mission.relatedLocations.length,
+      accentColor: COLORS.purple,
+      lines: buildBulletedLines(layout.doc, mission.relatedLocations, width - 14, 8.5),
+      fontSize: 8.5,
+      lineHeight: 1.25,
+    })
   }
 
   if (mission.powerfulItems && mission.powerfulItems.length > 0) {
-    startSection(layout, 'Powerful Items', 12, { iconText: 'P', accentColor: COLORS.secondary })
-    mission.powerfulItems.forEach((item) => {
-      const lines = buildWrappedLinesFromList(layout.doc, [`Status: ${item.status}`], textWidth, 9)
-      renderTitledLinesBox(layout, {
-        x: layout.margin,
-        width,
-        title: item.name,
-        lines,
-        titleFontSize: 10,
-        bodyFontSize: 9,
-        onPageBreak: () => {
-          layout.y = addSectionHeader(
-            layout.doc,
-            'Powerful Items (continued)',
-            layout.y,
-            layout.pageWidth,
-            layout.margin,
-            12,
-            { iconText: 'P', accentColor: COLORS.secondary }
-          )
-        },
-      })
+    const itemLines = mission.powerfulItems.map((item) => `${item.name} — ${item.status}`)
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.mission.powerfulItemsTitle,
+      icon: '🗡️',
+      count: mission.powerfulItems.length,
+      accentColor: COLORS.amber,
+      lines: buildWrappedLinesFromList(layout.doc, itemLines, width - 14, 8.5),
+      fontSize: 8.5,
+      lineHeight: 1.25,
     })
   }
 
   if (mission.possibleOutcomes && mission.possibleOutcomes.length > 0) {
-    renderSectionListTwoColumn(layout, 'Possible Outcomes', mission.possibleOutcomes, { fontSize: 10, iconText: 'O', accentColor: COLORS.secondary })
+    renderCardLines(layout, {
+      x: layout.margin,
+      width,
+      title: labels.mission.possibleOutcomesTitle,
+      icon: '🔮',
+      count: mission.possibleOutcomes.length,
+      accentColor: COLORS.secondary,
+      lines: buildBulletedLines(layout.doc, mission.possibleOutcomes, width - 14, 8.5),
+      fontSize: 8.5,
+      lineHeight: 1.25,
+    })
   }
 }
 

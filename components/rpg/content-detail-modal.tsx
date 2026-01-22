@@ -16,7 +16,7 @@ import { supabase } from "@/lib/supabase"
 import { Input } from "@/components/ui/input"
 import { useLocale } from 'next-intl'
 import { formatDateMedium, formatDateTimeMedium } from "@/lib/date"
-import { exportAsJSON, exportAsPDF, type ContentLinks } from "@/lib/export"
+import { exportAsJSON, exportAsPDF, type ContentLinks, type PdfExportLabels } from "@/lib/export"
 
 /** Renders diff values as readable, formatted UI instead of raw JSON. */
 function DiffValueBlock({ value, className = "" }: { value: unknown; className?: string }) {
@@ -681,7 +681,8 @@ export function ContentDetailModal({
     try {
       setIsExportingPDF(true)
       await new Promise((resolve) => setTimeout(resolve, 0))
-      exportAsPDF(item)
+      const pdfLabels = buildPdfLabels()
+      exportAsPDF(item, { labels: pdfLabels })
       showExportNotice("success", t("library.exportSuccessPDF"))
     } catch (err) {
       console.error("Export PDF error:", err)
@@ -706,6 +707,75 @@ export function ContentDetailModal({
       showExportNotice("error", `${t("library.exportError")}: ${err instanceof Error ? err.message : "Unknown error"}`)
     } finally {
       setIsExportingJSON(false)
+    }
+  }
+
+  function buildPdfLabels(): PdfExportLabels {
+    const character = item.type === "character" ? (item.content_data as Character) : null
+    const environment = item.type === "environment" ? (item.content_data as Environment) : null
+    const mission = item.type === "mission" ? (item.content_data as Mission) : null
+
+    return {
+      common: {
+        levelLabel: t("rpg.level"),
+      },
+      character: {
+        abilityScoresTitle: t("rpg.abilityScores"),
+        abilityScoresSubtitle: t("rpg.coreAttributes"),
+        skillsTitle: t("rpg.skills"),
+        skillsSubtitle: t("rpg.skillCount", { count: character?.skills?.length || 0 }),
+        proficiencyBonusTitle: t("rpg.proficiencyBonus"),
+        expertiseTitle: t("rpg.expertise"),
+        expertiseSubtitle: t("rpg.skillWithExpertise", { count: character?.expertise?.length || 0 }),
+        racialTraitsTitle: t("rpg.racialTraits"),
+        racialTraitsSubtitle: t("rpg.traitCount", { count: character?.racialTraits?.length || 0 }),
+        classFeaturesTitle: t("rpg.classFeatures"),
+        classFeaturesSubtitle: t("rpg.featureCount", { count: character?.classFeatures?.length || 0 }),
+        traitsTitle: t("rpg.traits"),
+        traitsSubtitle: t("rpg.traitCount", { count: character?.traits?.length || 0 }),
+        spellsTitle: t("rpg.spells"),
+        spellsSubtitle: t("rpg.spellCount", { count: character?.spells?.length || 0 }),
+        historyTitle: t("rpg.history"),
+        historySubtitle: t("rpg.characterBackstory"),
+        personalityTitle: t("rpg.personality"),
+        personalitySubtitle: t("rpg.characterDemeanor"),
+        voiceTitle: t("rpg.voice"),
+        voiceSubtitle: t("rpg.voiceCharacteristics"),
+      },
+      environment: {
+        descriptionTitle: t("rpg.environment.description"),
+        descriptionSubtitle: t("rpg.environment.locationDetails"),
+        moodTitle: t("rpg.environment.mood"),
+        lightingTitle: t("rpg.environment.lighting"),
+        ambientTitle: t("rpg.environment.ambientAtmosphere"),
+        ambientSubtitle: t("rpg.environment.soundsAndAtmosphere"),
+        notableFeaturesTitle: t("rpg.environment.notableFeatures"),
+        notableFeaturesSubtitle: t("rpg.environment.featureCount", { count: environment?.features?.length || 0 }),
+        currentConflictTitle: t("rpg.environment.currentConflict"),
+        currentConflictSubtitle: t("rpg.environment.activeIssues"),
+        presentNPCsTitle: t("rpg.environment.presentNPCs"),
+        presentNPCsSubtitle: t("rpg.environment.npcCount", { count: environment?.npcs?.length || 0 }),
+        adventureHooksTitle: t("rpg.environment.adventureHooks"),
+        adventureHooksSubtitle: t("rpg.environment.hookCount", { count: environment?.adventureHooks?.length || 0 }),
+      },
+      mission: {
+        missionDetailsTitle: t("rpg.mission.missionDetails"),
+        missionDetailsSubtitle: "",
+        missionBriefTitle: t("rpg.mission.missionBrief"),
+        missionBriefSubtitle: t("rpg.mission.missionDetails"),
+        contextTitle: t("rpg.mission.context"),
+        contextSubtitle: t("rpg.mission.contextSubtitle"),
+        objectivesTitle: t("rpg.mission.objectives"),
+        objectivesSubtitle: t("rpg.mission.objectiveCount", { count: mission?.objectives?.length || 0 }),
+        baseRewardsTitle: t("rpg.mission.baseRewards"),
+        baseRewardsSubtitle: t("rpg.mission.missionCompletionRewards"),
+        choiceBasedRewardsTitle: t("rpg.mission.choiceBasedRewards"),
+        choiceBasedRewardsSubtitle: t("rpg.mission.pathCount", { count: mission?.choiceBasedRewards?.length || 0 }),
+        relatedNPCsTitle: t("rpg.mission.relatedNPCs"),
+        relatedLocationsTitle: t("rpg.mission.relatedLocations"),
+        powerfulItemsTitle: t("rpg.mission.powerfulItems"),
+        possibleOutcomesTitle: t("rpg.mission.possibleOutcomes"),
+      },
     }
   }
 

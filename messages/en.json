@@ -582,6 +582,8 @@
     "environment": {
       "description": "Description",
       "locationDetails": "Location details",
+      "mood": "Mood",
+      "lighting": "Lighting",
       "ambientAtmosphere": "Ambient Atmosphere",
       "soundsAndAtmosphere": "Sounds and atmosphere",
       "notableFeatures": "Notable Features",
@@ -596,6 +598,8 @@
     "mission": {
       "missionBrief": "Mission Brief",
       "missionDetails": "Mission details",
+      "context": "Context",
+      "contextSubtitle": "Situation details",
       "objectives": "Objectives",
       "objectiveCount": "{count} {count, plural, one {objective} other {objectives}}",
       "alternativePaths": "Some objectives are alternative paths - choose one approach",
