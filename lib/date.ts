@@ -64,3 +64,11 @@ export function formatDateTimeCompact(value: DateInput, locale: string): string 
 
   return `${datePart} ${timePart}`
 }
+
+export function formatDateNumericShort(value: DateInput, locale: string): string {
+  return formatDateWithLocale(value, locale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  })
+}
