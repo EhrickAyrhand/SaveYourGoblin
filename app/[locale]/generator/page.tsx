@@ -922,16 +922,24 @@ export default function GeneratorPage() {
         )}
       </div>
 
-      <div className={`mx-auto space-y-6 pt-4 ${advancedMode ? "max-w-6xl" : "max-w-5xl"}`}>
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="min-w-0">
-            <h1 className="font-display text-5xl font-bold mb-3 whitespace-nowrap">{t('generator.title')}</h1>
-            <p className="mt-2 text-base text-muted-foreground font-body">
-              {t('generator.description')}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <NavigationDropdown onSignOut={handleSignOut} />
+      <div className="mx-auto max-w-7xl space-y-8 pt-4">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-lg border-2 border-primary/20"></div>
+          <div className="relative flex items-center justify-between p-6 md:p-8">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-5xl md:text-6xl">✨</span>
+                <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-primary via-primary/90 to-primary bg-clip-text text-transparent">
+                  {t('generator.title')}
+                </h1>
+              </div>
+              <p className="mt-3 text-base md:text-lg text-muted-foreground font-body pl-1">
+                {t('generator.description')}
+              </p>
+            </div>
+            <div className="flex gap-2 ml-4">
+              <NavigationDropdown onSignOut={handleSignOut} />
+            </div>
           </div>
         </div>
 
