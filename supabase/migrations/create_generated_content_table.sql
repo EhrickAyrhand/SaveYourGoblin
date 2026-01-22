@@ -18,6 +18,12 @@ CREATE INDEX IF NOT EXISTS idx_generated_content_created_at ON generated_content
 -- Enable Row Level Security (RLS)
 ALTER TABLE generated_content ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies to allow re-running this migration
+DROP POLICY IF EXISTS "Users can view their own generated content" ON generated_content;
+DROP POLICY IF EXISTS "Users can insert their own generated content" ON generated_content;
+DROP POLICY IF EXISTS "Users can update their own generated content" ON generated_content;
+DROP POLICY IF EXISTS "Users can delete their own generated content" ON generated_content;
+
 -- Policy: Users can only see their own content
 CREATE POLICY "Users can view their own generated content"
   ON generated_content
