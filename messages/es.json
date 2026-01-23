@@ -455,6 +455,11 @@
       "royal": "Elegante"
     },
     "avatarStyle": "Estilo de Avatar",
+    "warrior": "Guerrero",
+    "wizard": "Mago",
+    "rogue": "Pícaro",
+    "bard": "Bardo",
+    "cleric": "Clérigo",
     "saving": "Guardando...",
     "saveProfile": "Guardar Perfil"
   },

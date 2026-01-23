@@ -35,6 +35,15 @@ const avatarEmojis: Record<ProfileSettings["avatarStyle"], string> = {
   cleric: "✨",
 }
 
+const avatarStyles = [
+  { value: "warrior", emoji: "⚔️" },
+  { value: "wizard", emoji: "🔮" },
+  { value: "rogue", emoji: "🗡️" },
+  { value: "bard", emoji: "🎵" },
+  { value: "cleric", emoji: "✨" },
+] as const
+
+
 export default function ProfilePage() {
   const t = useTranslations()
   const locale = useLocale()
@@ -431,57 +440,56 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Avatar Style */}
-              <div className="space-y-4">
-                <Label className="font-body text-base">{t('profile.avatarStyle')}</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { value: "warrior", label: "⚔️ Warrior", emoji: "⚔️" },
-                    { value: "wizard", label: "🔮 Wizard", emoji: "🔮" },
-                    { value: "rogue", label: "🗡️ Rogue", emoji: "🗡️" },
-                    { value: "bard", label: "🎵 Bard", emoji: "🎵" },
-                    { value: "cleric", label: "✨ Cleric", emoji: "✨" },
-                  ].map((avatar) => (
-                    <button
-                      key={avatar.value}
-                      type="button"
-                      onClick={() => {
-                        const newProfile = {
-                          ...profile,
-                          avatarStyle: avatar.value as ProfileSettings["avatarStyle"],
-                        }
-                        setProfile(newProfile)
-                        // Save avatar immediately to localStorage (not waiting for Save Profile button)
-                        if (user) {
-                          try {
-                            const profileKey = `profile_${user.id}`
-                            const existingProfile = localStorage.getItem(profileKey)
-                            if (existingProfile) {
-                              const profileData = JSON.parse(existingProfile)
-                              profileData.avatarStyle = newProfile.avatarStyle
-                              localStorage.setItem(profileKey, JSON.stringify(profileData))
-                            } else {
-                              localStorage.setItem(profileKey, JSON.stringify(newProfile))
-                            }
-                          } catch (err) {
-                            // Silent fail - avatar will be saved on next profile save
-                          }
-                        }
-                      }}
-                      className={`rounded-lg border-2 p-4 text-center transition-all ${
-                        profile.avatarStyle === avatar.value
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <div className="text-3xl">{avatar.emoji}</div>
-                      <div className="mt-2 font-body text-sm font-medium">
-                        {avatar.label.split(" ")[1]}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+{/* Avatar Style */}
+<div className="space-y-4">
+  <Label className="font-body text-base">
+    {t('profile.avatarStyle')}
+  </Label>
+
+  <div className="grid grid-cols-2 gap-3">
+    {avatarStyles.map((avatar) => (
+      <button
+        key={avatar.value}
+        type="button"
+        onClick={() => {
+          const newProfile = {
+            ...profile,
+            avatarStyle: avatar.value as ProfileSettings["avatarStyle"],
+          }
+          setProfile(newProfile)
+
+          if (user) {
+            try {
+              const profileKey = `profile_${user.id}`
+              const existingProfile = localStorage.getItem(profileKey)
+              if (existingProfile) {
+                const profileData = JSON.parse(existingProfile)
+                profileData.avatarStyle = newProfile.avatarStyle
+                localStorage.setItem(profileKey, JSON.stringify(profileData))
+              } else {
+                localStorage.setItem(profileKey, JSON.stringify(newProfile))
+              }
+            } catch {
+              // Silent fail
+            }
+          }
+        }}
+        className={`rounded-lg border-2 p-4 text-center transition-all ${
+          profile.avatarStyle === avatar.value
+            ? "border-primary bg-primary/10"
+            : "border-border hover:border-primary/50"
+        }`}
+      >
+        <div className="text-3xl">{avatar.emoji}</div>
+
+        <div className="mt-2 font-body text-sm font-medium">
+          {t(`profile.${avatar.value}`)}
+        </div>
+      </button>
+    ))}
+  </div>
+</div>
+
             </CardContent>
           </Card>
         </div>

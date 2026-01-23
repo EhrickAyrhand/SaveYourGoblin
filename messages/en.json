@@ -456,6 +456,11 @@
       "royal": "Elegant"
     },
     "avatarStyle": "Avatar Style",
+    "warrior": "Warrior",
+    "wizard": "Wizard",
+    "rogue": "Rogue",
+    "bard": "Bard",
+    "cleric": "Cleric",
     "saving": "Saving...",
     "saveProfile": "Save Profile"
   },
