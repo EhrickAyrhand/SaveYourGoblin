@@ -115,7 +115,7 @@ Actual:
 - It open the contents correclty but don't follow the users page it only opens in the top of the page.
 ---
 
-## TC-009 - Campaign dropbox background color -- Failed❎
+## TC-009 - Campaign dropbox background color -- Fixed✅
 Steps:
 1. Create a Campaign
 2. After go for linekd content and click in add content 

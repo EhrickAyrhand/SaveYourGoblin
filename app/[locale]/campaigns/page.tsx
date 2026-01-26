@@ -24,6 +24,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { NavigationDropdown } from "@/components/ui/navigation-dropdown"
 import { formatDateNumericShort, formatDateWithLocale } from "@/lib/date"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type Campaign = {
   id: string
@@ -717,7 +724,7 @@ export default function CampaignsPage() {
   }
 
   const addContentModal = isAddContentOpen ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 text-foreground p-4">
       <div
         className="absolute inset-0 bg-black/40"
         onClick={() => setIsAddContentOpen(false)}
@@ -753,16 +760,22 @@ export default function CampaignsPage() {
                 placeholder={t("campaigns.searchPlaceholder")}
                 className="font-body flex-1 min-w-[220px]"
               />
-              <select
+              <Select
                 value={libraryType}
-                onChange={(event) => setLibraryType(event.target.value as ContentType | "all")}
-                className="rounded-md border border-input bg-transparent px-3 py-2 text-sm font-body shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                onValueChange={(value) => setLibraryType(value as ContentType | "all")}
               >
-                <option value="all">{t("campaigns.allTypes")}</option>
-                <option value="character">{t("generator.contentType.character")}</option>
-                <option value="environment">{t("generator.contentType.environment")}</option>
-                <option value="mission">{t("generator.contentType.mission")}</option>
-              </select>
+                <SelectTrigger className="w-[180px] font-body bg-background text-foreground border-input">
+                  <SelectValue placeholder={t("campaigns.allTypes")} />
+                </SelectTrigger>
+
+                <SelectContent className="bg-background text-foreground border-border">
+                  <SelectItem value="all">{t("campaigns.allTypes")}</SelectItem>
+                  <SelectItem value="character">{t("generator.contentType.character")}</SelectItem>
+                  <SelectItem value="environment">{t("generator.contentType.environment")}</SelectItem>
+                  <SelectItem value="mission">{t("generator.contentType.mission")}</SelectItem>
+                </SelectContent>
+              </Select>
+
               <Button
                 variant="outline"
                 size="sm"
@@ -902,11 +915,10 @@ export default function CampaignsPage() {
                       return (
                         <div
                           key={campaign.id}
-                          className={`rounded-lg border-2 p-3 transition-all ${
-                            isSelected
-                              ? "border-primary/60 bg-primary/10"
-                              : "border-primary/10 hover:border-primary/30 hover:bg-primary/5"
-                          }`}
+                          className={`rounded-lg border-2 p-3 transition-all ${isSelected
+                            ? "border-primary/60 bg-primary/10"
+                            : "border-primary/10 hover:border-primary/30 hover:bg-primary/5"
+                            }`}
                         >
                           <button
                             type="button"
@@ -1131,11 +1143,10 @@ export default function CampaignsPage() {
                               setDragOverIndex(null)
                             }}
                             onDrop={() => handleDrop(index)}
-                            className={`rounded-xl border-2 p-4 shadow-sm transition-colors ${
-                              dragOverIndex === index
-                                ? "border-primary/60 bg-primary/10"
-                                : "border-primary/10 bg-background/60"
-                            }`}
+                            className={`rounded-xl border-2 p-4 shadow-sm transition-colors ${dragOverIndex === index
+                              ? "border-primary/60 bg-primary/10"
+                              : "border-primary/10 bg-background/60"
+                              }`}
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex items-start gap-3">
