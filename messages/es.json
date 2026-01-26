@@ -168,7 +168,6 @@
         "Warlock": "Brujo",
         "Wizard": "Mago"
       },
-  
       "races": {
         "Human": "Humano",
         "Elf": "Elfo",
@@ -180,7 +179,6 @@
         "Half-Orc": "Medio orco",
         "Tiefling": "Tiefling"
       },
-  
       "backgrounds": {
         "Acolyte": "Acólito",
         "Charlatan": "Charlatán",
@@ -222,6 +220,39 @@
         "npcCount": "Cantidad de NPCs",
         "npcCountHelp": "Número de NPCs para incluir. Deja vacío para que la IA decida.",
         "npcCountPlaceholder": "0-10"
+      },
+      "environmentOptions": {
+        "moods": {
+          "peaceful": {
+            "label": "Pacífico"
+          },
+          "mysterious": {
+            "label": "Misterioso"
+          },
+          "dangerous": {
+            "label": "Peligroso"
+          },
+          "melancholic": {
+            "label": "Melancólico"
+          }
+        },
+        "lighting": {
+          "bright": {
+            "label": "Brillante"
+          },
+          "soft_sunlight": {
+            "label": "Luz Solar Suave"
+          },
+          "torchlight": {
+            "label": "Luz de Antorcha"
+          },
+          "moonlight": {
+            "label": "Luz de Luna"
+          },
+          "darkness": {
+            "label": "Oscuridad"
+          }
+        }
       },
       "mission": {
         "title": "Parámetros de la Misión",

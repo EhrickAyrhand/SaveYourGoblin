@@ -1,11 +1,14 @@
 import { z } from "zod"
 import { DND_REFERENCE } from "@/lib/dnd-reference"
 
-
 /**
  * Zod schemas for advanced structured inputs (generator forms).
  * Used for client-side validation before the generate API call.
  */
+
+/* =======================
+   Character
+======================= */
 const classEnum = z.enum(DND_REFERENCE.classes)
 const raceEnum = z.enum(DND_REFERENCE.races)
 const backgroundEnum = z.enum(DND_REFERENCE.backgrounds)
@@ -26,11 +29,34 @@ export const advancedCharacterInputSchema = z
   })
   .strict()
 
+/* =======================
+   Environment
+======================= */
+const environmentMoodEnum = z.enum(
+  Object.keys(DND_REFERENCE.environment.moods) as [
+    keyof typeof DND_REFERENCE.environment.moods,
+    ...(keyof typeof DND_REFERENCE.environment.moods)[]
+  ]
+)
+
+const environmentLightingEnum = z.enum(
+  Object.keys(DND_REFERENCE.environment.lighting) as [
+    keyof typeof DND_REFERENCE.environment.lighting,
+    ...(keyof typeof DND_REFERENCE.environment.lighting)[]
+  ]
+)
+
 
 export const advancedEnvironmentInputSchema = z
   .object({
-    mood: z.string().optional().describe("Desired mood"),
-    lighting: z.string().optional().describe("Desired lighting"),
+    mood: environmentMoodEnum
+      .optional()
+      .describe("Environment mood key (from DND_REFERENCE.environment.moods)"),
+
+    lighting: environmentLightingEnum
+      .optional()
+      .describe("Environment lighting key (from DND_REFERENCE.environment.lighting)"),
+
     npcCount: z
       .number()
       .int()
@@ -41,12 +67,18 @@ export const advancedEnvironmentInputSchema = z
   })
   .strict()
 
+
+
+/* =======================
+   Mission
+======================= */
 const difficultyEnum = z.enum(["easy", "medium", "hard", "deadly"])
 const rewardTypeEnum = z.enum(["xp", "gold", "items"])
 
 export const advancedMissionInputSchema = z
   .object({
     difficulty: difficultyEnum.optional().describe("Mission difficulty"),
+
     objectiveCount: z
       .number()
       .int()
@@ -54,6 +86,7 @@ export const advancedMissionInputSchema = z
       .max(5)
       .optional()
       .describe("Number of objectives (2-5)"),
+
     rewardTypes: z
       .array(rewardTypeEnum)
       .optional()
@@ -61,6 +94,15 @@ export const advancedMissionInputSchema = z
   })
   .strict()
 
-export type AdvancedCharacterInputSchema = z.infer<typeof advancedCharacterInputSchema>
-export type AdvancedEnvironmentInputSchema = z.infer<typeof advancedEnvironmentInputSchema>
-export type AdvancedMissionInputSchema = z.infer<typeof advancedMissionInputSchema>
+/* =======================
+   Types
+======================= */
+export type AdvancedCharacterInputSchema = z.infer<
+  typeof advancedCharacterInputSchema
+>
+export type AdvancedEnvironmentInputSchema = z.infer<
+  typeof advancedEnvironmentInputSchema
+>
+export type AdvancedMissionInputSchema = z.infer<
+  typeof advancedMissionInputSchema
+>

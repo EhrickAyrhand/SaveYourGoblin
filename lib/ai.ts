@@ -7,6 +7,7 @@
 import { generateObject } from 'ai'
 import { createOpenAI } from '@ai-sdk/openai'
 import { z } from 'zod'
+import { DND_REFERENCE } from "@/lib/dnd-reference"
 import type {
   Character,
   Environment,
@@ -587,42 +588,67 @@ CRITICAL:
 4. FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Names, descriptions, traits, backstory, personality - everything must be in ${detectedLanguage}.`
         break
 
-      case 'environment':
-        schema = environmentSchema
-        const envInput = advancedInput as AdvancedEnvironmentInput | undefined
-        const envMood = envInput?.mood ? ` with a ${envInput.mood} mood` : ''
-        const envLighting = envInput?.lighting ? ` with ${envInput.lighting} lighting` : ''
-        const envNPCs = envInput?.npcCount !== undefined ? ` with exactly ${envInput.npcCount} NPC${envInput.npcCount !== 1 ? 's' : ''}` : ''
+        case 'environment': {
+          schema = environmentSchema
+          const envInput = advancedInput as AdvancedEnvironmentInput | undefined
         
-        systemPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario is written in ${detectedLanguage}. You MUST generate ALL content in ${detectedLanguage}. This includes ALL text, descriptions, names, titles, dialogue, and every single word of output. Every field must be in ${detectedLanguage}.
-
-Example: If the user writes in Portuguese like "uma torre de mago", you MUST respond with Portuguese location names like "Torre do Mago" and all descriptions in Portuguese. If the user writes in Spanish like "una torre del mago", respond with Spanish names like "Torre del Mago" and all text in Spanish.
-
-You are an expert D&D 5e game master and world builder. Create immersive, atmospheric locations that bring the game world to life.${toneInstruction}${complexityInstruction} Environments should have rich sensory details, mood, and interactive elements that engage players.
-
-FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every name, description, feature, and text field must be in ${detectedLanguage}.${campaignInstruction}`
-        userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${detectedLanguage}. You MUST respond entirely in ${detectedLanguage}. Every word, name, description, and text must be in ${detectedLanguage}.
-
-Create a D&D 5e environment/location based on this scenario: "${scenario}"${envMood}${envLighting}${envNPCs}${advancedConstraints}${campaignContextBlock}
-
-IMPORTANT: The scenario above is written in ${detectedLanguage}. You MUST match this language exactly. All location names, descriptions, features, NPC names, and every single text field must be in ${detectedLanguage}. Use names appropriate for ${detectedLanguage} culture.
-
-Generate a complete location with the following clearly separated sections (ALL in ${detectedLanguage}):
-${envInput?.mood ? `- Mood: MUST be ${envInput.mood}` : '- Mood: The emotional tone players should feel upon entering, described in ${detectedLanguage} (keep this distinct from the description)'}
-${envInput?.lighting ? `- Lighting: MUST be ${envInput.lighting}` : '- Lighting: Lighting conditions and visibility described in ${detectedLanguage} (do NOT repeat description text)'}
-- Name: A memorable and unique location name (in ${detectedLanguage}, appropriate for ${detectedLanguage} culture)
-- Description: A vivid visual description of the place in ${detectedLanguage} (do NOT describe mood or lighting here)
-- Atmosphere: Ambient sounds, smells, and environmental details (described in ${detectedLanguage})
-- Notable Features: Interactive elements players can investigate or use (described in ${detectedLanguage})
-- NPCs: ${envInput?.npcCount !== undefined ? `Exactly ${envInput.npcCount} NPC${envInput.npcCount !== 1 ? 's' : ''}, each with a short role description in ${detectedLanguage}` : 'Key NPCs present, each with a short role description in ${detectedLanguage} (NPC names should be in ${detectedLanguage})'}${envInput?.npcCount === 0 ? ' (no NPCs should be included)' : ''}
-- Current Conflict: What is currently wrong or unstable in this location (described in ${detectedLanguage})
-- Adventure Hooks: 2-3 concrete hooks that can immediately involve the players (written in ${detectedLanguage})
-
-Make the environment feel immersive, playable, and ready to use at the table.
-Avoid repeating the same text across sections.
-
-FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Location name, all descriptions, NPC names, features, conflicts, hooks - everything must be in ${detectedLanguage}.`
-        break
+          const envMoodPrompt =
+            envInput?.mood
+              ? DND_REFERENCE.environment.moods[envInput.mood as keyof typeof DND_REFERENCE.environment.moods].prompt
+              : null
+        
+          const envLightingPrompt =
+            envInput?.lighting
+              ? DND_REFERENCE.environment.lighting[envInput.lighting as keyof typeof DND_REFERENCE.environment.lighting].prompt
+              : null
+        
+          const envMood = envMoodPrompt ? ` with ${envMoodPrompt}` : ''
+          const envLighting = envLightingPrompt ? ` with ${envLightingPrompt}` : ''
+          const envNPCs =
+            envInput?.npcCount !== undefined
+              ? ` with exactly ${envInput.npcCount} NPC${envInput.npcCount !== 1 ? 's' : ''}`
+              : ''
+        
+          systemPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario is written in ${detectedLanguage}. You MUST generate ALL content in ${detectedLanguage}. This includes ALL text, descriptions, names, titles, dialogue, and every single word of output. Every field must be in ${detectedLanguage}.
+        
+        Example: If the user writes in Portuguese like "uma torre de mago", you MUST respond with Portuguese location names like "Torre do Mago" and all descriptions in Portuguese. If the user writes in Spanish like "una torre del mago", respond with Spanish names like "Torre del Mago" and all text in Spanish.
+        
+        You are an expert D&D 5e game master and world builder. Create immersive, atmospheric locations that bring the game world to life.${toneInstruction}${complexityInstruction} Environments should have rich sensory details, mood, and interactive elements that engage players.
+        
+        FINAL REMINDER: The user wrote in ${detectedLanguage}. All output MUST be in ${detectedLanguage}. Every name, description, feature, and text field must be in ${detectedLanguage}.${campaignInstruction}`
+        
+          userPrompt = `CRITICAL LANGUAGE REQUIREMENT: The user's scenario below is written in ${detectedLanguage}. You MUST respond entirely in ${detectedLanguage}. Every word, name, description, and text must be in ${detectedLanguage}.
+        
+        Create a D&D 5e environment/location based on this scenario: "${scenario}"${envMood}${envLighting}${envNPCs}${advancedConstraints}${campaignContextBlock}
+        
+        IMPORTANT: The scenario above is written in ${detectedLanguage}. You MUST match this language exactly. All location names, descriptions, features, NPC names, and every single text field must be in ${detectedLanguage}. Use names appropriate for ${detectedLanguage} culture.
+        
+        Generate a complete location with the following clearly separated sections (ALL in ${detectedLanguage}):
+        ${envInput?.mood
+          ? `- Mood: MUST be ${DND_REFERENCE.environment.moods[envInput.mood as keyof typeof DND_REFERENCE.environment.moods].label}`
+          : '- Mood: The emotional tone players should feel upon entering, described in ${detectedLanguage} (keep this distinct from the description)'
+        }
+        ${envInput?.lighting
+          ? `- Lighting: MUST be ${DND_REFERENCE.environment.lighting[envInput.lighting as keyof typeof DND_REFERENCE.environment.lighting].label}`
+          : '- Lighting: Lighting conditions and visibility described in ${detectedLanguage} (do NOT repeat description text)'
+        }
+        - Name: A memorable and unique location name (in ${detectedLanguage}, appropriate for ${detectedLanguage} culture)
+        - Description: A vivid visual description of the place in ${detectedLanguage} (do NOT describe mood or lighting here)
+        - Atmosphere: Ambient sounds, smells, and environmental details (described in ${detectedLanguage})
+        - Notable Features: Interactive elements players can investigate or use (described in ${detectedLanguage})
+        - NPCs: ${envInput?.npcCount !== undefined
+          ? `Exactly ${envInput.npcCount} NPC${envInput.npcCount !== 1 ? 's' : ''}, each with a short role description in ${detectedLanguage}`
+          : 'Key NPCs present, each with a short role description in ${detectedLanguage} (NPC names should be in ${detectedLanguage})'
+        }${envInput?.npcCount === 0 ? ' (no NPCs should be included)' : ''}
+        - Current Conflict: What is currently wrong or unstable in this location (described in ${detectedLanguage})
+        - Adventure Hooks: 2-3 concrete hooks that can immediately involve the players (written in ${detectedLanguage})
+        
+        Make the environment feel immersive, playable, and ready to use at the table.
+        Avoid repeating the same text across sections.
+        
+        FINAL REMINDER: EVERY SINGLE TEXT FIELD MUST BE IN ${detectedLanguage}. Location name, all descriptions, NPC names, features, conflicts, hooks - everything must be in ${detectedLanguage}.`
+          break
+        }
 
       case 'mission':
         schema = missionSchema

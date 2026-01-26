@@ -20,7 +20,7 @@ Expected:
 - Validation error shown
 ---
 
-## TC-003 - Advanced mode invalid Character Class -- Failed❎
+## TC-003 - Advanced mode invalid Character Class -- Fixed✅
 Steps:
 1. Enable advanced mode
 2. Set class = anything
@@ -34,7 +34,7 @@ Actual:
     the output is class: asjfjwadjad
 ---
 
-## TC-004 - Advanced mode invalid Character Race -- Failed❎
+## TC-004 - Advanced mode invalid Character Race -- Fixed✅
 Steps:
 1. Enable advanced mode
 2. Set Race = anything
@@ -48,7 +48,7 @@ Actual:
     the output is class: asjfjwadjad
 ---
 
-## TC-005 - Advanced mode invalid Character Background -- Failed❎
+## TC-005 - Advanced mode invalid Character Background -- Fixed✅
 Steps:
 1. Enable advanced mode
 2. Set Background = anything
@@ -62,7 +62,7 @@ Actual:
     the output is class: asjfjwadjad
 ---
 
-## TC-005 - Advanced mode invalid environment Mood -- Failed❎
+## TC-005 - Advanced mode invalid environment Mood -- Fixed✅
 Steps:
 1. Enable advanced mode
 2. Set Mood = anything
@@ -76,7 +76,7 @@ Actual:
     the output is class: asjfjwadjad
 ---
 
-## TC-006 - Advanced mode invalid environment Lighting -- Failed❎
+## TC-006 - Advanced mode invalid environment Lighting -- Fixed✅
 Steps:
 1. Enable advanced mode
 2. Set Lighting = anything

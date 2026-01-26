@@ -221,6 +221,39 @@
         "npcCountHelp": "Número de NPCs para incluir. Deixe vazio para a IA decidir.",
         "npcCountPlaceholder": "0-10"
       },
+  "environmentOptions": {
+    "moods": {
+      "peaceful": {
+        "label": "Pacífico"
+      },
+      "mysterious": {
+        "label": "Misterioso"
+      },
+      "dangerous": {
+        "label": "Peligroso"
+      },
+      "melancholic": {
+        "label": "Melancólico"
+      }
+    },
+    "lighting": {
+      "bright": {
+        "label": "Brillante"
+      },
+      "soft_sunlight": {
+        "label": "Luz Solar Suave"
+      },
+      "torchlight": {
+        "label": "Luz de Antorcha"
+      },
+      "moonlight": {
+        "label": "Luz de Luna"
+      },
+      "darkness": {
+        "label": "Oscuridad"
+      }
+    }
+      },
       "mission": {
         "title": "Parâmetros da Missão",
         "difficulty": "Dificuldade",

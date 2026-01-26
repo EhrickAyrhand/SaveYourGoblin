@@ -221,6 +221,21 @@
         "npcCountHelp": "Number of NPCs to include. Leave empty to let AI decide.",
         "npcCountPlaceholder": "0-10"
       },
+      "environmentOptions": {
+        "moods": {
+          "peaceful": { "label": "Peaceful" },
+          "mysterious": { "label": "Mysterious" },
+          "dangerous": { "label": "Dangerous" },
+          "melancholic": { "label": "Melancholic" }
+        },
+        "lighting": {
+          "bright": { "label": "Bright" },
+          "soft_sunlight": { "label": "Soft Sunlight" },
+          "torchlight": { "label": "Torchlight" },
+          "moonlight": { "label": "Moonlight" },
+          "darkness": { "label": "Darkness" }
+        }
+      },
       "mission": {
         "title": "Mission Parameters",
         "difficulty": "Difficulty",

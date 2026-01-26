@@ -32,6 +32,7 @@ import { EnvironmentCard } from "@/components/rpg/environment-card"
 import { MissionCard } from "@/components/rpg/mission-card"
 import type { ContentType, GeneratedContent, Character, Environment, Mission, AdvancedCharacterInput, AdvancedEnvironmentInput, AdvancedMissionInput, AdvancedGenerationParams } from "@/types/rpg"
 import { DND_REFERENCE } from "@/lib/dnd-reference"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface GeneratorState {
   generatedContent: GeneratedContent | null
@@ -1027,8 +1028,8 @@ export default function GeneratorPage() {
                           onClick={() => setContentType(type.value)}
                           disabled={isGenerating}
                           className={`relative rounded-xl border-2 p-5 text-left transition-all shadow-md hover:shadow-lg transform ${contentType === type.value
-                              ? `bg-gradient-to-br ${type.color} border-primary text-primary shadow-lg scale-105`
-                              : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+                            ? `bg-gradient-to-br ${type.color} border-primary text-primary shadow-lg scale-105`
+                            : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
                             } ${isGenerating ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-[1.02]"}`}
                         >
                           <div className="text-5xl mb-3">{type.icon}</div>
@@ -1346,44 +1347,84 @@ export default function GeneratorPage() {
                         {/* Environment Advanced Fields */}
                         {contentType === 'environment' && (
                           <div className="space-y-4 p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl border-2 border-green-500/30">
-                            <h4 className="font-display text-lg font-semibold mb-3">{t('generator.advancedFields.environment.title')}</h4>
+                            <h4 className="font-display text-lg font-semibold mb-3">
+                              {t('generator.advancedFields.environment.title')}
+                            </h4>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Mood */}
                               <AdvancedFormField
                                 htmlFor="env-mood"
                                 label={t('generator.advancedFields.environment.mood')}
                                 help={t('generator.advancedFields.environment.moodHelp')}
                                 error={advancedFieldErrors['mood']}
                               >
-                                <Input
-                                  id="env-mood"
-                                  type="text"
-                                  value={advancedEnvironmentInput.mood || ''}
-                                  onChange={(e) => setAdvancedEnvironmentInput({
-                                    ...advancedEnvironmentInput,
-                                    mood: e.target.value || undefined
-                                  })}
-                                  placeholder={t('generator.advancedFields.environment.moodPlaceholder')}
-                                  className="font-body"
-                                />
+                                <Select
+                                  value={advancedEnvironmentInput.mood}
+                                  onValueChange={(value) =>
+                                    setAdvancedEnvironmentInput({
+                                      ...advancedEnvironmentInput,
+                                      mood: value as keyof typeof DND_REFERENCE.environment.moods,
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger id="env-mood" className="font-body">
+                                    <SelectValue
+                                      placeholder={t('generator.advancedFields.environment.moodPlaceholder')}
+                                    />
+                                  </SelectTrigger>
+
+                                  <SelectContent>
+                                    {(
+                                      Object.keys(DND_REFERENCE.environment.moods) as Array<
+                                        keyof typeof DND_REFERENCE.environment.moods
+                                      >
+                                    ).map((key) => (
+                                      <SelectItem key={key} value={key}>
+                                        {t(`generator.advancedFields.environmentOptions.moods.${key}.label`)}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </AdvancedFormField>
+
+                              {/* Lighting */}
                               <AdvancedFormField
                                 htmlFor="env-lighting"
                                 label={t('generator.advancedFields.environment.lighting')}
                                 help={t('generator.advancedFields.environment.lightingHelp')}
                                 error={advancedFieldErrors['lighting']}
                               >
-                                <Input
-                                  id="env-lighting"
-                                  type="text"
-                                  value={advancedEnvironmentInput.lighting || ''}
-                                  onChange={(e) => setAdvancedEnvironmentInput({
-                                    ...advancedEnvironmentInput,
-                                    lighting: e.target.value || undefined
-                                  })}
-                                  placeholder={t('generator.advancedFields.environment.lightingPlaceholder')}
-                                  className="font-body"
-                                />
+                                <Select
+                                  value={advancedEnvironmentInput.lighting}
+                                  onValueChange={(value) =>
+                                    setAdvancedEnvironmentInput({
+                                      ...advancedEnvironmentInput,
+                                      lighting: value as keyof typeof DND_REFERENCE.environment.lighting,
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger id="env-lighting" className="font-body">
+                                    <SelectValue
+                                      placeholder={t('generator.advancedFields.environment.lightingPlaceholder')}
+                                    />
+                                  </SelectTrigger>
+
+                                  <SelectContent>
+                                    {(
+                                      Object.keys(DND_REFERENCE.environment.lighting) as Array<
+                                        keyof typeof DND_REFERENCE.environment.lighting
+                                      >
+                                    ).map((key) => (
+                                      <SelectItem key={key} value={key}>
+                                        {t(`generator.advancedFields.environmentOptions.lighting.${key}.label`)}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </AdvancedFormField>
+
+                              {/* NPC Count */}
                               <AdvancedFormField
                                 htmlFor="env-npc-count"
                                 label={t('generator.advancedFields.environment.npcCount')}
@@ -1393,13 +1434,17 @@ export default function GeneratorPage() {
                                 <Input
                                   id="env-npc-count"
                                   type="number"
-                                  min="0"
-                                  max="10"
+                                  min={0}
+                                  max={10}
                                   value={advancedEnvironmentInput.npcCount ?? ''}
-                                  onChange={(e) => setAdvancedEnvironmentInput({
-                                    ...advancedEnvironmentInput,
-                                    npcCount: e.target.value ? parseInt(e.target.value) : undefined
-                                  })}
+                                  onChange={(e) =>
+                                    setAdvancedEnvironmentInput({
+                                      ...advancedEnvironmentInput,
+                                      npcCount: e.target.value
+                                        ? parseInt(e.target.value, 10)
+                                        : undefined,
+                                    })
+                                  }
                                   placeholder={t('generator.advancedFields.environment.npcCountPlaceholder')}
                                   className="font-body"
                                 />
@@ -1407,6 +1452,8 @@ export default function GeneratorPage() {
                             </div>
                           </div>
                         )}
+
+
 
                         {/* Mission Advanced Fields */}
                         {contentType === 'mission' && (
