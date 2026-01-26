@@ -90,7 +90,7 @@ Actual:
     the output is class: asjfjwadjad
 ---
 
-## TC-007 - Library searching with filters -- Failed❎
+## TC-007 - Library searching with filters -- Fixed✅
 Steps:
 1. Choose one of the filter by type (Character - Envrionment - Quests - Favorites)
 2. After selected search something that is not the filter

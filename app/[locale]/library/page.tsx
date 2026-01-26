@@ -230,6 +230,32 @@ export default function LibraryPage() {
     return map
   }, [sortedCampaigns])
 
+  const scopedItemsForSuggestions = useMemo(() => {
+    return allContent.filter((item) => {
+      if (selectedType !== "all" && item.type !== selectedType) return false
+      if (showFavoritesOnly && !item.is_favorite) return false
+  
+      if (selectedCampaignId !== "all") {
+        const inCampaign = contentCampaignMap[item.id]?.some((c) => c.id === selectedCampaignId)
+        if (!inCampaign) return false
+      }
+  
+      // (opcional) filtrar por dateFrom/dateTo aqui também, se quiser que sugestões respeitem datas
+      return true
+    })
+  }, [allContent, selectedType, showFavoritesOnly, selectedCampaignId, contentCampaignMap])
+
+  const scopedTags = useMemo(() => {
+    return Array.from(
+      new Set(
+        scopedItemsForSuggestions
+          .flatMap((item) => item.tags || [])
+          .filter((tag) => tag && tag.trim().length > 0)
+      )
+    ).sort()
+  }, [scopedItemsForSuggestions])
+  
+
   // Helper function to get content name for sorting
   function getContentName(item: LibraryContentItem): string {
     if (item.type === "character") {
@@ -245,24 +271,46 @@ export default function LibraryPage() {
   const searchSuggestions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     if (q.length < 2) return []
+  
     const seen = new Set<string>()
     const out: { type: "tag" | "name" | "scenario"; text: string }[] = []
+  
     const add = (type: "tag" | "name" | "scenario", text: string) => {
       const t = text.trim()
       if (!t || seen.has(t.toLowerCase())) return
       seen.add(t.toLowerCase())
       out.push({ type, text: t })
     }
-    allTags.filter((tag) => tag.toLowerCase().includes(q)).forEach((tag) => add("tag", tag))
-    const source = allContent.length > 0 ? allContent : content
-    for (const item of source) {
+  
+    // ✅ tags respeitando filtro
+    scopedTags
+      .filter((tag) => tag.toLowerCase().includes(q))
+      .forEach((tag) => add("tag", tag))
+  
+    // ✅ nomes/scenario respeitando filtro
+    for (const item of scopedItemsForSuggestions) {
       const name = getContentName(item)
       if (name.toLowerCase().includes(q)) add("name", name)
-      if (item.scenario_input && item.scenario_input.toLowerCase().includes(q))
+      if (item.scenario_input && item.scenario_input.toLowerCase().includes(q)) {
         add("scenario", item.scenario_input)
+      }
     }
+  
     return out.slice(0, 10)
-  }, [searchQuery, allTags, allContent, content])
+  }, [searchQuery, scopedTags, scopedItemsForSuggestions])
+
+  const scopedAllContentForSearch = useMemo(() => {
+    return allContent.filter((item) => {
+      if (selectedType !== "all" && item.type !== selectedType) return false
+      if (showFavoritesOnly && !item.is_favorite) return false
+      if (selectedCampaignId !== "all") {
+        const inCampaign = contentCampaignMap[item.id]?.some(c => c.id === selectedCampaignId)
+        if (!inCampaign) return false
+      }
+      // Se quiser, dá pra aplicar dateFrom/dateTo aqui também
+      return true
+    })
+  }, [allContent, selectedType, showFavoritesOnly, selectedCampaignId, contentCampaignMap])
 
   // Sort and filter content client-side for better UX
   // Also enhance search to include tags (since SQL can't search TEXT[] arrays easily)
@@ -277,7 +325,7 @@ export default function LibraryPage() {
       // Fetch all content to search in content_data and tags (since SQL can't do it efficiently)
       // For now, we'll search in the already-fetched items that matched scenario/notes
       // In the future, we could fetch all items and filter entirely client-side for better results
-      const allItemsForSearch = allContent.length > 0 ? allContent : processed
+      const allItemsForSearch = scopedAllContentForSearch.length > 0 ? scopedAllContentForSearch : processed
       const contentDataMatches = allItemsForSearch.filter(item => {
         const contentDataStr = JSON.stringify(item.content_data).toLowerCase()
         return contentDataStr.includes(searchLower)
