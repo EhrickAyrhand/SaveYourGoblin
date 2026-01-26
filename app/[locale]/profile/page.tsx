@@ -53,7 +53,7 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
-  
+
   // Initialize profile state - always start with dark (will be updated from localStorage if needed)
   const [profile, setProfile] = useState<ProfileSettings>({
     displayName: "",
@@ -72,7 +72,7 @@ export default function ProfilePage() {
       html.classList.add("dark")
     }
   }, [])
-  
+
   // Apply theme changes whenever theme preference changes (only after user is loaded to avoid race conditions)
   useEffect(() => {
     // Don't apply theme until user is loaded AND we have a preference
@@ -80,12 +80,12 @@ export default function ProfilePage() {
     if (!user || !profile.preferredTheme) {
       return
     }
-    
+
     const html = document.documentElement
-    
+
     // Remove all theme classes first
     html.classList.remove("light", "theme-royal")
-    
+
     // Apply selected theme - RESPECT USER CHOICE
     if (profile.preferredTheme === "parchment") {
       html.classList.add("light")
@@ -98,7 +98,7 @@ export default function ProfilePage() {
       html.classList.add("dark")
       html.classList.remove("light")
     }
-    
+
     // Store theme preference - Save full profile to keep everything in sync
     // This ensures theme changes persist even without clicking "Save Profile"
     try {
@@ -132,36 +132,36 @@ export default function ProfilePage() {
           router.push("/login")
           return
         }
-        
+
         // Check email verification - redirect unverified users to verify-email
         if (!currentUser.emailVerified) {
           router.push(`/verify-email?email=${encodeURIComponent(currentUser.email)}`)
           return
         }
-        
+
         setUser(currentUser)
-        
+
         // Load saved profile data - RESPECT USER PREFERENCE
         // Check if there's a saved profile for this user
         const profileKey = `profile_${currentUser.id}`
         const themeKey = `theme_${currentUser.id}`
         const savedProfile = localStorage.getItem(profileKey)
         const savedTheme = localStorage.getItem(themeKey)
-        
+
         if (savedProfile) {
           try {
             const loadedProfile = JSON.parse(savedProfile)
-            
+
             // RESPECT user's saved theme preference (including parchment)
             // Priority: 1) profile theme, 2) separate theme key (for backwards compatibility), 3) default to dark
             // Validate theme value - only accept valid themes
             const validThemes: ("dark" | "parchment" | "royal")[] = ["dark", "parchment", "royal"]
             let themeToUse: "dark" | "parchment" | "royal" = "dark"
-            
+
             const profileTheme = loadedProfile.preferredTheme
             const isProfileThemeValid = profileTheme && validThemes.includes(profileTheme as any)
             const isSavedThemeValid = savedTheme && validThemes.includes(savedTheme as any)
-            
+
             if (isProfileThemeValid) {
               themeToUse = profileTheme as "dark" | "parchment" | "royal"
             } else if (isSavedThemeValid) {
@@ -172,7 +172,7 @@ export default function ProfilePage() {
               themeToUse = "dark"
               loadedProfile.preferredTheme = "dark"
             }
-            
+
             // Apply theme immediately (before setProfile triggers the effect)
             const html = document.documentElement
             html.classList.remove("light", "theme-royal")
@@ -185,7 +185,7 @@ export default function ProfilePage() {
               html.classList.add("dark")
               html.classList.remove("light")
             }
-            
+
             const profileToSet = {
               ...loadedProfile,
               preferredTheme: themeToUse,
@@ -193,7 +193,7 @@ export default function ProfilePage() {
               avatarStyle: loadedProfile.avatarStyle || "bard",
             }
             setProfile(profileToSet)
-            
+
           } catch (err) {
             // Failed to parse, use defaults with dark mode
             setProfile({
@@ -210,7 +210,7 @@ export default function ProfilePage() {
           const html = document.documentElement
           html.classList.remove("light", "theme-royal")
           html.classList.add("dark")
-          
+
           setProfile({
             displayName: currentUser.email?.split("@")[0] || "",
             bio: "",
@@ -239,7 +239,7 @@ export default function ProfilePage() {
 
   async function handleSaveProfile() {
     if (!user) return
-    
+
     setIsSaving(true)
     setSaveSuccess(false)
     setError(null)
@@ -247,9 +247,9 @@ export default function ProfilePage() {
     try {
       // Save to localStorage for now (can be moved to Supabase later)
       localStorage.setItem(`profile_${user.id}`, JSON.stringify(profile))
-      
+
       // TODO: Save to Supabase profile table
-      
+
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err) {
@@ -425,11 +425,10 @@ export default function ProfilePage() {
                         })
                         // Theme effect will automatically save to localStorage
                       }}
-                      className={`rounded-lg border-2 p-4 text-center transition-all ${
-                        profile.preferredTheme === theme.value
+                      className={`rounded-lg border-2 p-4 text-center transition-all ${profile.preferredTheme === theme.value
                           ? "border-primary bg-primary/10"
                           : "border-border hover:border-primary/50"
-                      }`}
+                        }`}
                     >
                       <div className="font-display text-base font-semibold">{theme.label}</div>
                       <div className="mt-1 text-sm text-muted-foreground font-body">
@@ -440,55 +439,54 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-{/* Avatar Style */}
-<div className="space-y-4">
-  <Label className="font-body text-base">
-    {t('profile.avatarStyle')}
-  </Label>
+              {/* Avatar Style */}
+              <div className="space-y-4">
+                <Label className="font-body text-base">
+                  {t('profile.avatarStyle')}
+                </Label>
 
-  <div className="grid grid-cols-2 gap-3">
-    {avatarStyles.map((avatar) => (
-      <button
-        key={avatar.value}
-        type="button"
-        onClick={() => {
-          const newProfile = {
-            ...profile,
-            avatarStyle: avatar.value as ProfileSettings["avatarStyle"],
-          }
-          setProfile(newProfile)
+                <div className="grid grid-cols-2 gap-3">
+                  {avatarStyles.map((avatar) => (
+                    <button
+                      key={avatar.value}
+                      type="button"
+                      onClick={() => {
+                        const newProfile = {
+                          ...profile,
+                          avatarStyle: avatar.value as ProfileSettings["avatarStyle"],
+                        }
+                        setProfile(newProfile)
 
-          if (user) {
-            try {
-              const profileKey = `profile_${user.id}`
-              const existingProfile = localStorage.getItem(profileKey)
-              if (existingProfile) {
-                const profileData = JSON.parse(existingProfile)
-                profileData.avatarStyle = newProfile.avatarStyle
-                localStorage.setItem(profileKey, JSON.stringify(profileData))
-              } else {
-                localStorage.setItem(profileKey, JSON.stringify(newProfile))
-              }
-            } catch {
-              // Silent fail
-            }
-          }
-        }}
-        className={`rounded-lg border-2 p-4 text-center transition-all ${
-          profile.avatarStyle === avatar.value
-            ? "border-primary bg-primary/10"
-            : "border-border hover:border-primary/50"
-        }`}
-      >
-        <div className="text-3xl">{avatar.emoji}</div>
+                        if (user) {
+                          try {
+                            const profileKey = `profile_${user.id}`
+                            const existingProfile = localStorage.getItem(profileKey)
+                            if (existingProfile) {
+                              const profileData = JSON.parse(existingProfile)
+                              profileData.avatarStyle = newProfile.avatarStyle
+                              localStorage.setItem(profileKey, JSON.stringify(profileData))
+                            } else {
+                              localStorage.setItem(profileKey, JSON.stringify(newProfile))
+                            }
+                          } catch {
+                            // Silent fail
+                          }
+                        }
+                      }}
+                      className={`rounded-lg border-2 p-4 text-center transition-all ${profile.avatarStyle === avatar.value
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/50"
+                        }`}
+                    >
+                      <div className="text-3xl">{avatar.emoji}</div>
 
-        <div className="mt-2 font-body text-sm font-medium">
-          {t(`profile.${avatar.value}`)}
-        </div>
-      </button>
-    ))}
-  </div>
-</div>
+                      <div className="mt-2 font-body text-sm font-medium">
+                        {t(`profile.${avatar.value}`)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
             </CardContent>
           </Card>

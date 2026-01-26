@@ -1,9 +1,14 @@
 import { z } from "zod"
+import { DND_REFERENCE } from "@/lib/dnd-reference"
+
 
 /**
  * Zod schemas for advanced structured inputs (generator forms).
  * Used for client-side validation before the generate API call.
  */
+const classEnum = z.enum(DND_REFERENCE.classes)
+const raceEnum = z.enum(DND_REFERENCE.races)
+const backgroundEnum = z.enum(DND_REFERENCE.backgrounds)
 
 export const advancedCharacterInputSchema = z
   .object({
@@ -14,11 +19,13 @@ export const advancedCharacterInputSchema = z
       .max(20)
       .optional()
       .describe("Character level (1-20)"),
-    class: z.string().optional().describe("D&D 5e class"),
-    race: z.string().optional().describe("D&D 5e race"),
-    background: z.string().optional().describe("Character background"),
+
+    class: classEnum.optional().describe("D&D 5e class"),
+    race: raceEnum.optional().describe("D&D 5e race"),
+    background: backgroundEnum.optional().describe("Character background"),
   })
   .strict()
+
 
 export const advancedEnvironmentInputSchema = z
   .object({

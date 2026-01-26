@@ -11,7 +11,8 @@
     "delete": "Eliminar",
     "edit": "Editar",
     "close": "Cerrar",
-    "back": "Volver"
+    "back": "Volver",
+    "select": "Seleccione una opción"
   },
   "home": {
     "title": "SaveYourGoblin",
@@ -152,6 +153,49 @@
     "exampleListUseInRace": "Usar en Raza",
     "exampleListUseInBackground": "Usar en Trasfondo",
     "exampleListSpellCantrip": "Truco",
+    "dnd": {
+      "classes": {
+        "Barbarian": "Bárbaro",
+        "Bard": "Bardo",
+        "Cleric": "Clérigo",
+        "Druid": "Druida",
+        "Fighter": "Guerrero",
+        "Monk": "Monje",
+        "Paladin": "Paladín",
+        "Ranger": "Explorador",
+        "Rogue": "Pícaro",
+        "Sorcerer": "Hechicero",
+        "Warlock": "Brujo",
+        "Wizard": "Mago"
+      },
+  
+      "races": {
+        "Human": "Humano",
+        "Elf": "Elfo",
+        "Dwarf": "Enano",
+        "Halfling": "Mediano",
+        "Dragonborn": "Dracónido",
+        "Gnome": "Gnomo",
+        "Half-Elf": "Medio elfo",
+        "Half-Orc": "Medio orco",
+        "Tiefling": "Tiefling"
+      },
+  
+      "backgrounds": {
+        "Acolyte": "Acólito",
+        "Charlatan": "Charlatán",
+        "Criminal": "Criminal",
+        "Entertainer": "Artista",
+        "Folk Hero": "Héroe del pueblo",
+        "Guild Artisan": "Artesano del gremio",
+        "Hermit": "Ermitaño",
+        "Noble": "Noble",
+        "Outlander": "Forastero",
+        "Sage": "Sabio",
+        "Soldier": "Soldado",
+        "Urchin": "Pícaro callejero"
+      }
+    },
     "advancedFields": {
       "character": {
         "title": "Parámetros del Personaje",
@@ -752,7 +796,10 @@
     "invalidContentType": "Tipo de contenido inválido",
     "invalidCharacterData": "Estructura de datos de personaje inválida",
     "invalidEnvironmentData": "Estructura de datos de entorno inválida",
-    "invalidMissionData": "Estructura de datos de misión inválida"
+    "invalidMissionData": "Estructura de datos de misión inválida",
+    "invalidEnum": "Seleccione una opción válida de la lista.",
+    "outOfRange": "El valor está fuera del rango permitido.",
+    "invalidField": "Valor inválido."
   },
   "success": {
     "saved": "Guardado exitosamente",

@@ -31,6 +31,7 @@ import { CharacterCard } from "@/components/rpg/character-card"
 import { EnvironmentCard } from "@/components/rpg/environment-card"
 import { MissionCard } from "@/components/rpg/mission-card"
 import type { ContentType, GeneratedContent, Character, Environment, Mission, AdvancedCharacterInput, AdvancedEnvironmentInput, AdvancedMissionInput, AdvancedGenerationParams } from "@/types/rpg"
+import { DND_REFERENCE } from "@/lib/dnd-reference"
 
 interface GeneratorState {
   generatedContent: GeneratedContent | null
@@ -683,11 +684,24 @@ export default function GeneratorPage() {
       if (!result.success) {
         const byPath = result.error.issues.reduce(
           (acc, i) => {
-            acc[String(i.path[0])] = i.message
+            const field = String(i.path[0])
+
+            if (i.code === "invalid_enum_value") {
+              acc[field] = t("errors.invalidEnum")
+              return acc
+            }
+
+            if (i.code === "too_small" || i.code === "too_big") {
+              acc[field] = t("errors.outOfRange")
+              return acc
+            }
+
+            acc[field] = t("errors.invalidField")
             return acc
           },
           {} as Record<string, string>
         )
+
         setAdvancedFieldErrors(byPath)
         setError(t("generator.advancedValidationError"))
         return
@@ -1012,11 +1026,10 @@ export default function GeneratorPage() {
                           type="button"
                           onClick={() => setContentType(type.value)}
                           disabled={isGenerating}
-                          className={`relative rounded-xl border-2 p-5 text-left transition-all shadow-md hover:shadow-lg transform ${
-                            contentType === type.value
+                          className={`relative rounded-xl border-2 p-5 text-left transition-all shadow-md hover:shadow-lg transform ${contentType === type.value
                               ? `bg-gradient-to-br ${type.color} border-primary text-primary shadow-lg scale-105`
                               : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
-                          } ${isGenerating ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-[1.02]"}`}
+                            } ${isGenerating ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-[1.02]"}`}
                         >
                           <div className="text-5xl mb-3">{type.icon}</div>
                           <div className="font-display text-xl font-semibold mb-2">
@@ -1045,8 +1058,8 @@ export default function GeneratorPage() {
                           size="sm"
                           onClick={() => setShowExamples((prev) => !prev)}
                           className={`font-body transition-all ${showExamples
-                              ? 'bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90'
-                              : 'hover:bg-accent hover:text-accent-foreground'
+                            ? 'bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90'
+                            : 'hover:bg-accent hover:text-accent-foreground'
                             }`}
                         >
                           📖 {t('generator.exampleList')}
@@ -1064,8 +1077,8 @@ export default function GeneratorPage() {
                             setAdvancedFieldErrors({})
                           }}
                           className={`font-body transition-all ${advancedMode
-                              ? 'bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90'
-                              : 'hover:bg-accent hover:text-accent-foreground'
+                            ? 'bg-primary text-primary-foreground border-primary shadow-md hover:bg-primary/90'
+                            : 'hover:bg-accent hover:text-accent-foreground'
                             }`}
                         >
                           ⚙️ {t('generator.advancedMode')}
@@ -1119,7 +1132,7 @@ export default function GeneratorPage() {
                       {scenario.length > 0 && (
                         <div className="absolute bottom-2 right-2 flex items-center gap-1 text-xs text-muted-foreground">
                           <div className={`w-2 h-2 rounded-full ${scenario.length < 50 ? 'bg-green-500' :
-                              scenario.length < 200 ? 'bg-yellow-500' : 'bg-primary'
+                            scenario.length < 200 ? 'bg-yellow-500' : 'bg-primary'
                             } animate-pulse`} />
                         </div>
                       )}
@@ -1256,17 +1269,24 @@ export default function GeneratorPage() {
                                 help={t('generator.advancedFields.character.classHelp')}
                                 error={advancedFieldErrors['class']}
                               >
-                                <Input
+                                <select
                                   id="char-class"
-                                  type="text"
-                                  value={advancedCharacterInput.class || ''}
-                                  onChange={(e) => setAdvancedCharacterInput({
-                                    ...advancedCharacterInput,
-                                    class: e.target.value || undefined
-                                  })}
-                                  placeholder={t('generator.advancedFields.character.classPlaceholder')}
-                                  className="font-body"
-                                />
+                                  value={advancedCharacterInput.class ?? ''}
+                                  onChange={(e) =>
+                                    setAdvancedCharacterInput({
+                                      ...advancedCharacterInput,
+                                      class: e.target.value || undefined,
+                                    })
+                                  }
+                                  className="w-full rounded-lg border-2 border-primary/20 bg-background px-3 py-2 font-body"
+                                >
+                                  <option value="">{t('common.select')}</option>
+                                  {DND_REFERENCE.classes.map((cls) => (
+                                    <option key={cls} value={cls}>
+                                      {t(`generator.dnd.classes.${cls}`)}
+                                    </option>
+                                  ))}
+                                </select>
                               </AdvancedFormField>
                               <AdvancedFormField
                                 htmlFor="char-race"
@@ -1274,17 +1294,24 @@ export default function GeneratorPage() {
                                 help={t('generator.advancedFields.character.raceHelp')}
                                 error={advancedFieldErrors['race']}
                               >
-                                <Input
+                                <select
                                   id="char-race"
-                                  type="text"
-                                  value={advancedCharacterInput.race || ''}
-                                  onChange={(e) => setAdvancedCharacterInput({
-                                    ...advancedCharacterInput,
-                                    race: e.target.value || undefined
-                                  })}
-                                  placeholder={t('generator.advancedFields.character.racePlaceholder')}
-                                  className="font-body"
-                                />
+                                  value={advancedCharacterInput.race ?? ''}
+                                  onChange={(e) =>
+                                    setAdvancedCharacterInput({
+                                      ...advancedCharacterInput,
+                                      race: e.target.value || undefined,
+                                    })
+                                  }
+                                  className="w-full rounded-lg border-2 border-primary/20 bg-background px-3 py-2 font-body"
+                                >
+                                  <option value="">{t('common.select')}</option>
+                                  {DND_REFERENCE.races.map((race) => (
+                                    <option key={race} value={race}>
+                                      {t(`generator.dnd.races.${race}`)}
+                                    </option>
+                                  ))}
+                                </select>
                               </AdvancedFormField>
                               <AdvancedFormField
                                 htmlFor="char-background"
@@ -1292,18 +1319,26 @@ export default function GeneratorPage() {
                                 help={t('generator.advancedFields.character.backgroundHelp')}
                                 error={advancedFieldErrors['background']}
                               >
-                                <Input
+                                <select
                                   id="char-background"
-                                  type="text"
-                                  value={advancedCharacterInput.background || ''}
-                                  onChange={(e) => setAdvancedCharacterInput({
-                                    ...advancedCharacterInput,
-                                    background: e.target.value || undefined
-                                  })}
-                                  placeholder={t('generator.advancedFields.character.backgroundPlaceholder')}
-                                  className="font-body"
-                                />
+                                  value={advancedCharacterInput.background ?? ''}
+                                  onChange={(e) =>
+                                    setAdvancedCharacterInput({
+                                      ...advancedCharacterInput,
+                                      background: e.target.value || undefined,
+                                    })
+                                  }
+                                  className="w-full rounded-lg border-2 border-primary/20 bg-background px-3 py-2 font-body"
+                                >
+                                  <option value="">{t('common.select')}</option>
+                                  {DND_REFERENCE.backgrounds.map((bg) => (
+                                    <option key={bg} value={bg}>
+                                      {t(`generator.dnd.backgrounds.${bg}`)}
+                                    </option>
+                                  ))}
+                                </select>
                               </AdvancedFormField>
+
                             </div>
                           </div>
                         )}

@@ -11,7 +11,8 @@
     "delete": "Excluir",
     "edit": "Editar",
     "close": "Fechar",
-    "back": "Voltar"
+    "back": "Voltar",
+    "select": "Selecione uma opção"
   },
   "home": {
     "title": "SaveYourGoblin",
@@ -152,6 +153,47 @@
     "exampleListUseInRace": "Usar em Raça",
     "exampleListUseInBackground": "Usar em Antecedente",
     "exampleListSpellCantrip": "Truque",
+    "dnd": {
+      "classes": {
+        "Barbarian": "Bárbaro",
+        "Bard": "Bardo",
+        "Cleric": "Clérigo",
+        "Druid": "Druida",
+        "Fighter": "Guerreiro",
+        "Monk": "Monge",
+        "Paladin": "Paladino",
+        "Ranger": "Patrulheiro",
+        "Rogue": "Ladino",
+        "Sorcerer": "Feiticeiro",
+        "Warlock": "Bruxo",
+        "Wizard": "Mago"
+      },
+      "races": {
+        "Human": "Humano",
+        "Elf": "Elfo",
+        "Dwarf": "Anão",
+        "Halfling": "Halfling",
+        "Dragonborn": "Draconato",
+        "Gnome": "Gnomo",
+        "Half-Elf": "Meio-Elfo",
+        "Half-Orc": "Meio-Orc",
+        "Tiefling": "Tiefling"
+      },
+      "backgrounds": {
+        "Acolyte": "Acólito",
+        "Charlatan": "Charlatão",
+        "Criminal": "Criminoso",
+        "Entertainer": "Artista",
+        "Folk Hero": "Herói do Povo",
+        "Guild Artisan": "Artesão da Guilda",
+        "Hermit": "Eremita",
+        "Noble": "Nobre",
+        "Outlander": "Forasteiro",
+        "Sage": "Sábio",
+        "Soldier": "Soldado",
+        "Urchin": "Moleque de Rua"
+      }
+    },
     "advancedFields": {
       "character": {
         "title": "Parâmetros do Personagem",
@@ -752,7 +794,10 @@
     "invalidContentType": "Tipo de conteúdo inválido",
     "invalidCharacterData": "Estrutura de dados de personagem inválida",
     "invalidEnvironmentData": "Estrutura de dados de ambiente inválida",
-    "invalidMissionData": "Estrutura de dados de missão inválida"
+    "invalidMissionData": "Estrutura de dados de missão inválida",
+    "invalidEnum": "Selecione uma opção válida da lista.",
+    "outOfRange": "O valor está fora do intervalo permitido.",
+    "invalidField": "Valor inválido."
   },
   "success": {
     "saved": "Salvo com sucesso",
