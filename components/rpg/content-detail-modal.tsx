@@ -484,9 +484,9 @@ export function ContentDetailModal({
         prev.map((campaign) =>
           campaign.id === campaignId
             ? {
-                ...campaign,
-                contentIds: campaign.contentIds ? [...campaign.contentIds, item.id] : [item.id],
-              }
+              ...campaign,
+              contentIds: campaign.contentIds ? [...campaign.contentIds, item.id] : [item.id],
+            }
             : campaign
         )
       )
@@ -549,6 +549,28 @@ export function ContentDetailModal({
     return { section: parsed.section, data: parsed.data, index: parsed.index }
   }
 
+  function handlePrintToPDF() {
+    if (typeof window === "undefined") return
+  
+    // avisa componentes para expandirem
+    window.dispatchEvent(new Event("syg:print-start"))
+  
+    document.body.classList.add("printing")
+  
+    const cleanup = () => {
+      document.body.classList.remove("printing")
+      window.dispatchEvent(new Event("syg:print-end"))
+      window.removeEventListener("afterprint", cleanup)
+    }
+  
+    window.addEventListener("afterprint", cleanup)
+  
+    setTimeout(() => {
+      window.print()
+      // fallback caso afterprint falhe
+      setTimeout(cleanup, 1200)
+    }, 50)
+  }
   async function saveContentData(contentData: Record<string, unknown>): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession()
     const accessToken = session?.access_token
@@ -783,16 +805,16 @@ export function ContentDetailModal({
 
   const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in print-root"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose()
         }
       }}
     >
-      <div className="relative w-full max-w-6xl max-h-[95vh] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in slide-in-from-bottom-4 duration-300 parchment ornate-border">
+      <div className="relative w-full max-w-6xl max-h-[95vh] overflow-y-auto bg-background rounded-lg shadow-2xl animate-in slide-in-from-bottom-4 duration-300 parchment ornate-border print-container">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-4">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-4 no-print">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <h2 className="font-display text-2xl font-bold break-words">{t("library.contentDetails")}</h2>
@@ -801,73 +823,73 @@ export function ContentDetailModal({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            {onGenerateVariation && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleGenerateVariation}
-                disabled={isGeneratingVariation}
+              {onGenerateVariation && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateVariation}
+                  disabled={isGeneratingVariation}
+                  className="font-body no-print"
+                  title={t('library.generateVariation')}
+                >
+                  {isGeneratingVariation ? "⏳" : "🔄"} {t('library.generateVariation')}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCampaignModalOpen(true)}
                 className="font-body no-print"
-                title={t('library.generateVariation')}
               >
-                {isGeneratingVariation ? "⏳" : "🔄"} {t('library.generateVariation')}
+                🗺️ {t('library.addToCampaign')}
               </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCampaignModalOpen(true)}
-              className="font-body no-print"
-            >
-              🗺️ {t('library.addToCampaign')}
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleExportPDF} 
-              className="font-body no-print"
-              title={t('library.exportPDF')}
-              disabled={isExportingPDF || isExportingJSON}
-            >
-              {isExportingPDF ? `⏳ ${t("library.exportPreparing")}` : `📄 ${t('library.exportPDF')}`}
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setIsJsonExportModalOpen(true)} 
-              className="font-body no-print"
-              title={t('library.exportJSON')}
-              disabled={isExportingPDF || isExportingJSON}
-            >
-              {isExportingJSON ? `⏳ ${t("library.exportPreparing")}` : `📋 ${t('library.exportJSON')}`}
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => window.print()} 
-              className="font-body print-visible"
-            >
-              🖨️ {t('library.print')}
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleDelete} className="font-body no-print">
-              🗑️ {t('common.delete')}
-            </Button>
-            <Button variant="outline" size="sm" onClick={onClose} className="font-body no-print">
-              ✕ {t('common.close')}
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPDF}
+                className="font-body no-print"
+                title={t('library.exportPDF')}
+                disabled={isExportingPDF || isExportingJSON}
+              >
+                {isExportingPDF ? `⏳ ${t("library.exportPreparing")}` : `📄 ${t('library.exportPDF')}`}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsJsonExportModalOpen(true)}
+                className="font-body no-print"
+                title={t('library.exportJSON')}
+                disabled={isExportingPDF || isExportingJSON}
+              >
+                {isExportingJSON ? `⏳ ${t("library.exportPreparing")}` : `📋 ${t('library.exportJSON')}`}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrintToPDF}
+                className="font-body no-print"
+              >
+                🖨️ {t('library.print')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleDelete} className="font-body no-print">
+                🗑️ {t('common.delete')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={onClose} className="font-body no-print">
+                ✕ {t('common.close')}
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 print-page">
           {exportNotice && (
             <Alert variant={exportNotice.type === "error" ? "destructive" : "default"} className="no-print">
               <AlertDescription className="font-body text-sm">{exportNotice.message}</AlertDescription>
             </Alert>
           )}
           {/* Original Scenario */}
-          <Card className="parchment">
+          <Card className="parchment no-print">
             <CardHeader>
               <CardTitle className="font-display text-lg">{t('library.originalScenario')}</CardTitle>
             </CardHeader>
@@ -879,7 +901,7 @@ export function ContentDetailModal({
           </Card>
 
           {/* Tags Section */}
-          <Card className="parchment">
+          <Card className="parchment no-print">
             <CardHeader>
               <CardTitle className="font-display text-lg">{t('library.tags')}</CardTitle>
               <CardDescription className="font-body text-sm">
@@ -932,7 +954,7 @@ export function ContentDetailModal({
           </Card>
 
           {/* Notes Section */}
-          <Card className="parchment">
+          <Card className="parchment no-print">
             <CardHeader>
               <CardTitle className="font-display text-lg">{t('library.notes')}</CardTitle>
               <CardDescription className="font-body text-sm">
@@ -982,7 +1004,7 @@ export function ContentDetailModal({
           </Card>
 
           {/* Linked Content Section */}
-          <Card className="parchment">
+          <Card className="parchment no-print">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -1014,7 +1036,7 @@ export function ContentDetailModal({
                         {linkedContent.outgoing.map((link) => {
                           const linkedItem = link.content
                           if (!linkedItem) return null
-                          
+
                           const getLinkedName = () => {
                             if (linkedItem.type === "character") {
                               return (linkedItem.content_data as Character).name
@@ -1105,7 +1127,7 @@ export function ContentDetailModal({
                         {linkedContent.incoming.map((link) => {
                           const linkedItem = link.content
                           if (!linkedItem) return null
-                          
+
                           const getLinkedName = () => {
                             if (linkedItem.type === "character") {
                               return (linkedItem.content_data as Character).name
@@ -1250,7 +1272,7 @@ export function ContentDetailModal({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border p-4 flex justify-end gap-2">
+        <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border p-4 flex justify-end gap-2 print-sticky no-print">
           <Button variant="outline" onClick={onClose} className="font-body">
             {t('common.close')}
           </Button>
@@ -1479,11 +1501,11 @@ export function ContentDetailModal({
             <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border p-6 flex items-center justify-between">
               <div>
                 <h2 className="font-display text-2xl font-bold">
-                  {linkedItemPopup.type === "character" 
+                  {linkedItemPopup.type === "character"
                     ? (linkedItemPopup.content_data as Character).name
                     : linkedItemPopup.type === "environment"
-                    ? (linkedItemPopup.content_data as Environment).name
-                    : (linkedItemPopup.content_data as Mission).title}
+                      ? (linkedItemPopup.content_data as Environment).name
+                      : (linkedItemPopup.content_data as Mission).title}
                 </h2>
                 <p className="font-body text-sm text-muted-foreground mt-1">
                   {linkedItemPopup.type} • {t("library.created")} {formatDateMedium(linkedItemPopup.created_at, locale)}
@@ -1685,9 +1707,8 @@ function LinkModal({ currentItem, onClose, onLinkCreated }: LinkModalProps) {
                     key={contentItem.id}
                     type="button"
                     onClick={() => setSelectedContentId(contentItem.id)}
-                    className={`w-full text-left p-3 border-b border-border last:border-b-0 hover:bg-primary/10 transition-colors ${
-                      selectedContentId === contentItem.id ? 'bg-primary/20 border-primary' : ''
-                    }`}
+                    className={`w-full text-left p-3 border-b border-border last:border-b-0 hover:bg-primary/10 transition-colors ${selectedContentId === contentItem.id ? 'bg-primary/20 border-primary' : ''
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-lg">

@@ -47,6 +47,105 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* ===== Print-to-PDF mode ===== */
+@media print {
+  /* manter cores/gradientes no PDF */
+  
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* A4 */
+  @page { size: A4; margin: 6mm; }
+
+  /* esconder coisas que não devem ir ao PDF */
+  .no-print { display: none !important; }
+
+  /* ✅ remove páginas em branco:
+     imprime apenas o modal (portal) */
+  body.printing > *:not(.print-root) {
+    display: none !important;
+  }
+  body.printing > .print-root {
+    display: block !important;
+  }
+
+  /* tirar overlay/fixed do root */
+  body.printing .print-root {
+    position: static !important;
+    inset: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+
+    /* ✅ fundo escuro igual ao site */
+    background: #0b1220 !important;
+  }
+
+  /* container do modal vira documento normal */
+  body.printing .print-container {
+    position: static !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+
+    /* ✅ mantém fundo escuro */
+    background: #0b1220 !important;
+
+    /* opcional: borda sutil pra ficar bonito */
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+
+    box-shadow: none !important;
+  }
+
+  /* header/footer sticky não devem ficar sticky no PDF */
+  body.printing .print-sticky {
+    position: static !important;
+    top: auto !important;
+    bottom: auto !important;
+  }
+
+  /* wrapper do conteúdo A4 */
+  body.printing .print-page {
+    width: 210mm;
+    padding: 6mm;
+    margin: 0 auto;
+    box-sizing: border-box;
+
+    /* ✅ importante: o “papel” também fica escuro */
+    background: #0b1220 !important;
+  }
+
+  /* compactar espaçamentos (opcional, mas ajuda caber mais) */
+  body.printing .print-page .p-6 { padding: 16px !important; }
+  body.printing .print-page .p-8 { padding: 20px !important; }
+  body.printing .print-page .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 16px !important; }
+  body.printing .print-page .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 12px !important; }
+
+  /* evitar quebrar cards no meio */
+  body.printing .print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* grids viram 1 coluna no print */
+  body.printing .print-grid-1 {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  /* remove hover/scale no PDF */
+  * {
+    transition: none !important;
+    transform: none !important;
+  }
+
+  /* opcional: se ainda ficar apertado, descomente */
+  /* body.printing .print-page { transform: scale(0.95); transform-origin: top center; } */
+}
+
+
 :root {
   --radius: 0.5rem;
   /* Dark Medieval Theme - Deep Night in a Castle (DEFAULT) */

@@ -59,7 +59,7 @@ export function EnvironmentCard({ environment, isLoading = false, onRegenerateSe
   const headerTheme = getMoodTheme(environment.mood)
 
   return (
-    <Card className="parchment ornate-border border-2 border-primary/20">
+    <Card className="parchment ornate-border border-2 border-primary/20 print-card">
       <CardHeader className={`px-6 pt-6 pb-4 border-b-2 bg-gradient-to-r ${headerTheme}`}>
         <div className="flex items-start justify-between gap-4 mb-3">
           <div className="flex-1">
@@ -156,7 +156,7 @@ export function EnvironmentCard({ environment, isLoading = false, onRegenerateSe
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 print-grid-1">
                 {environment.features.map((feature, idx) => {
                   // Determine feature icon based on content
                   const getFeatureIcon = (text: string): string => {
@@ -310,7 +310,7 @@ export function EnvironmentCard({ environment, isLoading = false, onRegenerateSe
                   </span>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 print-grid-1">
                 {environment.adventureHooks.map((hook, idx) => {
                   // Determine hook type icon
                   const getHookIcon = (text: string): string => {

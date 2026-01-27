@@ -56,7 +56,7 @@ export function MissionCard({ mission, isLoading = false, onRegenerateSection, r
   const headerTheme = getDifficultyTheme(mission.difficulty)
 
   return (
-    <Card className="parchment ornate-border border-2 border-primary/20">
+    <Card className="parchment ornate-border border-2 border-primary/20 print-card">
       <CardHeader className={`px-6 pt-6 pb-4 border-b-2 bg-gradient-to-r ${headerTheme}`}>
         <div className="flex items-start justify-between gap-4 mb-3">
           <div className="flex-1">
@@ -285,7 +285,7 @@ export function MissionCard({ mission, isLoading = false, onRegenerateSection, r
                 </Button>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 print-grid-1">
               {mission.rewards.xp !== undefined && (
                 <RewardCard type="xp" value={mission.rewards.xp} />
               )}
@@ -349,7 +349,7 @@ export function MissionCard({ mission, isLoading = false, onRegenerateSection, r
                       </div>
                       <div className="font-semibold text-rose-600 dark:text-rose-400 text-sm">{choiceReward.condition}</div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 print-grid-1">
                       {choiceReward.rewards.xp !== undefined && (
                         <RewardCard type="xp" value={choiceReward.rewards.xp} />
                       )}

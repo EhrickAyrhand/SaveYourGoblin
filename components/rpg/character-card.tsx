@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslations } from 'next-intl'
 import {
   Card,
@@ -63,6 +63,34 @@ export function CharacterCard({ character, isLoading = false, onRegenerateSectio
     history: false,
     personality: false,
   })
+
+  useEffect(() => {
+    const expandAll = () => {
+      setExpandedSections({
+        spells: true,
+        traits: true,
+        racialTraits: true,
+        classFeatures: true,
+        history: true,
+        personality: true,
+      })
+    }
+  
+    const onStart = () => expandAll()
+    const onEnd = () => {
+      // se você quiser voltar pro estado normal após print, pode guardar um snapshot antes
+      // por enquanto, não faço nada pra não surpreender o usuário
+    }
+  
+    window.addEventListener("syg:print-start", onStart)
+    window.addEventListener("syg:print-end", onEnd)
+  
+    return () => {
+      window.removeEventListener("syg:print-start", onStart)
+      window.removeEventListener("syg:print-end", onEnd)
+    }
+  }, [])
+  
 
   // Calculate ability modifiers (D&D 5e: (score - 10) / 2, rounded down)
   const getModifier = (score: number): number => {
@@ -147,7 +175,7 @@ export function CharacterCard({ character, isLoading = false, onRegenerateSectio
   const classTheme = getClassTheme(character.class)
 
   return (
-    <Card className="parchment ornate-border border-2 border-primary/20">
+    <Card className="parchment ornate-border border-2 border-primary/20 print-card">
       {/* Character Header */}
       <CardHeader className={`border-b-2 ${classTheme.border} pb-4 px-6 pt-6 ${classTheme.bg}`}>
         <div className="flex items-start justify-between gap-4 mb-3">
@@ -175,7 +203,7 @@ export function CharacterCard({ character, isLoading = false, onRegenerateSectio
 
       <CardContent className="p-6 space-y-4">
         {/* Top Section: Ability Scores and Skills */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start print-grid-1">
           {/* Ability Scores - Left Column */}
           <div className="border-2 border-rose-500/30 rounded-xl overflow-hidden bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent h-fit">
             <div className="p-4">

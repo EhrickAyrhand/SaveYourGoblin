@@ -7,7 +7,6 @@ import jsPDF from 'jspdf'
 import type { LibraryContentItem } from '@/components/rpg/library-card'
 import type { Character, Environment, Mission } from '@/types/rpg'
 
-
 // Color tuple type
 type RGBColor = [number, number, number]
 
@@ -75,6 +74,9 @@ type PdfLayoutContext = {
   y: number
   currentPage: number
   renderPageHeader?: (layout: PdfLayoutContext) => void
+
+  // ✅ optional DataURL icon to be used in cards (eg: Attributes)
+  iconDataUrl?: string
 }
 
 function addNewPage(layout: PdfLayoutContext): void {
@@ -95,17 +97,25 @@ function ensureSpace(layout: PdfLayoutContext, requiredSpace: number): boolean {
 }
 
 function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) {
-    return text
-  }
+  if (text.length <= maxLength) return text
   return `${text.slice(0, Math.max(0, maxLength - 3))}...`
 }
 
 function getSafeText(text: string | undefined | null, fallback: string = '—'): string {
-  if (!text || text.trim().length === 0) {
-    return fallback
-  }
+  if (!text || text.trim().length === 0) return fallback
   return text
+}
+
+// ✅ helper used by exportAsPDFAsync (no top-level await!)
+async function fetchAsDataURL(src: string): Promise<string> {
+  const res = await fetch(src)
+  const blob = await res.blob()
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
 }
 
 /**
@@ -126,9 +136,10 @@ function drawSectionBox(
   doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2])
   doc.setLineWidth(borderWidth)
   doc.rect(x, y, width, height, 'FD') // F = fill, D = draw border
-  
+
   // Add subtle inner highlight for depth
-  if (bgColor !== COLORS.white) {
+  const isWhite = bgColor[0] === 255 && bgColor[1] === 255 && bgColor[2] === 255
+  if (!isWhite) {
     doc.setDrawColor(
       Math.min(255, bgColor[0] + 20),
       Math.min(255, bgColor[1] + 20),
@@ -147,7 +158,13 @@ function drawPageBackground(doc: jsPDF, pageWidth: number, pageHeight: number): 
 function drawPageBorder(doc: jsPDF, pageWidth: number, pageHeight: number, margin: number): void {
   doc.setDrawColor(COLORS.cardBorder[0], COLORS.cardBorder[1], COLORS.cardBorder[2])
   doc.setLineWidth(0.5)
-  doc.rect(margin - 3, margin - 3, pageWidth - (margin - 3) * 2, pageHeight - (margin - 3) * 2, 'D')
+  doc.rect(
+    margin - 3,
+    margin - 3,
+    pageWidth - (margin - 3) * 2,
+    pageHeight - (margin - 3) * 2,
+    'D'
+  )
 }
 
 function drawCornerOrnament(doc: jsPDF, x: number, y: number, size: number): void {
@@ -175,13 +192,7 @@ function measureBadgeWidth(doc: jsPDF, text: string): number {
   return textWidth + paddingX * 2
 }
 
-function drawBadge(
-  doc: jsPDF,
-  x: number,
-  y: number,
-  text: string,
-  style: BadgeStyle = {}
-): number {
+function drawBadge(doc: jsPDF, x: number, y: number, text: string, style: BadgeStyle = {}): number {
   const paddingX = 6
   const paddingY = 2
   const fontSize = 8.5
@@ -235,9 +246,8 @@ function measureBadgeGroupHeight(
   badges: Array<{ text: string }>,
   rowSpacing: number = 4
 ): number {
-  if (badges.length === 0) {
-    return 0
-  }
+  if (badges.length === 0) return 0
+
   const badgeHeight = 12
   let rows = 1
   let cursorX = 0
@@ -254,12 +264,7 @@ function measureBadgeGroupHeight(
 
 type HeaderBadge = { text: string; style?: BadgeStyle }
 
-function renderHeaderBlock(
-  layout: PdfLayoutContext,
-  title: string,
-  badges: HeaderBadge[],
-  iconText: string
-): void {
+function renderHeaderBlock(layout: PdfLayoutContext, title: string, badges: HeaderBadge[], iconText: string): void {
   const { doc, pageWidth, margin } = layout
   const width = pageWidth - 2 * margin
   const titleFontSize = 16
@@ -278,16 +283,20 @@ function renderHeaderBlock(
   doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
   doc.text(truncateText(title, 40), margin + 6, titleY)
 
-  const circleX = pageWidth - margin - 12
-  const circleY = margin + 10
-  doc.setFillColor(COLORS.sectionBg[0], COLORS.sectionBg[1], COLORS.sectionBg[2])
-  doc.setDrawColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2])
-  doc.setLineWidth(1)
-  doc.circle(circleX, circleY, 7, 'FD')
-  doc.setFontSize(10)
-  doc.setFont(undefined, 'bold')
-  doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
-  doc.text(iconText, circleX, circleY + 3, { align: 'center' })
+  // ✅ optional: hide circle if iconText empty
+  const safeIconText = (iconText ?? '').trim()
+  if (safeIconText.length > 0) {
+    const circleX = pageWidth - margin - 12
+    const circleY = margin + 10
+    doc.setFillColor(COLORS.sectionBg[0], COLORS.sectionBg[1], COLORS.sectionBg[2])
+    doc.setDrawColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2])
+    doc.setLineWidth(1)
+    doc.circle(circleX, circleY, 7, 'FD')
+    doc.setFontSize(10)
+    doc.setFont(undefined, 'bold')
+    doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
+    doc.text(safeIconText, circleX, circleY + 3, { align: 'center' })
+  }
 
   if (badges.length > 0) {
     renderBadgeGroup(doc, margin + 6, margin + 18, badgeMaxWidth, badges, 4)
@@ -300,6 +309,12 @@ function renderHeaderBlock(
 type CardHeaderOptions = {
   title: string
   subtitle?: string
+  /**
+   * icon can be:
+   * - '' or undefined -> no icon
+   * - 'A' -> text icon
+   * - data:image/png;base64,... -> image icon (DataURL)
+   */
   icon?: string
   count?: number
   accentColor?: RGBColor
@@ -320,13 +335,7 @@ function drawCardContainer(
   drawSectionBox(doc, x, y, width, height, COLORS.sectionBg, borderColor, 1)
 }
 
-function drawCardHeader(
-  doc: jsPDF,
-  x: number,
-  y: number,
-  width: number,
-  options: CardHeaderOptions
-): number {
+function drawCardHeader(doc: jsPDF, x: number, y: number, width: number, options: CardHeaderOptions): number {
   const headerHeight = getCardHeaderHeight(options.subtitle)
   const accent = options.accentColor ?? COLORS.secondary
 
@@ -337,25 +346,43 @@ function drawCardHeader(
   doc.setLineWidth(0.8)
   doc.line(x, y + headerHeight, x + width, y + headerHeight)
 
-  if (options.icon) {
+  const hasIcon = !!(options.icon && options.icon.trim().length > 0)
+  if (hasIcon) {
     doc.setFillColor(accent[0], accent[1], accent[2])
     doc.roundedRect(x + 5, y + 3, 8, 8, 2, 2, 'F')
-    doc.setFontSize(8)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
-    doc.text(options.icon, x + 9, y + 9, { align: 'center' })
+
+    const icon = options.icon!.trim()
+
+    if (icon.startsWith('data:image/')) {
+      const isJpeg = icon.startsWith('data:image/jpeg') || icon.startsWith('data:image/jpg')
+      const format = isJpeg ? 'JPEG' : 'PNG'
+      try {
+        doc.addImage(icon, format as any, x + 6, y + 4, 6, 6)
+      } catch {
+        doc.setFontSize(8)
+        doc.setFont(undefined, 'bold')
+        doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
+        doc.text(icon.slice(0, 2), x + 9, y + 9, { align: 'center' })
+      }
+    } else {
+      doc.setFontSize(8)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
+      const txt = icon.length > 2 ? icon.slice(0, 2) : icon
+      doc.text(txt, x + 9, y + 9, { align: 'center' })
+    }
   }
 
   doc.setFontSize(9.5)
   doc.setFont(undefined, 'bold')
   doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
-  doc.text(options.title, x + (options.icon ? 18 : 8), y + 10)
+  doc.text(options.title, x + (hasIcon ? 18 : 8), y + 10)
 
   if (options.subtitle) {
     doc.setFontSize(6.8)
     doc.setFont(undefined, 'normal')
     doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
-    doc.text(options.subtitle, x + (options.icon ? 18 : 8), y + 15)
+    doc.text(options.subtitle, x + (hasIcon ? 18 : 8), y + 15)
   }
 
   if (typeof options.count === 'number') {
@@ -384,15 +411,7 @@ function renderCardLines(
     gapAfter?: number
   }
 ): void {
-  const {
-    x,
-    width,
-    lines,
-    fontSize,
-    lineHeight,
-    gapAfter = 8,
-    ...headerOptions
-  } = options
+  const { x, width, lines, fontSize, lineHeight, gapAfter = 8, ...headerOptions } = options
 
   let remaining = lines.length > 0 ? lines : [getSafeText('', '—')]
   while (remaining.length > 0) {
@@ -409,12 +428,14 @@ function renderCardLines(
     const chunk = remaining.slice(0, maxLines)
     const bodyHeight = chunk.length * fontSize * lineHeight + 8
     const cardHeight = headerHeight + bodyHeight
+
     drawCardContainer(layout.doc, x, layout.y, width, cardHeight, headerOptions.accentColor ?? COLORS.border)
     drawCardHeader(layout.doc, x, layout.y, width, { ...headerOptions, title: headerTitle })
 
     layout.doc.setFontSize(fontSize)
     layout.doc.setFont(undefined, 'normal')
     layout.doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
+
     let textY = layout.y + headerHeight + 6
     chunk.forEach((line) => {
       layout.doc.text(line, x + 6, textY + fontSize)
@@ -426,27 +447,19 @@ function renderCardLines(
   }
 }
 
-function renderCardLinesInColumn(options: CardHeaderOptions & {
-  doc: jsPDF
-  x: number
-  y: number
-  width: number
-  maxHeight: number
-  lines: string[]
-  fontSize: number
-  lineHeight: number
-}): { usedHeight: number; remainingLines: string[] } {
-  const {
-    doc,
-    x,
-    y,
-    width,
-    maxHeight,
-    lines,
-    fontSize,
-    lineHeight,
-    ...headerOptions
-  } = options
+function renderCardLinesInColumn(
+  options: CardHeaderOptions & {
+    doc: jsPDF
+    x: number
+    y: number
+    width: number
+    maxHeight: number
+    lines: string[]
+    fontSize: number
+    lineHeight: number
+  }
+): { usedHeight: number; remainingLines: string[] } {
+  const { doc, x, y, width, maxHeight, lines, fontSize, lineHeight, ...headerOptions } = options
 
   const headerHeight = getCardHeaderHeight(headerOptions.subtitle)
   const maxLines = Math.floor((maxHeight - headerHeight - 10) / (fontSize * lineHeight))
@@ -461,6 +474,7 @@ function renderCardLinesInColumn(options: CardHeaderOptions & {
   doc.setFontSize(fontSize)
   doc.setFont(undefined, 'normal')
   doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
+
   let textY = y + headerHeight + 6
   chunk.forEach((line) => {
     doc.text(line, x + 6, textY + fontSize)
@@ -484,8 +498,7 @@ function addSectionHeader(
 ): number {
   const headerHeight = fontSize + 8
   const headerY = y
-  
-  // Draw header background with subtle border
+
   doc.setFillColor(COLORS.primaryHeader[0], COLORS.primaryHeader[1], COLORS.primaryHeader[2])
   doc.setDrawColor(COLORS.primaryHeader[0], COLORS.primaryHeader[1], COLORS.primaryHeader[2])
   doc.setLineWidth(0)
@@ -494,18 +507,20 @@ function addSectionHeader(
   const accentColor = options?.accentColor ?? COLORS.secondary
   doc.setFillColor(accentColor[0], accentColor[1], accentColor[2])
   doc.rect(margin, headerY, 4, headerHeight, 'F')
-  
-  // Add subtle shadow effect (darker line below)
-  doc.setDrawColor(COLORS.primaryHeader[0] * 0.7, COLORS.primaryHeader[1] * 0.7, COLORS.primaryHeader[2] * 0.7)
+
+  // ✅ rounded integers (avoid floats)
+  const shade = (n: number) => Math.round(n * 0.7)
+  doc.setDrawColor(shade(COLORS.primaryHeader[0]), shade(COLORS.primaryHeader[1]), shade(COLORS.primaryHeader[2]))
   doc.setLineWidth(0.5)
   doc.line(margin, headerY + headerHeight, pageWidth - margin, headerY + headerHeight)
-  
-  // Add header text with better padding
+
   doc.setFontSize(fontSize)
   doc.setFont(undefined, 'bold')
   doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
-  const iconText = options?.iconText
+
+  const iconText = (options?.iconText ?? '').trim()
   const textX = iconText ? margin + 20 : margin + 8
+
   if (iconText) {
     doc.setFillColor(accentColor[0], accentColor[1], accentColor[2])
     doc.circle(margin + 11, headerY + headerHeight / 2, 4, 'F')
@@ -514,8 +529,8 @@ function addSectionHeader(
     doc.text(iconText, margin + 9, headerY + headerHeight / 2 + 2)
     doc.setFontSize(fontSize)
   }
+
   doc.text(text, textX, headerY + fontSize)
-  
   return headerY + headerHeight + 5
 }
 
@@ -565,30 +580,20 @@ function buildWrappedLines(
   return doc.splitTextToSize(getSafeText(text), maxWidth) as string[]
 }
 
-function buildWrappedLinesFromList(
-  doc: jsPDF,
-  lines: string[],
-  maxWidth: number,
-  fontSize: number
-): string[] {
+function buildWrappedLinesFromList(doc: jsPDF, lines: string[], maxWidth: number, fontSize: number): string[] {
   return lines.flatMap((line) => buildWrappedLines(doc, line, maxWidth, fontSize))
 }
 
-function buildBulletedLines(
-  doc: jsPDF,
-  items: string[],
-  maxWidth: number,
-  fontSize: number
-): string[] {
+function buildBulletedLines(doc: jsPDF, items: string[], maxWidth: number, fontSize: number): string[] {
   const safeItems = items.filter((item) => item && item.trim().length > 0)
-  if (safeItems.length === 0) {
-    return [getSafeText('', '—')]
-  }
+  if (safeItems.length === 0) return [getSafeText('', '—')]
+
   doc.setFontSize(fontSize)
   doc.setFont(undefined, 'normal')
   const bullet = '• '
   const bulletWidth = doc.getTextWidth(bullet)
   const availableWidth = Math.max(0, maxWidth - bulletWidth)
+
   const lines: string[] = []
   safeItems.forEach((item) => {
     const wrapped = doc.splitTextToSize(item, availableWidth) as string[]
@@ -657,11 +662,7 @@ function renderLinesBox(layout: PdfLayoutContext, lines: string[], options: Line
   }
 }
 
-function renderTwoColumnLinesBox(
-  layout: PdfLayoutContext,
-  lines: string[],
-  options: LinesBoxOptions & { columnGap?: number }
-): void {
+function renderTwoColumnLinesBox(layout: PdfLayoutContext, lines: string[], options: LinesBoxOptions & { columnGap?: number }): void {
   const {
     x,
     width,
@@ -801,357 +802,21 @@ function renderTitledLinesBox(layout: PdfLayoutContext, options: TitledLinesBoxO
   }
 }
 
-function startSection(
-  layout: PdfLayoutContext,
-  title: string,
-  fontSize: number = 12,
-  options?: { iconText?: string; accentColor?: RGBColor }
-): void {
+function startSection(layout: PdfLayoutContext, title: string, fontSize: number = 12, options?: { iconText?: string; accentColor?: RGBColor }): void {
   ensureSpace(layout, fontSize + 12)
   layout.y = addSectionHeader(layout.doc, title, layout.y, layout.pageWidth, layout.margin, fontSize, options)
-}
-
-function renderSectionText(
-  layout: PdfLayoutContext,
-  title: string,
-  text: string,
-  options?: { headerFontSize?: number; fontSize?: number; lineHeight?: number; iconText?: string; accentColor?: RGBColor }
-): void {
-  const headerFontSize = options?.headerFontSize ?? 12
-  const fontSize = options?.fontSize ?? 10
-  const lineHeight = options?.lineHeight ?? 1.3
-  const width = layout.pageWidth - 2 * layout.margin
-  const textWidth = width - 16
-
-  startSection(layout, title, headerFontSize, {
-    iconText: options?.iconText,
-    accentColor: options?.accentColor,
-  })
-
-  const lines = buildWrappedLines(layout.doc, text, textWidth, fontSize)
-  renderLinesBox(layout, lines, {
-    x: layout.margin,
-    width,
-    fontSize,
-    lineHeight,
-    onPageBreak: () => {
-      layout.y = addSectionHeader(
-        layout.doc,
-        `${title} (continued)`,
-        layout.y,
-        layout.pageWidth,
-        layout.margin,
-        headerFontSize,
-        { iconText: options?.iconText, accentColor: options?.accentColor }
-      )
-    },
-  })
-}
-
-function renderSectionList(
-  layout: PdfLayoutContext,
-  title: string,
-  items: string[],
-  options?: { headerFontSize?: number; fontSize?: number; lineHeight?: number; iconText?: string; accentColor?: RGBColor }
-): void {
-  const headerFontSize = options?.headerFontSize ?? 12
-  const fontSize = options?.fontSize ?? 10
-  const lineHeight = options?.lineHeight ?? 1.3
-  const width = layout.pageWidth - 2 * layout.margin
-  const textWidth = width - 16
-
-  startSection(layout, title, headerFontSize, {
-    iconText: options?.iconText,
-    accentColor: options?.accentColor,
-  })
-
-  const lines = buildBulletedLines(layout.doc, items, textWidth, fontSize)
-  renderLinesBox(layout, lines, {
-    x: layout.margin,
-    width,
-    fontSize,
-    lineHeight,
-    onPageBreak: () => {
-      layout.y = addSectionHeader(
-        layout.doc,
-        `${title} (continued)`,
-        layout.y,
-        layout.pageWidth,
-        layout.margin,
-        headerFontSize,
-        { iconText: options?.iconText, accentColor: options?.accentColor }
-      )
-    },
-  })
-}
-
-function renderSectionListTwoColumn(
-  layout: PdfLayoutContext,
-  title: string,
-  items: string[],
-  options?: { headerFontSize?: number; fontSize?: number; lineHeight?: number; iconText?: string; accentColor?: RGBColor }
-): void {
-  const headerFontSize = options?.headerFontSize ?? 12
-  const fontSize = options?.fontSize ?? 10
-  const lineHeight = options?.lineHeight ?? 1.3
-  const width = layout.pageWidth - 2 * layout.margin
-  const columnGap = 12
-  const columnWidth = (width - columnGap) / 2
-  const textWidth = columnWidth - 16
-
-  startSection(layout, title, headerFontSize, {
-    iconText: options?.iconText,
-    accentColor: options?.accentColor,
-  })
-
-  const lines = buildBulletedLines(layout.doc, items, textWidth, fontSize)
-  renderTwoColumnLinesBox(layout, lines, {
-    x: layout.margin,
-    width,
-    fontSize,
-    lineHeight,
-    columnGap,
-    onPageBreak: () => {
-      layout.y = addSectionHeader(
-        layout.doc,
-        `${title} (continued)`,
-        layout.y,
-        layout.pageWidth,
-        layout.margin,
-        headerFontSize,
-        { iconText: options?.iconText, accentColor: options?.accentColor }
-      )
-    },
-  })
-}
-
-/**
- * Helper function to add header to each page
- */
-function addHeader(
-  doc: jsPDF,
-  contentName: string,
-  type: string,
-  pageNumber: number,
-  totalPages: number,
-  pageWidth: number,
-  margin: number
-): void {
-  const headerHeight = 15
-  const headerY = 0
-  
-  // Draw header background
-  doc.setFillColor(COLORS.primaryHeader[0], COLORS.primaryHeader[1], COLORS.primaryHeader[2])
-  doc.setDrawColor(COLORS.primaryHeader[0], COLORS.primaryHeader[1], COLORS.primaryHeader[2])
-  doc.setLineWidth(0)
-  doc.rect(0, headerY, pageWidth, headerHeight, 'FD')
-  doc.setDrawColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2])
-  doc.setLineWidth(1)
-  doc.line(margin, headerHeight, pageWidth - margin, headerHeight)
-  
-  // Add content name and type indicator
-  doc.setFontSize(10)
-  doc.setFont(undefined, 'bold')
-  doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
-  doc.text(truncateText(contentName, 38), margin, headerY + 8)
-  doc.text(`${getTypeLabel(type)} • ${pageNumber}/${totalPages}`, pageWidth - margin, headerY + 8, { align: 'right' })
 }
 
 /**
  * Helper function to add footer to each page
  */
-function addFooter(
-  doc: jsPDF,
-  pageNumber: number,
-  totalPages: number,
-  pageWidth: number,
-  pageHeight: number,
-  margin: number,
-  createdAt: string,
-  tags: string[] | undefined,
-  notes: string | undefined
-): void {
-  const footerHeight = 12
-  const footerY = pageHeight - footerHeight
-  
-  // Draw footer background
-  doc.setFillColor(COLORS.sectionBg[0], COLORS.sectionBg[1], COLORS.sectionBg[2])
-  doc.setDrawColor(COLORS.border[0], COLORS.border[1], COLORS.border[2])
-  doc.setLineWidth(0.5)
-  doc.rect(0, footerY, pageWidth, footerHeight, 'FD')
-  
-  // Add footer text
-  doc.setFontSize(8)
-  doc.setFont(undefined, 'normal')
-  doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
-  const createdDate = formatDate(createdAt)
-  const tagsSummary = tags && tags.length > 0 ? `Tags: ${tags.length}` : ''
-  const notesSummary = notes && notes.trim().length > 0 ? 'Notes: yes' : ''
-  const summaryText = [tagsSummary, notesSummary].filter(Boolean).join(' • ')
-  doc.text(`Created: ${createdDate}`, margin, footerY + 8)
-  if (summaryText) {
-    doc.text(summaryText, pageWidth / 2, footerY + 8, { align: 'center' })
-  }
-  doc.text(`Page ${pageNumber} of ${totalPages}`, pageWidth - margin, footerY + 8, { align: 'right' })
-}
-
-function addSimpleFooter(
-  doc: jsPDF,
-  pageNumber: number,
-  totalPages: number,
-  pageWidth: number,
-  pageHeight: number,
-  margin: number
-): void {
+function addSimpleFooter(doc: jsPDF, pageNumber: number, totalPages: number, pageWidth: number, pageHeight: number, margin: number): void {
   const footerY = pageHeight - 8
   doc.setFontSize(8)
   doc.setFont(undefined, 'normal')
   doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
   doc.text('SaveYourGoblin', margin, footerY)
   doc.text(`Page ${pageNumber} / ${totalPages}`, pageWidth - margin, footerY, { align: 'right' })
-}
-
-function addCoverFooter(
-  doc: jsPDF,
-  pageWidth: number,
-  pageHeight: number,
-  margin: number,
-  createdAt: string
-): void {
-  const footerY = pageHeight - 18
-  doc.setFontSize(9)
-  doc.setFont(undefined, 'normal')
-  doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
-  doc.text(`Created ${formatDate(createdAt)}`, margin, footerY)
-  doc.text('SaveYourGoblin', pageWidth - margin, footerY, { align: 'right' })
-}
-
-function renderCoverPage(
-  doc: jsPDF,
-  item: LibraryContentItem,
-  pageWidth: number,
-  pageHeight: number,
-  margin: number
-): void {
-  drawPageBackground(doc, pageWidth, pageHeight)
-  drawPageBorder(doc, pageWidth, pageHeight, margin)
-
-  const ornamentSize = 14
-  drawCornerOrnament(doc, margin - 6, margin - 6, ornamentSize)
-  drawCornerOrnament(doc, pageWidth - margin - ornamentSize + 6, margin - 6, ornamentSize)
-  drawCornerOrnament(doc, margin - 6, pageHeight - margin - ornamentSize + 6, ornamentSize)
-  drawCornerOrnament(doc, pageWidth - margin - ornamentSize + 6, pageHeight - margin - ornamentSize + 6, ornamentSize)
-
-  const contentName = getContentName(item)
-  const typeLabel = getTypeLabel(item.type)
-
-  doc.setFontSize(28)
-  doc.setFont(undefined, 'bold')
-  doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
-  const titleLines = doc.splitTextToSize(contentName, pageWidth - margin * 2 - 20) as string[]
-  let titleY = 70
-  titleLines.forEach((line) => {
-    const lineWidth = doc.getTextWidth(line)
-    doc.text(line, (pageWidth - lineWidth) / 2, titleY)
-    titleY += 10
-  })
-
-  doc.setFontSize(14)
-  doc.setFont(undefined, 'normal')
-  doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
-  doc.setDrawColor(COLORS.border[0], COLORS.border[1], COLORS.border[2])
-  doc.setLineWidth(0.8)
-  doc.line(margin + 20, titleY - 4, pageWidth - margin - 20, titleY - 4)
-  doc.text(typeLabel, pageWidth / 2, titleY + 6, { align: 'center' })
-
-  const badges = [
-    { text: typeLabel, style: { bgColor: COLORS.primaryHeader, textColor: COLORS.white } },
-    { text: `Created ${formatDate(item.created_at)}`, style: { bgColor: COLORS.sectionBg, textColor: COLORS.textPrimary, borderColor: COLORS.border } },
-  ]
-  if (item.tags && item.tags.length > 0) {
-    badges.push({ text: `${item.tags.length} tag${item.tags.length > 1 ? 's' : ''}`, style: { bgColor: COLORS.secondary, textColor: COLORS.white } })
-  }
-  const badgesY = titleY + 18
-  const badgesEndY = renderBadgeGroup(doc, pageWidth / 2 - 120, badgesY, 240, badges, 6)
-
-  const summaryText = getSafeText(item.scenario_input, '')
-  if (summaryText) {
-    doc.setFontSize(11)
-    doc.setFont(undefined, 'normal')
-    doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
-    const summaryLines = doc.splitTextToSize(summaryText, pageWidth - margin * 2 - 20)
-    let summaryY = badgesEndY + 8
-    summaryLines.slice(0, 8).forEach((line: string) => {
-      doc.text(line, margin + 10, summaryY)
-      summaryY += 6
-    })
-  }
-}
-
-/**
- * Helper function to draw ability score grid for characters
- */
-function drawAbilityScoreGrid(
-  doc: jsPDF,
-  character: Character,
-  startY: number,
-  pageWidth: number,
-  margin: number
-): number {
-  const boxWidth = (pageWidth - 2 * margin - 25) / 6 // 6 abilities, with spacing
-  const boxHeight = 34
-  const spacing = 5
-  let x = margin
-  let y = startY
-  
-  const abilities = [
-    { name: 'STR', value: character.attributes.strength },
-    { name: 'DEX', value: character.attributes.dexterity },
-    { name: 'CON', value: character.attributes.constitution },
-    { name: 'INT', value: character.attributes.intelligence },
-    { name: 'WIS', value: character.attributes.wisdom },
-    { name: 'CHA', value: character.attributes.charisma },
-  ]
-  
-  abilities.forEach((ability) => {
-    // Draw card background
-    doc.setFillColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
-    doc.setDrawColor(COLORS.border[0], COLORS.border[1], COLORS.border[2])
-    doc.setLineWidth(0.8)
-    doc.roundedRect(x, y, boxWidth, boxHeight, 2, 2, 'FD')
-
-    // Accent bar
-    doc.setFillColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2])
-    doc.roundedRect(x, y, boxWidth, 6, 2, 2, 'F')
-    
-    // Add ability name (centered)
-    doc.setFontSize(8.5)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(COLORS.white[0], COLORS.white[1], COLORS.white[2])
-    const nameWidth = doc.getTextWidth(ability.name)
-    doc.text(ability.name, x + (boxWidth - nameWidth) / 2, y + 5)
-    
-    // Add ability value (larger, centered, bold)
-    doc.setFontSize(16)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
-    const valueText = ability.value.toString()
-    const valueWidth = doc.getTextWidth(valueText)
-    doc.text(valueText, x + (boxWidth - valueWidth) / 2, y + 22)
-    
-    // Add modifier calculation hint (small text below)
-    const modifier = Math.floor((ability.value - 10) / 2)
-    const modifierText = modifier >= 0 ? `+${modifier}` : `${modifier}`
-    doc.setFontSize(7)
-    doc.setFont(undefined, 'normal')
-    doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
-    const modWidth = doc.getTextWidth(modifierText)
-    doc.text(modifierText, x + (boxWidth - modWidth) / 2, y + 30)
-    
-    x += boxWidth + spacing
-  })
-  
-  return y + boxHeight + 10
 }
 
 export type ContentLinkEntry = {
@@ -1237,6 +902,10 @@ export type PdfExportLabels = {
 
 export type PdfExportOptions = {
   labels?: PdfExportLabels
+  /**
+   * ✅ if provided and is a DataURL (data:image/...), it will be used as icon in the Attributes card header.
+   */
+  iconDataUrl?: string
 }
 
 function pluralize(count: number, singular: string, plural: string): string {
@@ -1260,8 +929,6 @@ function buildDefaultPdfLabels(item: LibraryContentItem): PdfExportLabels {
   const hookCount = environment?.adventureHooks?.length ?? 0
 
   const objectiveCount = mission?.objectives?.length ?? 0
-  const powerfulItemCount = mission?.powerfulItems?.length ?? 0
-  const outcomeCount = mission?.possibleOutcomes?.length ?? 0
 
   return {
     common: {
@@ -1337,7 +1004,10 @@ function buildHeaderBadges(item: LibraryContentItem, labels: PdfExportLabels): {
       { text: truncateText(character.background, 22), style: { bgColor: COLORS.sectionBg, textColor: COLORS.textPrimary, borderColor: COLORS.cardBorder } },
     ]
     if (character.voiceDescription) {
-      badges.push({ text: truncateText(character.voiceDescription, 22), style: { bgColor: COLORS.sectionBg, textColor: COLORS.textSecondary, borderColor: COLORS.cardBorder } })
+      badges.push({
+        text: truncateText(character.voiceDescription, 22),
+        style: { bgColor: COLORS.sectionBg, textColor: COLORS.textSecondary, borderColor: COLORS.cardBorder },
+      })
     }
     return {
       badges,
@@ -1347,9 +1017,7 @@ function buildHeaderBadges(item: LibraryContentItem, labels: PdfExportLabels): {
 
   if (item.type === 'environment') {
     const environment = item.content_data as Environment
-    const badges: HeaderBadge[] = [
-      { text: getTypeLabel(item.type), style: { bgColor: COLORS.secondary, textColor: COLORS.white } },
-    ]
+    const badges: HeaderBadge[] = [{ text: getTypeLabel(item.type), style: { bgColor: COLORS.secondary, textColor: COLORS.white } }]
     if (environment.mood) {
       badges.push({ text: `${labels.environment.moodTitle}: ${truncateText(environment.mood, 18)}`, style: { bgColor: COLORS.purple, textColor: COLORS.white } })
     }
@@ -1360,17 +1028,17 @@ function buildHeaderBadges(item: LibraryContentItem, labels: PdfExportLabels): {
   }
 
   const mission = item.content_data as Mission
-  const badges: HeaderBadge[] = [
-    { text: getTypeLabel(item.type), style: { bgColor: COLORS.secondary, textColor: COLORS.white } },
-  ]
+  const badges: HeaderBadge[] = [{ text: getTypeLabel(item.type), style: { bgColor: COLORS.secondary, textColor: COLORS.white } }]
+
   if (mission.difficulty) {
-    const diffColor = mission.difficulty === 'easy'
-      ? COLORS.green
-      : mission.difficulty === 'hard'
-        ? COLORS.orange
-        : mission.difficulty === 'deadly'
-          ? COLORS.warning
-          : COLORS.yellow
+    const diffColor =
+      mission.difficulty === 'easy'
+        ? COLORS.green
+        : mission.difficulty === 'hard'
+          ? COLORS.orange
+          : mission.difficulty === 'deadly'
+            ? COLORS.warning
+            : COLORS.yellow
     badges.push({ text: mission.difficulty, style: { bgColor: diffColor, textColor: COLORS.black } })
   }
   if (mission.recommendedLevel) {
@@ -1409,7 +1077,8 @@ export function exportAsJSON(item: LibraryContentItem, options: JsonExportOption
 }
 
 /**
- * Export content as PDF file
+ * Export content as PDF file (sync)
+ * If you want image icons, call exportAsPDFAsync and pass iconDataUrl.
  */
 export function exportAsPDF(item: LibraryContentItem, options: PdfExportOptions = {}): void {
   const doc = new jsPDF()
@@ -1419,6 +1088,7 @@ export function exportAsPDF(item: LibraryContentItem, options: PdfExportOptions 
   const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 12
   const footerHeight = 10
+
   const contentName = getContentName(item)
   const labels = options.labels ?? buildDefaultPdfLabels(item)
 
@@ -1440,6 +1110,7 @@ export function exportAsPDF(item: LibraryContentItem, options: PdfExportOptions 
     contentStartY: margin,
     y: margin,
     currentPage: 1,
+    iconDataUrl: options.iconDataUrl,
   }
 
   const headerBadges = buildHeaderBadges(item, labels)
@@ -1460,14 +1131,21 @@ export function exportAsPDF(item: LibraryContentItem, options: PdfExportOptions 
   }
 
   const totalPages = doc.internal.pages.length - 1
-
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page)
     addSimpleFooter(doc, page, totalPages, pageWidth, pageHeight, margin)
   }
-  
 
   doc.save(`${contentName}.pdf`)
+}
+
+/**
+ * ✅ Export content as PDF file (async)
+ * Loads /background.png as DataURL and injects into the PDF options.
+ */
+export async function exportAsPDFAsync(item: LibraryContentItem, options: PdfExportOptions = {}): Promise<void> {
+  const iconDataUrl = options.iconDataUrl ?? (await fetchAsDataURL('/background.png'))
+  exportAsPDF(item, { ...options, iconDataUrl })
 }
 
 const SKILL_ABILITY_MAP: Record<string, string> = {
@@ -1515,6 +1193,7 @@ function renderAttributeCard(
     { name: 'WIS', value: character.attributes.wisdom, color: COLORS.purple },
     { name: 'CHA', value: character.attributes.charisma, color: COLORS.yellow },
   ]
+
   const headerHeight = getCardHeaderHeight(labels.character.abilityScoresSubtitle)
   const rowHeight = 8
   const contentHeight = abilities.length * rowHeight + 18
@@ -1524,7 +1203,8 @@ function renderAttributeCard(
   drawCardHeader(layout.doc, x, y, width, {
     title: labels.character.abilityScoresTitle,
     subtitle: labels.character.abilityScoresSubtitle,
-    icon: '',
+    // ✅ image icon if available (DataURL)
+    icon: layout.iconDataUrl ?? '',
     count: abilities.length,
     accentColor: COLORS.rose,
   })
@@ -1537,6 +1217,7 @@ function renderAttributeCard(
     layout.doc.setFont(undefined, 'bold')
     layout.doc.setTextColor(COLORS.textPrimary[0], COLORS.textPrimary[1], COLORS.textPrimary[2])
     layout.doc.text(ability.name, x + 6, rowY + 6)
+
     layout.doc.setFont(undefined, 'normal')
     layout.doc.setTextColor(COLORS.textSecondary[0], COLORS.textSecondary[1], COLORS.textSecondary[2])
     layout.doc.text(`${ability.value} ${formatModifier(modifier)}`, x + width - 12, rowY + 6, { align: 'right' })
@@ -1680,9 +1361,7 @@ function renderCharacterToPDF(layout: PdfLayoutContext, character: Character, la
       lineHeight: 1.2,
     })
     rightY += result.usedHeight
-    if (result.remainingLines.length > 0) {
-      overflowSections.push({ ...section, lines: result.remainingLines })
-    }
+    if (result.remainingLines.length > 0) overflowSections.push({ ...section, lines: result.remainingLines })
   })
 
   if (skillResult.remainingLines.length > 0) {
@@ -1884,8 +1563,10 @@ function exportMissionToPDF(layout: PdfLayoutContext, mission: Mission, labels: 
 
   const detailLines = [
     `${labels.common.levelLabel}: ${mission.recommendedLevel || '—'}`,
-    `Difficulty: ${mission.difficulty}`,
+    // ✅ avoid undefined
+    `Difficulty: ${mission.difficulty ?? '—'}`,
   ]
+
   renderCardLines(layout, {
     x: layout.margin,
     width,
@@ -2048,13 +1729,9 @@ function exportMissionToPDF(layout: PdfLayoutContext, mission: Mission, labels: 
  * Helper function to get content name
  */
 function getContentName(item: LibraryContentItem): string {
-  if (item.type === 'character') {
-    return (item.content_data as Character).name
-  } else if (item.type === 'environment') {
-    return (item.content_data as Environment).name
-  } else {
-    return (item.content_data as Mission).title
-  }
+  if (item.type === 'character') return (item.content_data as Character).name
+  if (item.type === 'environment') return (item.content_data as Environment).name
+  return (item.content_data as Mission).title
 }
 
 /**
