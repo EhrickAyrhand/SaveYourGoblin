@@ -150,13 +150,13 @@ export default function LibraryPage() {
           router.push("/login")
           return
         }
-        
+
         // Check email verification - redirect unverified users to verify-email
         if (!currentUser.emailVerified) {
           router.push(`/verify-email?email=${encodeURIComponent(currentUser.email)}`)
           return
         }
-        
+
         setUser(currentUser)
       } catch (err) {
         setError("Failed to load user data")
@@ -234,12 +234,12 @@ export default function LibraryPage() {
     return allContent.filter((item) => {
       if (selectedType !== "all" && item.type !== selectedType) return false
       if (showFavoritesOnly && !item.is_favorite) return false
-  
+
       if (selectedCampaignId !== "all") {
         const inCampaign = contentCampaignMap[item.id]?.some((c) => c.id === selectedCampaignId)
         if (!inCampaign) return false
       }
-  
+
       // (opcional) filtrar por dateFrom/dateTo aqui também, se quiser que sugestões respeitem datas
       return true
     })
@@ -254,7 +254,7 @@ export default function LibraryPage() {
       )
     ).sort()
   }, [scopedItemsForSuggestions])
-  
+
 
   // Helper function to get content name for sorting
   function getContentName(item: LibraryContentItem): string {
@@ -271,22 +271,22 @@ export default function LibraryPage() {
   const searchSuggestions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     if (q.length < 2) return []
-  
+
     const seen = new Set<string>()
     const out: { type: "tag" | "name" | "scenario"; text: string }[] = []
-  
+
     const add = (type: "tag" | "name" | "scenario", text: string) => {
       const t = text.trim()
       if (!t || seen.has(t.toLowerCase())) return
       seen.add(t.toLowerCase())
       out.push({ type, text: t })
     }
-  
+
     // ✅ tags respeitando filtro
     scopedTags
       .filter((tag) => tag.toLowerCase().includes(q))
       .forEach((tag) => add("tag", tag))
-  
+
     // ✅ nomes/scenario respeitando filtro
     for (const item of scopedItemsForSuggestions) {
       const name = getContentName(item)
@@ -295,7 +295,7 @@ export default function LibraryPage() {
         add("scenario", item.scenario_input)
       }
     }
-  
+
     return out.slice(0, 10)
   }, [searchQuery, scopedTags, scopedItemsForSuggestions])
 
@@ -331,7 +331,7 @@ export default function LibraryPage() {
         return contentDataStr.includes(searchLower)
       })
       const tagMatches = allItemsForSearch.filter(item => {
-        return item.tags && Array.isArray(item.tags) && 
+        return item.tags && Array.isArray(item.tags) &&
           item.tags.some((tag: string) => tag.toLowerCase().includes(searchLower))
       })
       const additionalMatches = [...contentDataMatches, ...tagMatches]
@@ -501,7 +501,7 @@ export default function LibraryPage() {
 
       // Create a copy of the content with a new scenario (add "Copy" suffix)
       const duplicatedScenario = `${item.scenario_input} (Copy)`
-      
+
       const response = await fetch("/api/content", {
         method: "POST",
         headers: {
@@ -557,11 +557,11 @@ export default function LibraryPage() {
       }
 
       const result = await response.json()
-      
+
       // Refresh content list and all content for counts
       await fetchContent()
       await fetchAllContent()
-      
+
       // Optionally open the new variation in detail modal
       if (result.data) {
         setSelectedItem(result.data)
@@ -701,7 +701,7 @@ export default function LibraryPage() {
       )
 
       await Promise.all(deletePromises)
-      
+
       // Refresh content and clear selection
       await fetchContent()
       await fetchAllContent()
@@ -740,7 +740,7 @@ export default function LibraryPage() {
       )
 
       await Promise.all(updatePromises)
-      
+
       // Refresh content and clear selection
       await fetchContent()
       await fetchAllContent()
@@ -753,17 +753,29 @@ export default function LibraryPage() {
 
   function handleCompare() {
     const selected = filteredContent.filter(item => selectedIds.has(item.id))
+  
     if (selected.length !== 2) {
-      setError(t('comparison.selectTwoItems'))
+      setError(t("comparison.selectTwoItems"))
       return
     }
     if (selected[0].type !== selected[1].type) {
-      setError(t('comparison.sameTypeRequired'))
+      setError(t("comparison.sameTypeRequired"))
       return
     }
-    setItemsToCompare([selected[0], selected[1]] as [LibraryContentItem, LibraryContentItem])
-    setIsComparisonOpen(true)
+  
+    // 1) fecha modal se já estiver aberto (evita lock interferir)
+    setIsComparisonOpen(false)
+  
+    // 2) sobe a PÁGINA (instantâneo, não smooth)
+    window.scrollTo(0, 0)
+  
+    // 3) abre o modal no próximo frame (depois do scroll)
+    requestAnimationFrame(() => {
+      setItemsToCompare([selected[0], selected[1]] as [LibraryContentItem, LibraryContentItem])
+      setIsComparisonOpen(true)
+    })
   }
+  
 
   // Calculate counts for filter buttons from allContent (unfiltered)
   const counts = {
@@ -868,11 +880,10 @@ export default function LibraryPage() {
                       type="button"
                       onClick={() => setSelectedType(filter.value)}
                       disabled={isFetching}
-                      className={`relative rounded-xl border-2 px-6 py-3 text-base font-body transition-all font-semibold shadow-md hover:shadow-lg transform hover:scale-105 ${
-                        selectedType === filter.value
-                          ? `bg-gradient-to-br ${filter.color} border-primary text-primary shadow-lg scale-105`
-                          : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
-                      } ${isFetching ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      className={`relative rounded-xl border-2 px-6 py-3 text-base font-body transition-all font-semibold shadow-md hover:shadow-lg transform hover:scale-105 ${selectedType === filter.value
+                        ? `bg-gradient-to-br ${filter.color} border-primary text-primary shadow-lg scale-105`
+                        : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+                        } ${isFetching ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                     >
                       <span className="mr-2 text-xl">{filter.icon}</span>
                       {filter.label} <span className="ml-2 text-sm font-bold">({filter.count})</span>
@@ -886,11 +897,10 @@ export default function LibraryPage() {
                     type="button"
                     onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                     disabled={isFetching}
-                    className={`relative rounded-xl border-2 px-6 py-3 text-base font-body transition-all font-semibold shadow-md hover:shadow-lg transform hover:scale-105 ${
-                      showFavoritesOnly
-                        ? "bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border-yellow-500/50 text-primary shadow-lg scale-105"
-                        : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
-                    } ${isFetching ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                    className={`relative rounded-xl border-2 px-6 py-3 text-base font-body transition-all font-semibold shadow-md hover:shadow-lg transform hover:scale-105 ${showFavoritesOnly
+                      ? "bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border-yellow-500/50 text-primary shadow-lg scale-105"
+                      : "border-border bg-background hover:border-primary/50 hover:bg-primary/5"
+                      } ${isFetching ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                   >
                     <span className="mr-2 text-xl">{showFavoritesOnly ? "⭐" : "☆"}</span>
                     {t('library.favorites')} <span className="ml-2 text-sm font-bold">({counts.favorites})</span>
@@ -941,62 +951,62 @@ export default function LibraryPage() {
                     {searchFocused &&
                       ((searchQuery.trim().length === 0 && recentSearches.length > 0) ||
                         (searchQuery.trim().length >= 2 && searchSuggestions.length > 0)) && (
-                      <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-auto rounded-xl border-2 border-primary/20 bg-background shadow-xl">
-                        {searchQuery.trim().length === 0 ? (
-                          <>
-                            <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-primary/10">
-                              {t("library.recentSearches")}
-                            </div>
-                            {recentSearches.map((s) => (
+                        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-auto rounded-xl border-2 border-primary/20 bg-background shadow-xl">
+                          {searchQuery.trim().length === 0 ? (
+                            <>
+                              <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-primary/10">
+                                {t("library.recentSearches")}
+                              </div>
+                              {recentSearches.map((s) => (
+                                <button
+                                  key={s}
+                                  type="button"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    applySuggestion(s)
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left text-sm font-body hover:bg-primary/10 flex items-center gap-2"
+                                >
+                                  <span className="text-muted-foreground">🕐</span>
+                                  {s}
+                                </button>
+                              ))}
                               <button
-                                key={s}
                                 type="button"
                                 onMouseDown={(e) => {
                                   e.preventDefault()
-                                  applySuggestion(s)
+                                  clearSearchHistory()
                                 }}
-                                className="w-full px-4 py-2.5 text-left text-sm font-body hover:bg-primary/10 flex items-center gap-2"
+                                className="w-full px-4 py-2 text-left text-xs text-muted-foreground hover:bg-primary/10 hover:text-foreground font-body border-t border-primary/10"
                               >
-                                <span className="text-muted-foreground">🕐</span>
-                                {s}
+                                {t("library.clearSearchHistory")}
                               </button>
-                            ))}
-                            <button
-                              type="button"
-                              onMouseDown={(e) => {
-                                e.preventDefault()
-                                clearSearchHistory()
-                              }}
-                              className="w-full px-4 py-2 text-left text-xs text-muted-foreground hover:bg-primary/10 hover:text-foreground font-body border-t border-primary/10"
-                            >
-                              {t("library.clearSearchHistory")}
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-primary/10">
-                              {t("library.suggestions")}
-                            </div>
-                            {searchSuggestions.map((s, i) => (
-                              <button
-                                key={`${s.type}-${s.text}-${i}`}
-                                type="button"
-                                onMouseDown={(e) => {
-                                  e.preventDefault()
-                                  applySuggestion(s.text)
-                                }}
-                                className="w-full px-4 py-2.5 text-left text-sm font-body hover:bg-primary/10 flex items-center gap-2"
-                              >
-                                <span className="text-muted-foreground shrink-0">
-                                  {s.type === "tag" ? "🏷️" : s.type === "name" ? "📄" : "📝"}
-                                </span>
-                                <span className="truncate">{s.text}</span>
-                              </button>
-                            ))}
-                          </>
-                        )}
-                      </div>
-                    )}
+                            </>
+                          ) : (
+                            <>
+                              <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-primary/10">
+                                {t("library.suggestions")}
+                              </div>
+                              {searchSuggestions.map((s, i) => (
+                                <button
+                                  key={`${s.type}-${s.text}-${i}`}
+                                  type="button"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    applySuggestion(s.text)
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left text-sm font-body hover:bg-primary/10 flex items-center gap-2"
+                                >
+                                  <span className="text-muted-foreground shrink-0">
+                                    {s.type === "tag" ? "🏷️" : s.type === "name" ? "📄" : "📝"}
+                                  </span>
+                                  <span className="truncate">{s.text}</span>
+                                </button>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1.5 font-body">{t("library.searchPressEnter")}</p>
                 </div>
@@ -1353,6 +1363,7 @@ export default function LibraryPage() {
         {/* Content Comparison Modal */}
         {itemsToCompare && (
           <ContentComparisonModal
+            key={`${itemsToCompare[0].id}-${itemsToCompare[1].id}`}
             items={itemsToCompare}
             isOpen={isComparisonOpen}
             onClose={() => {
@@ -1361,6 +1372,7 @@ export default function LibraryPage() {
             }}
           />
         )}
+
       </div>
     </div>
   )

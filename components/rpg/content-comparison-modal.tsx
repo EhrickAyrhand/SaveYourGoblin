@@ -1,9 +1,8 @@
 "use client"
 
-import { useEffect } from "react"
-import { useLocale, useTranslations } from 'next-intl'
+import { useEffect, useLayoutEffect, useRef } from "react"
+import { useLocale, useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CharacterCard } from "@/components/rpg/character-card"
 import { EnvironmentCard } from "@/components/rpg/environment-card"
 import { MissionCard } from "@/components/rpg/mission-card"
@@ -17,139 +16,157 @@ interface ContentComparisonModalProps {
   onClose: () => void
 }
 
-export function ContentComparisonModal({
-  items,
-  isOpen,
-  onClose,
-}: ContentComparisonModalProps) {
+export function ContentComparisonModal({ items, isOpen, onClose }: ContentComparisonModalProps) {
   const t = useTranslations()
   const locale = useLocale()
   const [item1, item2] = items
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden"
-      // Hide theme selector when comparison modal is open
-      document.body.setAttribute('data-comparison-open', 'true')
-    } else {
-      document.body.style.overflow = "unset"
-      document.body.removeAttribute('data-comparison-open')
+  const modalRef = useRef<HTMLDivElement | null>(null)
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null)
+  const savedScrollYRef = useRef(0)
+
+  // ✅ Scroll lock robusto + restaura EXATAMENTE a posição do usuário
+  useLayoutEffect(() => {
+    if (!isOpen) return
+
+    // salva o scroll real da página ANTES de travar
+    savedScrollYRef.current = window.scrollY
+
+    const body = document.body
+    const html = document.documentElement
+
+    const prevBodyStyle = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
     }
+    const prevHtmlOverflow = html.style.overflow
+
+    html.style.overflow = "hidden"
+    body.style.overflow = "hidden"
+    body.style.position = "fixed"
+    body.style.top = `-${savedScrollYRef.current}px`
+    body.style.left = "0"
+    body.style.right = "0"
+    body.style.width = "100%"
 
     return () => {
-      document.body.style.overflow = "unset"
-      document.body.removeAttribute('data-comparison-open')
+      // desfaz lock
+      html.style.overflow = prevHtmlOverflow
+      body.style.position = prevBodyStyle.position
+      body.style.top = prevBodyStyle.top
+      body.style.left = prevBodyStyle.left
+      body.style.right = prevBodyStyle.right
+      body.style.width = prevBodyStyle.width
+      body.style.overflow = prevBodyStyle.overflow
+
+      // restaura scroll da página (isso corrige o "vai pro meio")
+      window.scrollTo(0, savedScrollYRef.current)
     }
   }, [isOpen])
 
+  // ✅ Sempre abre no topo do conteúdo do modal (sem mexer no scroll da página)
+  useLayoutEffect(() => {
+    if (!isOpen) return
+    modalRef.current?.focus()
+    if (scrollAreaRef.current) scrollAreaRef.current.scrollTop = 0
+  }, [isOpen, item1.id, item2.id])
+
+  // ESC fecha
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose()
-      }
+      if (e.key === "Escape" && isOpen) onClose()
     }
-
     document.addEventListener("keydown", handleEscape)
     return () => document.removeEventListener("keydown", handleEscape)
   }, [isOpen, onClose])
 
   if (!isOpen) return null
 
-  const formatDate = (dateString: string): string => {
-    return formatDateWithLocale(dateString, locale, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
-  }
+  const formatDate = (dateString: string): string =>
+    formatDateWithLocale(dateString, locale, { year: "numeric", month: "short", day: "numeric" })
 
   const getContentName = (item: LibraryContentItem): string => {
-    if (item.type === "character") {
-      return (item.content_data as Character).name
-    } else if (item.type === "environment") {
-      return (item.content_data as Environment).name
-    } else {
-      return (item.content_data as Mission).title
-    }
+    if (item.type === "character") return (item.content_data as Character).name
+    if (item.type === "environment") return (item.content_data as Environment).name
+    return (item.content_data as Mission).title
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-background animate-in fade-in"
-    >
-      {/* Header - Full Width */}
-      <div className="sticky top-0 z-[60] bg-background/95 backdrop-blur-sm border-b border-border p-4 flex items-center justify-between shadow-md">
-        <div>
-          <h2 className="font-display text-2xl font-bold">{t('comparison.title')}</h2>
-          <p className="font-body text-sm text-muted-foreground">
-            {t('comparison.comparing')} {item1.type}s
-          </p>
-        </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onClose} 
-          className="font-body"
-          title={t('comparison.close')}
-        >
-          ✕ {t('comparison.close')}
-        </Button>
-      </div>
+    <>
+      {/* overlay */}
+      <div className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm" />
 
-      {/* Comparison Content - Full Screen Side by Side */}
-      <div className="h-[calc(100vh-80px)] overflow-hidden">
-        <div className="grid grid-cols-2 gap-0 h-full w-full">
-          {/* Item 1 - Left Side */}
-          <div className="h-full overflow-y-auto overflow-x-hidden border-r border-border bg-background">
-            <div className="p-6">
-              <div className="mb-4 pb-4 border-b border-border">
-                <h3 className="font-display text-xl font-bold mb-1">
-                  {t('comparison.item1')}: {getContentName(item1)}
-                </h3>
-                <p className="font-body text-sm text-muted-foreground">
-                  {formatDate(item1.created_at)}
-                </p>
+      {/* modal centralizado */}
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        className="
+    fixed left-1/2 top-4 md:top-6 z-[9999]
+    w-[min(1100px,calc(100vw-2rem))]
+    h-[min(86dvh,calc(100dvh-2rem))]
+    -translate-x-1/2
+    bg-background rounded-2xl shadow-2xl
+    flex flex-col min-h-0 overflow-hidden outline-none
+  "
+      >
+
+        {/* header */}
+        <div className="shrink-0 bg-background/95 backdrop-blur-sm border-b border-border p-3 flex items-center justify-between shadow-md">
+          <div>
+            <h2 className="font-display text-xl font-bold">{t("comparison.title")}</h2>
+            <p className="font-body text-sm text-muted-foreground">
+              {t("comparison.comparing")} {item1.type}s
+            </p>
+          </div>
+
+          <Button variant="outline" size="sm" onClick={onClose} className="font-body">
+            ✕ {t("comparison.close")}
+          </Button>
+        </div>
+
+        {/* conteúdo com scroll único */}
+        <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+            {/* Left */}
+            <div className="bg-background md:border-r border-border">
+              <div className="p-4">
+                <div className="mb-4 pb-4 border-b border-border">
+                  <h3 className="font-display text-xl font-bold mb-1">
+                    {t("comparison.item1")}: {getContentName(item1)}
+                  </h3>
+                  <p className="font-body text-sm text-muted-foreground">{formatDate(item1.created_at)}</p>
+                </div>
+
+                {item1.type === "character" && <CharacterCard character={item1.content_data as Character} />}
+                {item1.type === "environment" && <EnvironmentCard environment={item1.content_data as Environment} />}
+                {item1.type === "mission" && <MissionCard mission={item1.content_data as Mission} />}
               </div>
-              <div className="w-full">
-                {item1.type === "character" && (
-                  <CharacterCard character={item1.content_data as Character} />
-                )}
-                {item1.type === "environment" && (
-                  <EnvironmentCard environment={item1.content_data as Environment} />
-                )}
-                {item1.type === "mission" && (
-                  <MissionCard mission={item1.content_data as Mission} />
-                )}
+            </div>
+
+            {/* Right */}
+            <div className="bg-background">
+              <div className="p-4">
+                <div className="mb-4 pb-4 border-b border-border">
+                  <h3 className="font-display text-xl font-bold mb-1">
+                    {t("comparison.item2")}: {getContentName(item2)}
+                  </h3>
+                  <p className="font-body text-sm text-muted-foreground">{formatDate(item2.created_at)}</p>
+                </div>
+
+                {item2.type === "character" && <CharacterCard character={item2.content_data as Character} />}
+                {item2.type === "environment" && <EnvironmentCard environment={item2.content_data as Environment} />}
+                {item2.type === "mission" && <MissionCard mission={item2.content_data as Mission} />}
               </div>
             </div>
           </div>
 
-          {/* Item 2 - Right Side */}
-          <div className="h-full overflow-y-auto overflow-x-hidden bg-background">
-            <div className="p-6">
-              <div className="mb-4 pb-4 border-b border-border">
-                <h3 className="font-display text-xl font-bold mb-1">
-                  {t('comparison.item2')}: {getContentName(item2)}
-                </h3>
-                <p className="font-body text-sm text-muted-foreground">
-                  {formatDate(item2.created_at)}
-                </p>
-              </div>
-              <div className="w-full">
-                {item2.type === "character" && (
-                  <CharacterCard character={item2.content_data as Character} />
-                )}
-                {item2.type === "environment" && (
-                  <EnvironmentCard environment={item2.content_data as Environment} />
-                )}
-                {item2.type === "mission" && (
-                  <MissionCard mission={item2.content_data as Mission} />
-                )}
-              </div>
-            </div>
-          </div>
+          <div className="h-10" />
         </div>
       </div>
-    </div>
+    </>
   )
 }

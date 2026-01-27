@@ -103,7 +103,7 @@ Actual:
 - It ignores the filter and searches even if it's not from the same filter.
 ---
 
-## TC-008 - Library compare option -- Failed❎
+## TC-008 - Library compare option -- Fixed✅
 Steps:
 1. Choose two cards
 2. After selected click in the compare button
